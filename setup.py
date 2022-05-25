@@ -25,7 +25,6 @@ setup(
     maintainer_email='dozgulbas@anl.gov',
     description='Driver for the OT2',
     license='MIT License',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'ot2_driver = ot2_driver_pkg.ot2_driver:main_null',
@@ -38,10 +37,6 @@ setup(
             'external_server = zeroMQ_OT2.external_server:main_null',
             'ot2_client = zeroMQ_OT2.ot2_client:main_null',
             'OT2_listener = zeroMQ_OT2.OT2_listener:main_null',
-            'stream_camera = zeroMQ_OT2.stream_camera:main_null',
-            'camera_server = vision_pipette.camera_server:main',
-            'camera_client_test = doga_tests.camera_client_test:camera_client',
-            'open_shell_ssh = doga_tests.open_shell_ssh:main',
         ],
     },
 )
