@@ -1,2 +1,2 @@
-zmq
+pyzmq
 mysql-connector
