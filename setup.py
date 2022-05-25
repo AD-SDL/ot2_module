@@ -2,6 +2,14 @@ from setuptools import setup
 
 package_name = 'ot2_driver_pkg'
 
+install_requires = []
+with open('requirements.txt') as reqs:
+    for line in reqs.readlines():
+        req = line.strip()
+        if not req or req.startswith('#'):
+            continue
+        install_requires.append(req)
+
 setup(
     name=package_name,
     version='0.0.0',
@@ -11,7 +19,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
     ],
-    install_requires=['setuptools'],
+    install_requires = install_requires,
     zip_safe=True,
     maintainer='Doga Ozgulbas and Alan Wang',
     maintainer_email='dozgulbas@anl.gov',
