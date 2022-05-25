@@ -13,7 +13,7 @@ with open('requirements.txt') as reqs:
 setup(
     name=package_name,
     version='0.0.0',
-    packages=[package_name, 'database', 'protocol_handler', 'zeroMQ_OT2', 'vision_pipette', 'ZeroMQ_External', 'doga_tests'],
+    packages=[package_name, 'database', 'protocol_handler', 'zeroMQ_OT2', 'ZeroMQ_External'],
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
