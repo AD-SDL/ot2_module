@@ -23,7 +23,7 @@ def transfer(local_path, user, host_ip):
 
 		#Setup SCP transfer
 		scp = SCPClient(client.get_transport())
-		scp.put(local_path, recursive=True, remote_path='/tmp') #TODO: OT2 have a folder called data where the protocols are suppose to be stored 
+		scp.put(local_path, recursive=True, remote_path='/data') #TODO: OT2 have a folder called data where the protocols are suppose to be stored 
 	except paramiko.AuthenticationException:
 		print("Authentication failed, please verify your credentials: %s")
 		return 1 # error

@@ -17,7 +17,7 @@ def handler(Protocol_ID, user, ip, port):
         return "", "", 1
 
     #print(protocol)
-    msg_error, msg_output, msg_errorcode = send_message_to_OT2("python3 "+ "/tmp/" + protocol.split("/")[-1], user, ip, port)
+    msg_error, msg_output, msg_errorcode = send_message_to_OT2("python3 "+ "/data/" + protocol.split("/")[-1], user, ip, port)
     
     return msg_output, msg_error, msg_errorcode
 
