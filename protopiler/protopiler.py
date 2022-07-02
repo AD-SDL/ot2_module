@@ -1,6 +1,7 @@
 import re
-import yaml
+import copy
 import json
+import yaml
 import argparse
 from pathlib import Path
 from itertools import repeat
@@ -38,6 +39,7 @@ PathLike = Union[Path, str]
 class Labware(BaseSettings):
     name: str
     location: str
+    alias: Optional[str]
 
 
 class Pipette(BaseSettings):
@@ -45,24 +47,13 @@ class Pipette(BaseSettings):
     mount: str
 
 
-# Command containers
-class Instruction(BaseSettings):
-    directive: Optional[str] = None
-    dim: Optional[str] = None
-    iters: Optional[int] = None
-
-
+# Command container
 class Command(BaseSettings):
     name: Optional[str]
     source: Union[List[str], str]
     destination: Union[str, List[str]]
     volume: Union[int, List[int]]
-    instruction: Optional[Instruction] = None
     drop_tip: bool = True
-
-
-class Commands(BaseSettings):
-    commands: List[Command]
 
 
 # metadata container
@@ -117,6 +108,7 @@ class ProtoPiler:
             self.metadata = self.config.get("metadata", None)
 
             # load the labware
+            # TODO: split this into a method like process commands?
             for data in self.config["equipment"]:
                 if isinstance(data, dict) and len(data) == 1:  # it is in form {"name": {'info': info }}
                     for _name, elem_data in data.items():
@@ -131,7 +123,11 @@ class ProtoPiler:
                         self.pipettes.append(Pipette(**data))
 
             # load the commands
-            self.commands = Commands(commands=[Command(**data) for data in self.config["commands"]])
+            # TODO: figure out how to add the alias tag before a list e.g
+            # source:[A1, A2, ...], it should accept [source:A1, source:A2, dest:A4 ...] right now, but check it
+            self.commands = [Command(**data) for data in self.config["commands"]]
+            # post process on commands to accept alias:[str...]
+            self._postprocess_commands()
 
         else:
             raise Exception("Unknown configuration file format")
@@ -144,6 +140,7 @@ class ProtoPiler:
         # generate name -> location and location -> name relationships for labware
         self.labware_to_location = {}
         self.location_to_labware = {}
+        self.alias_to_location = {}
 
         self.pipette_to_mount = {}
         self.mount_to_pipette = {}
@@ -158,6 +155,12 @@ class ProtoPiler:
                 raise Exception("Labware location overloaded, please check configuration")
             self.location_to_labware[element.location] = element.name
 
+            if element.alias:
+                self.alias_to_location[element.alias] = element.location
+
+            # adding both the alias and the location just in case the user uses it interchangeably
+            self.alias_to_location[element.location] = element.location
+
         for element in self.pipettes:
             if element.mount in self.mount_to_pipette:
                 raise Exception("Pipette location overloaded, please check configuration")
@@ -168,6 +171,47 @@ class ProtoPiler:
                 self.pipette_to_mount[element.name].append(element.mount)
             else:
                 self.pipette_to_mount[element.name] = [element.mount]
+
+    def _postprocess_commands(self) -> None:  # Could use more testing
+        for command in self.commands:
+            if ":[" in command.source:
+                new_locations = []
+                alias = command.source.split(":")[0]
+                process_source = copy.deepcopy(command.source)
+                process_source = ":".join(process_source.split(":")[1:])  # split and rejoin after first colon
+                process_source = process_source.strip("][").split(", ")
+
+                for location in process_source:
+                    if len(location) == 0:  # Handles list that end like this: ...A3, A4, ]
+                        continue
+                    new_location = None
+                    if ":" not in location:
+                        new_location = f"{alias}:{location}"
+                        new_locations.append(new_location)
+                    else:
+                        new_locations.append(location)
+
+                command.source = new_locations
+
+            if ":[" in command.destination:
+                new_locations = []
+                alias = command.destination.split(":")[0]
+                process_destination = copy.deepcopy(command.destination)
+                process_destination = ":".join(
+                    process_destination.split(":")[1:]
+                )  # split and rejoin after first colon
+                process_destination = process_destination.strip("][").split(", ")
+                for location in process_destination:
+                    if len(location) == 0:  # Handles list that end like this: ...A3, A4, ]
+                        continue
+                    new_location = None
+                    if ":" not in location:
+                        new_location = f"{alias}:{location}"
+                        new_locations.append(new_location)
+                    else:
+                        new_locations.append(location)
+
+                command.destination = new_locations
 
     def yaml_to_protocol(self, out_file: PathLike) -> None:
 
@@ -252,7 +296,7 @@ class ProtoPiler:
         drop_tip_template = open((self.template_dir / "drop_tip.template")).read()
 
         tip_loaded = {"left": False, "right": False}
-        for i, command_block in enumerate(self.commands.commands):
+        for i, command_block in enumerate(self.commands):
 
             block_name = command_block.name if command_block.name is not None else f"command {i}"
             commands.append(f"\n\t# {block_name}")
@@ -269,20 +313,23 @@ class ProtoPiler:
                     tip_loaded[pipette_mount] = True
 
                 # aspirate and dispense
-                # find wellplate TODO: what happens with more than one wellplate
-                # should accomodate in find wellplate method
-                wellplate_location = self._find_wellplate()
-                if wellplate_location is None:
-                    raise Exception("No wellplate found")
+                src_wellplate_location = self._find_wellplate(src)
+                src_well = src.split(":")[-1]  # should handle things not formed like loc:well
 
                 aspirate_command = aspirate_template.replace("#pipette#", f'pipettes["{pipette_mount}"]')
                 aspirate_command = aspirate_command.replace("#volume#", str(volume))
-                aspirate_command = aspirate_command.replace("#src#", f'deck["{wellplate_location}"]["{src}"]')
+                aspirate_command = aspirate_command.replace(
+                    "#src#", f'deck["{src_wellplate_location}"]["{src_well}"]'
+                )
                 commands.append(aspirate_command)
 
+                dst_wellplate_location = self._find_wellplate(dst)
+                dst_well = dst.split(":")[-1]  # should handle things not formed like loc:well
                 dispense_command = dispense_template.replace("#pipette#", f'pipettes["{pipette_mount}"]')
                 dispense_command = dispense_command.replace("#volume#", str(volume))
-                dispense_command = dispense_command.replace("#dst#", f'deck["{wellplate_location}"]["{dst}"]')
+                dispense_command = dispense_command.replace(
+                    "#dst#", f'deck["{dst_wellplate_location}"]["{dst_well}"]'
+                )
                 commands.append(dispense_command)
 
                 if command_block.drop_tip:
@@ -314,18 +361,29 @@ class ProtoPiler:
 
         return pipette
 
-    def _find_wellplate(self) -> str:
+    def _find_wellplate(self, command_location: str) -> str:
         location = None
+        if ":" in command_location:  # new format, pass a wellplate location, then well location
+            try:
+                plate, _ = command_location.split(":")
+            except ValueError:
+                raise Exception(f"Command: {command_location} is not formatted correctly...")
 
-        for name, loc in self.labware_to_location.items():
-            if "well" in name:
-                if location is not None:
-                    print(f"Location {location} is overwritten with {loc}, multiple wellplates present")
-                if type(loc) is list:
-                    # TODO: determine correct one to take if more than one wellplate, currently take first one
-                    location = loc[0]
-                elif type(loc) is str:
-                    location = loc
+            location = self.alias_to_location[plate]
+        else:  # older format of passing location
+            for name, loc in self.labware_to_location.items():
+                if "well" in name:
+                    if location is not None:
+                        print(f"Location {location} is overwritten with {loc}, multiple wellplates present")
+                    if type(loc) is list and len(loc) > 1:
+                        print(
+                            f"Ambiguous command '{command_location}', multiple plates satisfying params (locations: {loc}) found, choosing location: {loc[0]}..."
+                        )
+                        location = loc[0]
+                    elif type(loc) is list and len(loc) == 1:
+                        location = loc[0]
+                    elif type(loc) is str:
+                        location = loc
 
         return location
 
@@ -364,7 +422,9 @@ class ProtoPiler:
                     if len(command_block.destination) == 1:
                         command_block.destination = command_block.destination[0]
                     else:
-                        raise Exception("Multiple iterables found, cannot deterine dimension to iterate over")
+                        raise Exception(
+                            "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
+                        )
                 iter_len = len(command_block.destination)
 
             if not isinstance(command_block.volume, list):
@@ -384,7 +444,7 @@ class ProtoPiler:
                 yield vol, src, dst
 
     """
-    Everything under here is for getting a config from an existing protocol
+    Everything under here is for getting a config from an existing protocol, currently a work in progress...
     """
 
     def protocol_to_yaml(self, protocol_path: PathLike, yaml_path: PathLike) -> None:
