@@ -19,7 +19,7 @@ def transfer(local_path, user, host_ip):
 		client.load_system_host_keys()
 		client.set_missing_host_key_policy(AutoAddPolicy())
 		#client.connect(host_ip, username= user, password = passwd)
-		client.connect(host_ip, username=user)
+		client.connect(host_ip, username=user,disabled_algorithms={'pubkeys': ['rsa-sha2-256', 'rsa-sha2-512']})
 
 		#Setup SCP transfer
 		scp = SCPClient(client.get_transport())
@@ -44,3 +44,6 @@ def transfer(local_path, user, host_ip):
 
 def main_null():
 	print("This function is not meant to have a main function")
+
+#if __name__ == "__main__":
+#    transfer(,"root","10.140.54.14")
