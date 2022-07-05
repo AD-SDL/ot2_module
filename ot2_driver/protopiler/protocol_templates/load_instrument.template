@@ -1,0 +1,1 @@
+    pipettes[#mount#] = protocol.load_instrument(#name#, #mount#, tip_racks=[#tip_racks#])

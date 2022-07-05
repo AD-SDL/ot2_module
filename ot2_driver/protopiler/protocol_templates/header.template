@@ -1,0 +1,9 @@
+from opentrons import protocol_api
+
+
+#metadata#
+
+def run(protocol: protocol_api.ProtocolContext):
+
+    deck = {} 
+    pipettes = {} 
