@@ -1,1 +1,0 @@
-    deck[#location#] = protocol.load_labware(#name#, #location#)
