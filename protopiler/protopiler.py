@@ -71,9 +71,7 @@ class ProtoPiler:
 
         self._parse_config()
 
-    def _parse_config(
-        self,
-    ) -> None:
+    def _parse_config(self,) -> None:
         """Create a programatic representation of ot2 protocol setup and execution
             provided by YAML
 
@@ -123,10 +121,8 @@ class ProtoPiler:
                         self.pipettes.append(Pipette(**data))
 
             # load the commands
-            # TODO: figure out how to add the alias tag before a list e.g
-            # source:[A1, A2, ...], it should accept [source:A1, source:A2, dest:A4 ...] right now, but check it
             self.commands = [Command(**data) for data in self.config["commands"]]
-            # post process on commands to accept alias:[str...]
+            # post process on commands to accept alias:[str...] and [alias:loc] form
             self._postprocess_commands()
 
         else:
@@ -145,6 +141,7 @@ class ProtoPiler:
         self.pipette_to_mount = {}
         self.mount_to_pipette = {}
 
+        # generate labware -> location and location -> labware association
         for element in self.labware:
             if element.name in self.labware_to_location:
                 self.labware_to_location[element.name].append(element.location)
@@ -162,6 +159,7 @@ class ProtoPiler:
             self.alias_to_location[element.location] = element.location
 
         for element in self.pipettes:
+            # Generate pipette -> mount association
             if element.mount in self.mount_to_pipette:
                 raise Exception("Pipette location overloaded, please check configuration")
 
@@ -173,6 +171,27 @@ class ProtoPiler:
                 self.pipette_to_mount[element.name] = [element.mount]
 
     def _postprocess_commands(self) -> None:  # Could use more testing
+        """Processes the commands to support the alias syntax.
+
+
+        In short, this method will accept commands of the sort:
+            ```
+              - name: example command
+                source: source:[A1, A2, A3]
+                destination: dest:[B1, B2, B3]
+                volume: 100
+            ```
+        or:
+            ```
+              - name: example command
+                source: [source:A1, alias:A2, source:A3]
+                destination: [dest:B1, dest:B2, dest:B3]
+                volume: 100
+            ```
+        You can also mix and match, provide a global alias outside the brackets and keep some of the aliases inside.
+        The inside alias will always overrule the outside alias.
+        """
+        # TODO: do more testing of this function
         for command in self.commands:
             if ":[" in command.source:
                 new_locations = []
@@ -214,6 +233,16 @@ class ProtoPiler:
                 command.destination = new_locations
 
     def yaml_to_protocol(self, out_file: PathLike) -> None:
+        """Public function that provides entrance to the protopiler. Creates the protocol.py file from a configuration
+
+        TODO: Might want to make the protopiler take the config here instead of the constructor.
+        probably don't necesarily want to make a new protopiler for each config we end up with.
+
+        Parameters
+        ----------
+        out_file : PathLike
+            The path to the protocol py file that will be created.
+        """
 
         protocol = []
 
@@ -259,6 +288,20 @@ class ProtoPiler:
             f.write("\n".join(protocol))
 
     def _find_valid_tipracks(self, pipette_name: str) -> List[str]:
+        """Finds the valid tipracks for a given pipette
+
+        TODO: If we end up with custom labware, either make sure it follows the opentrons naming scheme, or change this function.
+
+        Parameters
+        ----------
+        pipette_name : str
+            the opentrons API name for the pipette. Contains the volume of the pipette
+
+        Returns
+        -------
+        List[str]
+            A list of strings formatted correctly for the protocol. Of the form `'deck["{location}"]'`
+        """
 
         pip_volume_pattern = re.compile(r"p\d{2,}")
         rack_volume_pattern = re.compile(r"\d{2,}ul$")
@@ -275,9 +318,7 @@ class ProtoPiler:
 
         return valid_tipracks
 
-    def _create_commands(
-        self,
-    ) -> List[str]:
+    def _create_commands(self,) -> List[str]:
         """Creates the flow of commands for the OT2 to run
 
         Raises:
@@ -347,6 +388,18 @@ class ProtoPiler:
         return commands
 
     def _determine_instrument(self, target_volume: int) -> str:
+        """Determines which pippette to use for a given volume
+
+        Parameters
+        ----------
+        target_volume : int
+            The volume (in microliters) to be aspirated
+
+        Returns
+        -------
+        str
+            The location (in string form) of the pipette we are going to use. Either `right` or `left`
+        """
         pipette = None
         min_available = float("inf")
         pip_volume_pattern = re.compile(r"\d{2,}")
@@ -362,6 +415,23 @@ class ProtoPiler:
         return pipette
 
     def _find_wellplate(self, command_location: str) -> str:
+        """Finds the correct wellplate give the commands location
+
+        Parameters
+        ----------
+        command_location : str
+            The raw command coming from the input file. Form: `alias:Well` or `Well`. Function accepts both
+
+        Returns
+        -------
+        str
+            The wellplate location in string form (will be in range 1-9, due to ot2 deck size)
+
+        Raises
+        ------
+        Exception
+            If the command is not formatted correctly, it should get caught before this, but if not I check here
+        """
         location = None
         if ":" in command_location:  # new format, pass a wellplate location, then well location
             try:
@@ -388,6 +458,26 @@ class ProtoPiler:
         return location
 
     def _process_instruction(self, command_block: Command) -> List[str]:
+        """Processes a command block to translate into the protocol information.
+
+        Supports unrolling over any dimension, syntactic sugar at best, but might come in handy someday
+
+        Parameters
+        ----------
+        command_block : Command
+            The command dataclass parsed directly from the file. See the `example_configs/` directory for examples.
+
+        Returns
+        -------
+        List[str]
+            Yields a triple of [volume, source, destination] values until there are no values left to be consumed
+
+        Raises
+        ------
+        Exception
+            If the command is not formatted correctly and there are different dimension iterables present, exception is raised.
+            This function either supports one field being an iterable with length >1, or they all must be iterables with the same length.
+        """
         if (
             type(command_block.volume) is int
             and type(command_block.source) is str
