@@ -5,5 +5,5 @@ from opentrons import protocol_api
 
 def run(protocol: protocol_api.ProtocolContext):
 
-    deck = {} 
-    pipettes = {} 
+    deck = {}
+    pipettes = {}

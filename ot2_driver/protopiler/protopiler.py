@@ -5,6 +5,7 @@ import yaml
 import argparse
 from pathlib import Path
 from itertools import repeat
+from datetime import datetime
 from typing import List, Optional, TypeVar, Union, Dict, Type
 
 from pydantic import BaseSettings as _BaseSettings
@@ -65,10 +66,22 @@ class Metadata(BaseSettings):
 
 
 class ProtoPiler:
-    def __init__(self, config_path: PathLike, template_dir: PathLike = Path("./protocol_templates")) -> None:
+    def __init__(
+        self,
+        config_path: Optional[PathLike] = None,
+        template_dir: PathLike = Path("./protocol_templates"),
+        resource_tracking: bool = False,
+    ) -> None:
         self.template_dir = template_dir
-        self.config = yaml.safe_load(open(config_path))
+        self.resource_tracking = resource_tracking
 
+        self.config = None
+        if config_path:
+            self.load_config(config_path)
+
+    def load_config(self, config_path: PathLike) -> None:
+        self.config_path = config_path
+        self.config = yaml.safe_load(open(config_path))
         self._parse_config()
 
     def _parse_config(self,) -> None:
@@ -232,47 +245,58 @@ class ProtoPiler:
 
                 command.destination = new_locations
 
-    def _setup_tracker(self, resource_tracker: dict) -> None:
-        """Things to track:
+    def _reset(self,) -> None:
+        """Reset the class so that another config can be parsed without side effects
 
-        - pipette tips used
-        - wells used
-        - quantities of liquids used?
 
-        Parameters
-        ----------
-        resource_tracker : dict
-            dictionary setup with keys/vals to track resource usage of a config/protocol
+        TODO: this is messy, and seems to break the 'idea' of classes, think of how to avoid this
         """
+        self.config = None
+        self.metadata = None
+        self.labware = None
+        self.pipettes = None
+        self.commands = None
 
-        for name, location in self.labware_to_location.items():
-            if isinstance(location, list):
-                for loc in location:
-                    resource_tracker[loc] = {"name": name, "used": 0, "depleted": False}
-                    if "wellplate" in name:  # adding the wellplate set tracker
-                        resource_tracker[loc]["wells_used"] = set()
-            else:
-                resource_tracker[location] = {"name": name, "used": 0, "depleted": False}
-                if "wellplate" in name:  # adding the wellplate set tracker
-                    resource_tracker[location]["wells_used"] = set()
+        self.labware_to_location = None
+        self.location_to_labware = None
+        self.alias_to_location = None
+
+        self.pipette_to_mount = None
+        self.mount_to_pipette = None
 
     def yaml_to_protocol(
-        self, out_file: PathLike, resource_file: Optional[PathLike] = None, track: bool = False
+        self,
+        config_path: Optional[PathLike] = None,
+        out_file: PathLike = Path(f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"),
+        resource_file: Optional[PathLike] = None,
+        resource_tracking: bool = True,
+        reset_when_done: bool = True,
     ) -> None:
-        """Public function that provides entrance to the protopiler. Creates the protocol.py file from a configuration
-
-        TODO: Might want to make the protopiler take the config here instead of the constructor.
-        probably don't necesarily want to make a new protopiler for each config we end up with.
+        """Public function that provides entrance to the protopiler. Creates the OT2 *.py file from a configuration
 
         Parameters
         ----------
-        out_file : PathLike
-            The path to the protocol py file that will be created.
+        config_path : Optional[PathLike], optional
+            Path to the config.yml file, by default None, can be passed to constructor
+        out_file : PathLike, optional
+            path to save the protocol file to, by default Path(f"./protocol_{datetime.now().strftime('%Y%m-%d%H-%M%S')}.py")
+        resource_file : Optional[PathLike], optional
+            If we are tracking resources, this is where the file will be saved, by default None and will mirror the protocol file naming
+        reset_when_done : bool, optional
+            reset the class variables when done, by default True
         """
+
+        if not self.config:
+            self.load_config(config_path)
+
+        if self.resource_tracking != resource_tracking:
+            track_this_config = resource_tracking
+        else:
+            track_this_config = self.resource_tracking
 
         protocol = []
         resource_tracker = None
-        if track:
+        if track_this_config:
             resource_tracker = {}
             self._setup_tracker(resource_tracker)
 
@@ -285,7 +309,7 @@ class ProtoPiler:
         protocol.append(header)
 
         # load labware and pipette
-        protocol.append("\n\t# load labware")
+        protocol.append("\n    ################\n    # load labware #\n    ################")
 
         labware_block = open((self.template_dir / "load_labware.template")).read()
         for location, name in self.location_to_labware.items():
@@ -310,7 +334,8 @@ class ProtoPiler:
             protocol.append(pipette_command)
 
         # execute commands
-        protocol.append("\n\t## execute commands ##")
+        protocol.append("\n    ####################\n    # execute commands #\n    ####################")
+
         commands_python = self._create_commands(resource_tracker)
         protocol.extend(commands_python)
 
@@ -319,7 +344,7 @@ class ProtoPiler:
         with open(out_file, "w") as f:
             f.write("\n".join(protocol))
 
-        if track:
+        if track_this_config:
             # prune the set datatype, we shouldn't need it
             for location in resource_tracker.keys():
                 resource_tracker[location].pop("wells_used", None)  # returns none if DNE
@@ -329,6 +354,33 @@ class ProtoPiler:
 
             with open(resource_file, "w") as f:
                 json.dump(resource_tracker, f, indent=2)
+
+        if reset_when_done:
+            self._reset()
+
+    def _setup_tracker(self, resource_tracker: dict) -> None:
+        """Things to track:
+
+        - pipette tips used
+        - wells used
+        - quantities of liquids used?
+
+        Parameters
+        ----------
+        resource_tracker : dict
+            dictionary setup with keys/vals to track resource usage of a config/protocol
+        """
+
+        for name, location in self.labware_to_location.items():
+            if isinstance(location, list):
+                for loc in location:
+                    resource_tracker[loc] = {"name": name, "used": 0, "depleted": False}
+                    if "wellplate" in name:  # adding the wellplate set tracker
+                        resource_tracker[loc]["wells_used"] = set()
+            else:
+                resource_tracker[location] = {"name": name, "used": 0, "depleted": False}
+                if "wellplate" in name:  # adding the wellplate set tracker
+                    resource_tracker[location]["wells_used"] = set()
 
     def _find_valid_tipracks(self, pipette_name: str) -> List[str]:
         """Finds the valid tipracks for a given pipette
@@ -384,7 +436,7 @@ class ProtoPiler:
         for i, command_block in enumerate(self.commands):
 
             block_name = command_block.name if command_block.name is not None else f"command {i}"
-            commands.append(f"\n\t# {block_name}")
+            commands.append(f"\n    # {block_name}")
             for (volume, src, dst) in self._process_instruction(command_block):
                 # determine which pipette to use
                 pipette_mount = self._determine_instrument(volume)
@@ -642,8 +694,6 @@ class ProtoPiler:
                     metadata_flag = True
 
                 if "{" in line and "}" in line:
-                    print(line)
-                    print("one-liner")
                     metadata = line.split("=")[-1]
                     metadata = json.loads(metadata)
                     metadata_flag = False
@@ -702,9 +752,18 @@ def parse_args() -> argparse.Namespace:
 
 
 def main(config_path):
-    ppiler = ProtoPiler(config_path)
+    # TODO: Think about how a user would want to interact with this, do they want to interact with something like a
+    # SeqIO from Biopython? Or more like a interpreter kind of thing? That will guide some of this... not sure where
+    # its going right now
+    ppiler = ProtoPiler()
 
-    ppiler.yaml_to_protocol(out_file="test_protocol.py", resource_file="test_resources.json", track=True)
+    ppiler.yaml_to_protocol(
+        config_path=config_path,
+        out_file="./test_protocol.py",
+        resource_file="./test_resources.json",
+        resource_tracking=True,
+        reset_when_done=True,
+    )
 
 
 if __name__ == "__main__":
