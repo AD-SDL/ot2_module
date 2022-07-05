@@ -232,7 +232,33 @@ class ProtoPiler:
 
                 command.destination = new_locations
 
-    def yaml_to_protocol(self, out_file: PathLike) -> None:
+    def _setup_tracker(self, resource_tracker: dict) -> None:
+        """Things to track:
+
+        - pipette tips used
+        - wells used
+        - quantities of liquids used?
+
+        Parameters
+        ----------
+        resource_tracker : dict
+            dictionary setup with keys/vals to track resource usage of a config/protocol
+        """
+
+        for name, location in self.labware_to_location.items():
+            if isinstance(location, list):
+                for loc in location:
+                    resource_tracker[loc] = {"name": name, "used": 0, "depleted": False}
+                    if "wellplate" in name:  # adding the wellplate set tracker
+                        resource_tracker[loc]["wells_used"] = set()
+            else:
+                resource_tracker[location] = {"name": name, "used": 0, "depleted": False}
+                if "wellplate" in name:  # adding the wellplate set tracker
+                    resource_tracker[location]["wells_used"] = set()
+
+    def yaml_to_protocol(
+        self, out_file: PathLike, resource_file: Optional[PathLike] = None, track: bool = False
+    ) -> None:
         """Public function that provides entrance to the protopiler. Creates the protocol.py file from a configuration
 
         TODO: Might want to make the protopiler take the config here instead of the constructor.
@@ -245,6 +271,10 @@ class ProtoPiler:
         """
 
         protocol = []
+        resource_tracker = None
+        if track:
+            resource_tracker = {}
+            self._setup_tracker(resource_tracker)
 
         # Header and run() declaration with initial deck and pipette dicts
         header = open((self.template_dir / "header.template")).read()
@@ -271,21 +301,34 @@ class ProtoPiler:
             pipette_command = pipette_command.replace("#mount#", f'"{mount}"')
 
             # get valid tipracks
-            valid_tipracks = self._find_valid_tipracks(name)
-            if len(valid_tipracks) == 0:
+            valid_tiprack_locations = self._find_valid_tipracks(name)
+            if len(valid_tiprack_locations) == 0:
                 print(f"Warning, no tipracks found for: {name}")
-            pipette_command = pipette_command.replace("#tip_racks#", ",".join(valid_tipracks))
+            pipette_command = pipette_command.replace(
+                "#tip_racks#", ", ".join([f'deck["{loc}"]' for loc in valid_tiprack_locations])
+            )
             protocol.append(pipette_command)
 
         # execute commands
-        protocol.append("\n\t# execute commands")
-        commands_python = self._create_commands()
+        protocol.append("\n\t## execute commands ##")
+        commands_python = self._create_commands(resource_tracker)
         protocol.extend(commands_python)
 
         # TODO: anything to write for closing?
 
         with open(out_file, "w") as f:
             f.write("\n".join(protocol))
+
+        if track:
+            # prune the set datatype, we shouldn't need it
+            for location in resource_tracker.keys():
+                resource_tracker[location].pop("wells_used", None)  # returns none if DNE
+            if not resource_file:
+                name = f"{out_file.stem}_resources.json"
+                resource_file = Path(out_file).parent / name
+
+            with open(resource_file, "w") as f:
+                json.dump(resource_tracker, f, indent=2)
 
     def _find_valid_tipracks(self, pipette_name: str) -> List[str]:
         """Finds the valid tipracks for a given pipette
@@ -300,7 +343,8 @@ class ProtoPiler:
         Returns
         -------
         List[str]
-            A list of strings formatted correctly for the protocol. Of the form `'deck["{location}"]'`
+            A list of string integers representing the location of the valid tipracks on the deck `['1', '2', ... ]`
+
         """
 
         pip_volume_pattern = re.compile(r"p\d{2,}")
@@ -314,11 +358,11 @@ class ProtoPiler:
                 vol = int(matches.group().replace("ul", ""))
                 if vol == pip_volume:
                     for location in locations:
-                        valid_tipracks.append(f'deck["{location}"]')
+                        valid_tipracks.append(str(location))
 
         return valid_tipracks
 
-    def _create_commands(self,) -> List[str]:
+    def _create_commands(self, resource_tracker: Optional[dict] = None) -> List[str]:
         """Creates the flow of commands for the OT2 to run
 
         Raises:
@@ -352,6 +396,31 @@ class ProtoPiler:
                     load_command = pick_tip_template.replace("#pipette#", f'pipettes["{pipette_mount}"]')
                     commands.append(load_command)
                     tip_loaded[pipette_mount] = True
+                    if resource_tracker:
+                        # TODO: need to figure out which tiprack it is pulling from. How does OT2 handle multiple tipracks
+                        # For now assume its in the order its stored in the dict (i know it shouldnt be constant, but in python3.8 it is...)
+                        pipette_name = self.mount_to_pipette[pipette_mount]
+                        tiprack_locations = self._find_valid_tipracks(pipette_name)
+                        updated_tiprack_usage = False
+                        for rack_location in tiprack_locations:
+                            rack_capacity = int(
+                                self.location_to_labware[rack_location].split("_")[1]
+                            )  # TODO: highly dependent on opentrons naming
+                            if resource_tracker[rack_location]["used"] >= rack_capacity:
+                                resource_tracker[rack_location]["depleted"] = True
+                                continue
+
+                            resource_tracker[rack_location]["used"] += 1
+                            updated_tiprack_usage = True
+
+                            # check if that was the last tip
+                            if resource_tracker[rack_location]["used"] >= rack_capacity:
+                                resource_tracker[rack_location]["depleted"] = True
+
+                            break  # just need the first one that has space
+
+                        if not updated_tiprack_usage:  # we know we ran out of tips
+                            raise Exception("No more tips, protocol does not have enough resources...")
 
                 # aspirate and dispense
                 src_wellplate_location = self._find_wellplate(src)
@@ -363,6 +432,12 @@ class ProtoPiler:
                     "#src#", f'deck["{src_wellplate_location}"]["{src_well}"]'
                 )
                 commands.append(aspirate_command)
+                # update resources if exist
+                if resource_tracker:
+                    resource_tracker[src_wellplate_location]["wells_used"].add(src_well)
+                    resource_tracker[src_wellplate_location]["used"] = len(
+                        resource_tracker[src_wellplate_location]["wells_used"]
+                    )
 
                 dst_wellplate_location = self._find_wellplate(dst)
                 dst_well = dst.split(":")[-1]  # should handle things not formed like loc:well
@@ -372,6 +447,12 @@ class ProtoPiler:
                     "#dst#", f'deck["{dst_wellplate_location}"]["{dst_well}"]'
                 )
                 commands.append(dispense_command)
+                # update resources if exist
+                if resource_tracker:
+                    resource_tracker[dst_wellplate_location]["wells_used"].add(dst_well)
+                    resource_tracker[dst_wellplate_location]["used"] = len(
+                        resource_tracker[dst_wellplate_location]["wells_used"]
+                    )
 
                 if command_block.drop_tip:
                     drop_command = drop_tip_template.replace("#pipette#", f'pipettes["{pipette_mount}"]')
@@ -489,6 +570,10 @@ class ProtoPiler:
             # could be one source (either list of volumes or one volume) to many desitnation
             # could be many sources (either list of volumes or one volume) to one destination
             # could be one source/destination, many volumes
+
+            # TODO: think about optimizatoins. e.g if you are dispensing from one well to multiple
+            # destinations, we could pick up the sum of the volumes and drop into each well without
+            # the whole dispense, drop tip, pick up tip, aspirate in the middle
 
             # since we are here we know at least one of the things is a list
             iter_len = 0
@@ -619,7 +704,7 @@ def parse_args() -> argparse.Namespace:
 def main(config_path):
     ppiler = ProtoPiler(config_path)
 
-    ppiler.yaml_to_protocol(out_file="test_out.py")
+    ppiler.yaml_to_protocol(out_file="test_protocol.py", resource_file="test_resources.json", track=True)
 
 
 if __name__ == "__main__":
