@@ -3,3 +3,5 @@ mysql-connector
 paramiko
 rich
 scp
+pyaml
+pydantic
