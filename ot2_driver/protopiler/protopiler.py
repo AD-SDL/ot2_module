@@ -10,6 +10,16 @@ from typing import List, Optional, TypeVar, Union, Dict, Type
 
 from pydantic import BaseSettings as _BaseSettings
 
+
+""" Things to do: 
+        [ ] take in current resources, if empty default is full
+        [ ] allow partial tipracks, specify the tip location in the out protocol.py
+        [ ] resource manager as like a parasite class, just pass it around and update as needed 
+        [ ] dispatch jobs? 
+        [ ] logging (both of state of robot and standard python logging) goal is to get to globus levels of logging 
+
+"""
+
 _T = TypeVar("_T")
 
 PathLike = Union[str, Path]
@@ -84,7 +94,9 @@ class ProtoPiler:
         self.config = yaml.safe_load(open(config_path))
         self._parse_config()
 
-    def _parse_config(self,) -> None:
+    def _parse_config(
+        self,
+    ) -> None:
         """Create a programatic representation of ot2 protocol setup and execution
             provided by YAML
 
@@ -245,7 +257,9 @@ class ProtoPiler:
 
                 command.destination = new_locations
 
-    def _reset(self,) -> None:
+    def _reset(
+        self,
+    ) -> None:
         """Reset the class so that another config can be parsed without side effects
 
 
@@ -436,6 +450,7 @@ class ProtoPiler:
         for i, command_block in enumerate(self.commands):
 
             block_name = command_block.name if command_block.name is not None else f"command {i}"
+            print(block_name, command_block.drop_tip)
             commands.append(f"\n    # {block_name}")
             for (volume, src, dst) in self._process_instruction(command_block):
                 # determine which pipette to use
@@ -513,10 +528,10 @@ class ProtoPiler:
 
                 commands.append("")
 
-            for mount, status in tip_loaded.items():
-                if status:
-                    commands.append(drop_tip_template.replace("#pipette#", f'pipettes["{mount}"]'))
-                    tip_loaded[mount] = False
+        for mount, status in tip_loaded.items():
+            if status:
+                commands.append(drop_tip_template.replace("#pipette#", f'pipettes["{mount}"]'))
+                tip_loaded[mount] = False
 
         return commands
 
