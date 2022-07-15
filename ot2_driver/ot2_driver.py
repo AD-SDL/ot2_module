@@ -1,9 +1,9 @@
-import subprocess
-from typing import Optional, Union
-from pathlib import Path
-import fabric
 import yaml
+import fabric
+import subprocess
+from pathlib import Path
 from pydantic import BaseModel
+from typing import Optional, Union
 from argparse import ArgumentParser
 from protopiler.protopiler import ProtoPiler
 
