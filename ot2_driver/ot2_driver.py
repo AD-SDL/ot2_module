@@ -1,51 +1,87 @@
-# ROS Libraries
-import rclpy
-from rclpy.node import Node
-
-# Database functions
-from database.database_functions import *
-from database.database_functions import insert_protocol
-from protocol_handler.protocol_parser import *
-from protocol_handler.protocol_parser import protocol_parser
-from protocol_handler.protocol_handling_client import *
-from protocol_handler.protocol_handling_client import handler
-
-# Path libraries
+import subprocess
+from typing import Optional, Union
 from pathlib import Path
+import fabric
+import yaml
+from pydantic import BaseModel
+from argparse import ArgumentParser
+from protopiler.protopiler import ProtoPiler
 
-'''
-    This function uploads a protocol to the OT2 driver (however, the driver wishes to distribute it)
 
-    Input: Protocol Path, and a robot ID (that ROS will use later)
-    Output: A protocol_id for it to use to retrieve the just uploaded file
-'''
-def load_protocol(protocol_path, robot_id):
+class OT2_Config(BaseModel):
+    ip: str
+    ssh_key: str
+    model: str = "OT2"
+    version: Optional[int]
 
-    # insert error handling 
-    protocol_new_name = protocol_parser(protocol_path)
 
-    # insert protocol into database
-    path = Path()
-    home_location = str(path.home()) #TODO: switch to a less ROS dependent path (maybe in /tmp)
-    protocol_module_location = home_location + "/ot2_ws/src/ot2_workcell/Protocol_Modules/" # Get Protocol_Module location
-    protocol_id = insert_protocol(protocol_module_location + protocol_new_name, robot_id)
+class OT2_Driver:
+    def __init__(self, config: OT2_Config) -> None:
+        self.config: OT2_Config = config
+        self.protopiler: ProtoPiler = ProtoPiler(
+            template_dir=Path(
+                "/Users/kyle/github/ot2_driver/ot2_driver/protopiler/protocol_templates"
+            )
+        )
 
-    # Return protocol ID
-    return protocol_id
+    def _connect(self):
 
-'''
-    This function runs a given protocol (however, the driver wishes to load and then run and return output)
-    
-    Input: protocol_id, username, ip, and port (username, ip, and port are the username, ip, and port of internal OT2)
-    TODO: switch username, ip, and port to a config file ROS should not have to feed it in as input
-    Output: error_msg, output_msg, status_code (0-SUCCESS, 1-ERROR, 2-WARNING, 3-FATAL)
-'''
-def run_protocol(protocol_id, username, ip, port):
-    
-    return handler(protocol_id, username, ip, port)
+        return fabric.Connection(
+            host=self.config.ip,
+            user="root",
+            connect_kwargs={
+                "key_filename": [self.config.ssh_key],
+            },
+        )
 
-def main_null():
-    print("This is not meant to have a main function")
+    def compile_protocol(self, config_path):
+        self.protopiler.load_config(config_path=config_path)
 
-if __name__=='__main__':
-    main_null()
+        protocol_out_path = self.protopiler.yaml_to_protocol(config_path)
+
+        return protocol_out_path
+
+    def transfer(self, protocol_path: Union[Path, str], out_path: str = "/root"):
+        cmd = ["scp", "-r", protocol_path, f"root@{self.config.ip}:{out_path}"]
+
+        proc = subprocess.run(cmd)
+
+        return proc.returncode
+
+    def execute(self, remote_protcol_path: str):
+        conn = self._connect()
+        cmd = f"opentrons_execute {remote_protcol_path}"
+        print(conn.run(cmd))
+
+
+def main(args):
+    ot2s = []
+    for ot2_raw_cfg in yaml.safe_load(open(args.robot_config)):
+        ot2s.append(OT2_Driver(OT2_Config(**ot2_raw_cfg)))
+
+    ot2: OT2_Driver = ot2s[0]
+
+    out_path = ot2.compile_protocol(args.protocol_config)
+    returncode = ot2.transfer(out_path)
+
+    if returncode:
+        print("Exception raised when transferring")
+
+    ot2.execute(out_path)
+
+
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument(
+        "-rc", "--robot_config", type=Path, help="Path to config for OT2(s)"
+    )
+    parser.add_argument(
+        "-pc",
+        "--protocol_config",
+        type=Path,
+        help="Path to protocol config or protocol.py",
+        default=Path("./protopiler/example_configs/basic_config.yaml"),
+    )
+
+    args = parser.parse_args()
+    main(args)

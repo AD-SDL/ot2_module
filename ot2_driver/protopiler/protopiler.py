@@ -11,13 +11,14 @@ from typing import List, Optional, TypeVar, Union, Dict, Type
 from pydantic import BaseSettings as _BaseSettings
 
 
-""" Things to do: 
+""" Things to do:
         [ ] take in current resources, if empty default is full
         [ ] allow partial tipracks, specify the tip location in the out protocol.py
-        [ ] resource manager as like a parasite class, just pass it around and update as needed 
-        [ ] dispatch jobs? 
-        [ ] logging (both of state of robot and standard python logging) goal is to get to globus levels of logging 
-
+        [ ] resource manager as like a parasite class, just pass it around and update as needed
+        [ ] dispatch jobs?
+        [ ] logging (both of state of robot and standard python logging) goal is to get to globus levels of logging
+        [ ] connect to opentrons and execute, should be outside this file, but since it doesn't exist, I am doing this now
+        [ ] create smart templates, variable fields at the top that can be populated later
 """
 
 _T = TypeVar("_T")
@@ -126,14 +127,20 @@ class ProtoPiler:
         # as well as list like assignment
         # i.e i should be able to tell if a block is a labware/pipette vs a command block
 
-        if isinstance(self.config, dict) and "equipment" in self.config and "commands" in self.config:
+        if (
+            isinstance(self.config, dict)
+            and "equipment" in self.config
+            and "commands" in self.config
+        ):
             # load metadata, optional
             self.metadata = self.config.get("metadata", None)
 
             # load the labware
             # TODO: split this into a method like process commands?
             for data in self.config["equipment"]:
-                if isinstance(data, dict) and len(data) == 1:  # it is in form {"name": {'info': info }}
+                if (
+                    isinstance(data, dict) and len(data) == 1
+                ):  # it is in form {"name": {'info': info }}
                     for _name, elem_data in data.items():
                         if "location" in elem_data.keys():
                             self.labware.append(Labware(**elem_data))
@@ -174,7 +181,9 @@ class ProtoPiler:
                 self.labware_to_location[element.name] = [element.location]
 
             if element.location in self.location_to_labware:
-                raise Exception("Labware location overloaded, please check configuration")
+                raise Exception(
+                    "Labware location overloaded, please check configuration"
+                )
             self.location_to_labware[element.location] = element.name
 
             if element.alias:
@@ -186,7 +195,9 @@ class ProtoPiler:
         for element in self.pipettes:
             # Generate pipette -> mount association
             if element.mount in self.mount_to_pipette:
-                raise Exception("Pipette location overloaded, please check configuration")
+                raise Exception(
+                    "Pipette location overloaded, please check configuration"
+                )
 
             self.mount_to_pipette[element.mount] = element.name
 
@@ -222,11 +233,15 @@ class ProtoPiler:
                 new_locations = []
                 alias = command.source.split(":")[0]
                 process_source = copy.deepcopy(command.source)
-                process_source = ":".join(process_source.split(":")[1:])  # split and rejoin after first colon
+                process_source = ":".join(
+                    process_source.split(":")[1:]
+                )  # split and rejoin after first colon
                 process_source = process_source.strip("][").split(", ")
 
                 for location in process_source:
-                    if len(location) == 0:  # Handles list that end like this: ...A3, A4, ]
+                    if (
+                        len(location) == 0
+                    ):  # Handles list that end like this: ...A3, A4, ]
                         continue
                     new_location = None
                     if ":" not in location:
@@ -246,7 +261,9 @@ class ProtoPiler:
                 )  # split and rejoin after first colon
                 process_destination = process_destination.strip("][").split(", ")
                 for location in process_destination:
-                    if len(location) == 0:  # Handles list that end like this: ...A3, A4, ]
+                    if (
+                        len(location) == 0
+                    ):  # Handles list that end like this: ...A3, A4, ]
                         continue
                     new_location = None
                     if ":" not in location:
@@ -281,11 +298,13 @@ class ProtoPiler:
     def yaml_to_protocol(
         self,
         config_path: Optional[PathLike] = None,
-        out_file: PathLike = Path(f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"),
+        out_file: PathLike = Path(
+            f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
+        ),
         resource_file: Optional[PathLike] = None,
         resource_tracking: bool = True,
         reset_when_done: bool = True,
-    ) -> None:
+    ) -> Path:
         """Public function that provides entrance to the protopiler. Creates the OT2 *.py file from a configuration
 
         Parameters
@@ -317,13 +336,17 @@ class ProtoPiler:
         # Header and run() declaration with initial deck and pipette dicts
         header = open((self.template_dir / "header.template")).read()
         if self.metadata is not None:
-            header = header.replace("#metadata#", f"metadata = {json.dumps(self.metadata, indent=4)}")
+            header = header.replace(
+                "#metadata#", f"metadata = {json.dumps(self.metadata, indent=4)}"
+            )
         else:
             header = header.replace("#metadata#", "")
         protocol.append(header)
 
         # load labware and pipette
-        protocol.append("\n    ################\n    # load labware #\n    ################")
+        protocol.append(
+            "\n    ################\n    # load labware #\n    ################"
+        )
 
         labware_block = open((self.template_dir / "load_labware.template")).read()
         for location, name in self.location_to_labware.items():
@@ -343,12 +366,15 @@ class ProtoPiler:
             if len(valid_tiprack_locations) == 0:
                 print(f"Warning, no tipracks found for: {name}")
             pipette_command = pipette_command.replace(
-                "#tip_racks#", ", ".join([f'deck["{loc}"]' for loc in valid_tiprack_locations])
+                "#tip_racks#",
+                ", ".join([f'deck["{loc}"]' for loc in valid_tiprack_locations]),
             )
             protocol.append(pipette_command)
 
         # execute commands
-        protocol.append("\n    ####################\n    # execute commands #\n    ####################")
+        protocol.append(
+            "\n    ####################\n    # execute commands #\n    ####################"
+        )
 
         commands_python = self._create_commands(resource_tracker)
         protocol.extend(commands_python)
@@ -361,7 +387,9 @@ class ProtoPiler:
         if track_this_config:
             # prune the set datatype, we shouldn't need it
             for location in resource_tracker.keys():
-                resource_tracker[location].pop("wells_used", None)  # returns none if DNE
+                resource_tracker[location].pop(
+                    "wells_used", None
+                )  # returns none if DNE
             if not resource_file:
                 name = f"{out_file.stem}_resources.json"
                 resource_file = Path(out_file).parent / name
@@ -371,6 +399,8 @@ class ProtoPiler:
 
         if reset_when_done:
             self._reset()
+
+        return out_file
 
     def _setup_tracker(self, resource_tracker: dict) -> None:
         """Things to track:
@@ -392,7 +422,11 @@ class ProtoPiler:
                     if "wellplate" in name:  # adding the wellplate set tracker
                         resource_tracker[loc]["wells_used"] = set()
             else:
-                resource_tracker[location] = {"name": name, "used": 0, "depleted": False}
+                resource_tracker[location] = {
+                    "name": name,
+                    "used": 0,
+                    "depleted": False,
+                }
                 if "wellplate" in name:  # adding the wellplate set tracker
                     resource_tracker[location]["wells_used"] = set()
 
@@ -416,7 +450,9 @@ class ProtoPiler:
         pip_volume_pattern = re.compile(r"p\d{2,}")
         rack_volume_pattern = re.compile(r"\d{2,}ul$")
         # find suitable tipracks
-        pip_volume = int(pip_volume_pattern.search(pipette_name).group().replace("p", ""))
+        pip_volume = int(
+            pip_volume_pattern.search(pipette_name).group().replace("p", "")
+        )
         valid_tipracks = []
         for labware_name, locations in self.labware_to_location.items():
             matches = rack_volume_pattern.search(labware_name)
@@ -449,18 +485,23 @@ class ProtoPiler:
         tip_loaded = {"left": False, "right": False}
         for i, command_block in enumerate(self.commands):
 
-            block_name = command_block.name if command_block.name is not None else f"command {i}"
-            print(block_name, command_block.drop_tip)
+            block_name = (
+                command_block.name if command_block.name is not None else f"command {i}"
+            )
             commands.append(f"\n    # {block_name}")
             for (volume, src, dst) in self._process_instruction(command_block):
                 # determine which pipette to use
                 pipette_mount = self._determine_instrument(volume)
                 if pipette_mount is None:
-                    raise Exception(f"No pipette available for {block_name} with volume: {volume}")
+                    raise Exception(
+                        f"No pipette available for {block_name} with volume: {volume}"
+                    )
 
                 # check for tip
                 if not tip_loaded[pipette_mount]:
-                    load_command = pick_tip_template.replace("#pipette#", f'pipettes["{pipette_mount}"]')
+                    load_command = pick_tip_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
                     commands.append(load_command)
                     tip_loaded[pipette_mount] = True
                     if resource_tracker:
@@ -487,13 +528,19 @@ class ProtoPiler:
                             break  # just need the first one that has space
 
                         if not updated_tiprack_usage:  # we know we ran out of tips
-                            raise Exception("No more tips, protocol does not have enough resources...")
+                            raise Exception(
+                                "No more tips, protocol does not have enough resources..."
+                            )
 
                 # aspirate and dispense
                 src_wellplate_location = self._find_wellplate(src)
-                src_well = src.split(":")[-1]  # should handle things not formed like loc:well
+                src_well = src.split(":")[
+                    -1
+                ]  # should handle things not formed like loc:well
 
-                aspirate_command = aspirate_template.replace("#pipette#", f'pipettes["{pipette_mount}"]')
+                aspirate_command = aspirate_template.replace(
+                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                )
                 aspirate_command = aspirate_command.replace("#volume#", str(volume))
                 aspirate_command = aspirate_command.replace(
                     "#src#", f'deck["{src_wellplate_location}"]["{src_well}"]'
@@ -507,8 +554,12 @@ class ProtoPiler:
                     )
 
                 dst_wellplate_location = self._find_wellplate(dst)
-                dst_well = dst.split(":")[-1]  # should handle things not formed like loc:well
-                dispense_command = dispense_template.replace("#pipette#", f'pipettes["{pipette_mount}"]')
+                dst_well = dst.split(":")[
+                    -1
+                ]  # should handle things not formed like loc:well
+                dispense_command = dispense_template.replace(
+                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                )
                 dispense_command = dispense_command.replace("#volume#", str(volume))
                 dispense_command = dispense_command.replace(
                     "#dst#", f'deck["{dst_wellplate_location}"]["{dst_well}"]'
@@ -522,7 +573,9 @@ class ProtoPiler:
                     )
 
                 if command_block.drop_tip:
-                    drop_command = drop_tip_template.replace("#pipette#", f'pipettes["{pipette_mount}"]')
+                    drop_command = drop_tip_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
                     commands.append(drop_command)
                     tip_loaded[pipette_mount] = False
 
@@ -530,7 +583,9 @@ class ProtoPiler:
 
         for mount, status in tip_loaded.items():
             if status:
-                commands.append(drop_tip_template.replace("#pipette#", f'pipettes["{mount}"]'))
+                commands.append(
+                    drop_tip_template.replace("#pipette#", f'pipettes["{mount}"]')
+                )
                 tip_loaded[mount] = False
 
         return commands
@@ -581,18 +636,24 @@ class ProtoPiler:
             If the command is not formatted correctly, it should get caught before this, but if not I check here
         """
         location = None
-        if ":" in command_location:  # new format, pass a wellplate location, then well location
+        if (
+            ":" in command_location
+        ):  # new format, pass a wellplate location, then well location
             try:
                 plate, _ = command_location.split(":")
             except ValueError:
-                raise Exception(f"Command: {command_location} is not formatted correctly...")
+                raise Exception(
+                    f"Command: {command_location} is not formatted correctly..."
+                )
 
             location = self.alias_to_location[plate]
         else:  # older format of passing location
             for name, loc in self.labware_to_location.items():
                 if "well" in name:
                     if location is not None:
-                        print(f"Location {location} is overwritten with {loc}, multiple wellplates present")
+                        print(
+                            f"Location {location} is overwritten with {loc}, multiple wellplates present"
+                        )
                     if type(loc) is list and len(loc) > 1:
                         print(
                             f"Ambiguous command '{command_location}', multiple plates satisfying params (locations: {loc}) found, choosing location: {loc[0]}..."
@@ -656,7 +717,9 @@ class ProtoPiler:
                     if len(command_block.source) == 1:
                         command_block.source = command_block.source[0]
                     else:
-                        raise Exception("Multiple iterables found, cannot deterine dimension to iterate over")
+                        raise Exception(
+                            "Multiple iterables found, cannot deterine dimension to iterate over"
+                        )
                 iter_len = len(command_block.source)
             if isinstance(command_block.destination, list):
                 if iter_len != 0 and len(command_block.destination) != iter_len:
@@ -745,13 +808,10 @@ class ProtoPiler:
         for line in protocol_python:
             if "load_instrument" in line:
                 line = line.split("(")[-1].replace(")", "")
-                print(line)
                 pipette_name, mount, *_tipracks = line.split(",")
                 pipette_name = pipette_name.strip().replace('"', "")
                 mount = mount.strip().replace('"', "")
                 pipettes[pipette_name] = mount
-
-        print(pipettes)
 
         return pipettes
 
@@ -761,7 +821,9 @@ class ProtoPiler:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config", help="YAML config file", type=str, required=True)
+    parser.add_argument(
+        "-c", "--config", help="YAML config file", type=str, required=True
+    )
     args = parser.parse_args()
     return args
 
