@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 from itertools import repeat
 from datetime import datetime
-from typing import List, Optional, TypeVar, Union, Dict, Type
+from typing import List, Optional, Tuple, TypeVar, Union, Dict, Type
 
 from pydantic import BaseSettings as _BaseSettings
 
@@ -14,10 +14,10 @@ from pydantic import BaseSettings as _BaseSettings
 """ Things to do:
         [ ] take in current resources, if empty default is full
         [ ] allow partial tipracks, specify the tip location in the out protocol.py
-        [ ] resource manager as like a parasite class, just pass it around and update as needed
-        [ ] dispatch jobs?
+        **[ ] resource manager as like a parasite class, just pass it around and update as needed
+        [x] dispatch jobs?
         [ ] logging (both of state of robot and standard python logging) goal is to get to globus levels of logging
-        [ ] connect to opentrons and execute, should be outside this file, but since it doesn't exist, I am doing this now
+        [x] connect to opentrons and execute, should be outside this file, but since it doesn't exist, I am doing this now
         [ ] create smart templates, variable fields at the top that can be populated later
 """
 
@@ -304,7 +304,7 @@ class ProtoPiler:
         resource_file: Optional[PathLike] = None,
         resource_tracking: bool = True,
         reset_when_done: bool = True,
-    ) -> Path:
+    ) -> Tuple[Path]:
         """Public function that provides entrance to the protopiler. Creates the OT2 *.py file from a configuration
 
         Parameters
@@ -328,10 +328,19 @@ class ProtoPiler:
             track_this_config = self.resource_tracking
 
         protocol = []
-        resource_tracker = None
+        resource_tracker = {}
         if track_this_config:
-            resource_tracker = {}
-            self._setup_tracker(resource_tracker)
+            if resource_file and Path(resource_file).exists():
+                resource_tracker = json.load(open(resource_file))
+                for location in resource_tracker:
+                    if "wells_used" in resource_tracker[location]:
+                        resource_tracker[location]["wells_used"] = set(
+                            resource_tracker[location]["wells_used"]
+                        )
+
+            else:
+                self._setup_tracker(resource_tracker)
+        print(f"{resource_tracker=}")
 
         # Header and run() declaration with initial deck and pipette dicts
         header = open((self.template_dir / "header.template")).read()
@@ -376,7 +385,7 @@ class ProtoPiler:
             "\n    ####################\n    # execute commands #\n    ####################"
         )
 
-        commands_python = self._create_commands(resource_tracker)
+        commands_python = self._create_commands(track_this_config, resource_tracker)
         protocol.extend(commands_python)
 
         # TODO: anything to write for closing?
@@ -385,11 +394,12 @@ class ProtoPiler:
             f.write("\n".join(protocol))
 
         if track_this_config:
-            # prune the set datatype, we shouldn't need it
+            # convert wells used to list, to make it serializable
             for location in resource_tracker.keys():
-                resource_tracker[location].pop(
-                    "wells_used", None
-                )  # returns none if DNE
+                if "wells_used" in resource_tracker[location]:
+                    resource_tracker[location]["wells_used"] = list(
+                        resource_tracker[location]["wells_used"]
+                    )
             if not resource_file:
                 name = f"{out_file.stem}_resources.json"
                 resource_file = Path(out_file).parent / name
@@ -400,7 +410,7 @@ class ProtoPiler:
         if reset_when_done:
             self._reset()
 
-        return out_file
+        return out_file, resource_file
 
     def _setup_tracker(self, resource_tracker: dict) -> None:
         """Things to track:
@@ -418,16 +428,28 @@ class ProtoPiler:
         for name, location in self.labware_to_location.items():
             if isinstance(location, list):
                 for loc in location:
-                    resource_tracker[loc] = {"name": name, "used": 0, "depleted": False}
-                    if "wellplate" in name:  # adding the wellplate set tracker
+                    if loc not in resource_tracker:
+                        resource_tracker[loc] = {
+                            "name": name,
+                            "used": 0,
+                            "depleted": False,
+                        }
+                    if (
+                        "wellplate" in name
+                        and "wells_used" not in resource_tracker[loc]
+                    ):  # adding the wellplate set tracker
                         resource_tracker[loc]["wells_used"] = set()
             else:
-                resource_tracker[location] = {
-                    "name": name,
-                    "used": 0,
-                    "depleted": False,
-                }
-                if "wellplate" in name:  # adding the wellplate set tracker
+                if location not in resource_tracker:
+                    resource_tracker[location] = {
+                        "name": name,
+                        "used": 0,
+                        "depleted": False,
+                    }
+                if (
+                    "wellplate" in name
+                    and "wells_used" not in resource_tracker[location]
+                ):  # adding the wellplate set tracker
                     resource_tracker[location]["wells_used"] = set()
 
     def _find_valid_tipracks(self, pipette_name: str) -> List[str]:
@@ -464,7 +486,9 @@ class ProtoPiler:
 
         return valid_tipracks
 
-    def _create_commands(self, resource_tracker: Optional[dict] = None) -> List[str]:
+    def _create_commands(
+        self, track_this_config: bool = False, resource_tracker: Optional[dict] = None
+    ) -> List[str]:
         """Creates the flow of commands for the OT2 to run
 
         Raises:
@@ -502,9 +526,27 @@ class ProtoPiler:
                     load_command = pick_tip_template.replace(
                         "#pipette#", f'pipettes["{pipette_mount}"]'
                     )
+                    if resource_tracker:
+                        # need to define location for tip, duplicated logic from down below
+                        # TODO: clean this up with symbiote resource tracker class
+                        pipette_name = self.mount_to_pipette[pipette_mount]
+                        tiprack_locations = self._find_valid_tipracks(pipette_name)
+                        for rack_location in tiprack_locations:
+                            if not resource_tracker[rack_location]["depleted"]:
+                                well_location = resource_tracker[rack_location]["used"]
+                                break
+                        location_string = (
+                            f'deck["{rack_location}"].wells()[{well_location}]'
+                        )
+                        load_command = load_command.replace(
+                            "#location#", location_string
+                        )
+                    else:
+                        load_command = load_command.replace("#location#", "")
+
                     commands.append(load_command)
                     tip_loaded[pipette_mount] = True
-                    if resource_tracker:
+                    if track_this_config:
                         # TODO: need to figure out which tiprack it is pulling from. How does OT2 handle multiple tipracks
                         # For now assume its in the order its stored in the dict (i know it shouldnt be constant, but in python3.8 it is...)
                         pipette_name = self.mount_to_pipette[pipette_mount]
@@ -547,7 +589,7 @@ class ProtoPiler:
                 )
                 commands.append(aspirate_command)
                 # update resources if exist
-                if resource_tracker:
+                if track_this_config:
                     resource_tracker[src_wellplate_location]["wells_used"].add(src_well)
                     resource_tracker[src_wellplate_location]["used"] = len(
                         resource_tracker[src_wellplate_location]["wells_used"]
@@ -566,7 +608,7 @@ class ProtoPiler:
                 )
                 commands.append(dispense_command)
                 # update resources if exist
-                if resource_tracker:
+                if track_this_config:
                     resource_tracker[dst_wellplate_location]["wells_used"].add(dst_well)
                     resource_tracker[dst_wellplate_location]["used"] = len(
                         resource_tracker[dst_wellplate_location]["wells_used"]
