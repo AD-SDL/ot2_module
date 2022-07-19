@@ -5,6 +5,7 @@ from pathlib import Path
 from pydantic import BaseModel
 from typing import Optional, Union
 from argparse import ArgumentParser
+
 from protopiler.protopiler import ProtoPiler
 
 

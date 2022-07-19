@@ -526,6 +526,7 @@ class ProtoPiler:
                     load_command = pick_tip_template.replace(
                         "#pipette#", f'pipettes["{pipette_mount}"]'
                     )
+                    # this is to determine the individual well to grab the pipette from
                     if resource_tracker:
                         # need to define location for tip, duplicated logic from down below
                         # TODO: clean this up with symbiote resource tracker class
