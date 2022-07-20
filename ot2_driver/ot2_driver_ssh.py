@@ -20,9 +20,7 @@ class OT2_Driver:
     def __init__(self, config: OT2_Config) -> None:
         self.config: OT2_Config = config
         self.protopiler: ProtoPiler = ProtoPiler(
-            template_dir=Path(
-                "/Users/kyle/github/ot2_driver/ot2_driver/protopiler/protocol_templates"
-            )
+            template_dir=(Path(__file__).parent.resolve() / "protopiler/protocol_templates")
         )
 
     def _connect(self):
@@ -36,7 +34,7 @@ class OT2_Driver:
         )
 
     def compile_protocol(self, config_path, resource_file=None):
-        self.protopiler.load_config(config_path=config_path)
+        self.protopiler.load_config(config_path=config_path, resource_file=resource_file)
 
         protocol_out_path, protocol_resource_file = self.protopiler.yaml_to_protocol(
             config_path, resource_file=resource_file
@@ -90,9 +88,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument(
-        "-rc", "--robot_config", type=Path, help="Path to config for OT2(s)"
-    )
+    parser.add_argument("-rc", "--robot_config", type=Path, help="Path to config for OT2(s)")
     parser.add_argument(
         "-pc",
         "--protocol_config",

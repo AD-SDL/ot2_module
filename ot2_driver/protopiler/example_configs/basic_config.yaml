@@ -14,13 +14,10 @@ commands:
     source: source:A1
     destination: dest:A1
     volume: 100
-    drop_tip: False
   - name: other command
     source: source:A2
     destination: dest:A2
     volume: 100
-    drop_tip: False
-
 metadata:
   protocolName: Example Name
   author: Kyle khippe@anl.gov
