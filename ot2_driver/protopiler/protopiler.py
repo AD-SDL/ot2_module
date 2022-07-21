@@ -8,15 +8,15 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 
 from protopiler.config import PathLike, Command
-from ot2_driver.protopiler.resource_manager import ResourceManager
+from protopiler.resource_manager import ResourceManager
 
 
 """ Things to do:
-        [ ] take in current resources, if empty default is full
-        [ ] allow partial tipracks, specify the tip location in the out protocol.py
+        [x] take in current resources, if empty default is full
+        [x] allow partial tipracks, specify the tip location in the out protocol.py
         [x] resource manager as like a parasite class, just pass it around and update as needed
         [x] dispatch jobs?
-        [ ] logging (both of state of robot and standard python logging) goal is to get to globus levels of logging
+        [v] (partially done, robot state in decent state) logging (both of state of robot and standard python logging) goal is to get to globus levels of logging
         [x] connect to opentrons and execute, should be outside this file, but since it doesn't exist, I am doing this now
         [ ] create smart templates, variable fields at the top that can be populated later
 """
@@ -46,9 +46,7 @@ class ProtoPiler:
         self.config = yaml.safe_load(open(config_path))
         self._parse_config()
 
-    def _parse_config(
-        self,
-    ) -> None:
+    def _parse_config(self) -> None:
         """Create a programatic representation of ot2 protocol setup and execution
             provided by YAML
 
