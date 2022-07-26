@@ -25,7 +25,8 @@ Packages **must** follow ROS 2 python package format, see useful commands below!
 
 ### Installation 
 1. `git clone https://github.com/KPHippe/ot2_driver.git`
-1. I would recommend a conda/venv environment. The following assusumes conda. 
+2. Switch to my dev branch `git checkout dev-kyle`
+3. I would recommend a conda/venv environment. The following assusumes conda. 
     1. `conda create -n ot2-driver python=3.9`
     1. `conda activate ot2-driver`
     1. `pip install -r requirements.txt` 
