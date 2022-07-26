@@ -77,7 +77,6 @@ class ProtoPiler:
             # load metadata, optional
             self.metadata = self.config.get("metadata", None)
 
-            print("creating resource manager: ", self.resource_file)
             self.resource_manager = ResourceManager(self.config["equipment"], resource_file=self.resource_file)
 
             # load the commands
@@ -174,8 +173,9 @@ class ProtoPiler:
     def yaml_to_protocol(
         self,
         config_path: Optional[PathLike] = None,
-        out_file: PathLike = Path(f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"),
+        protocol_out: PathLike = Path(f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"),
         resource_file: Optional[PathLike] = None,
+        resource_file_out: Optional[PathLike] = None,
         write_resources: bool = True,
         overwrite_resources_json: bool = True,
         reset_when_done: bool = False,
@@ -186,16 +186,21 @@ class ProtoPiler:
         ----------
         config_path : Optional[PathLike], optional
             Path to the config.yml file, by default None, can be passed to constructor
-        out_file : PathLike, optional
+        protocol_out : PathLike, optional
             path to save the protocol file to, by default Path(f"./protocol_{datetime.now().strftime('%Y%m-%d%H-%M%S')}.py")
         resource_file : Optional[PathLike], optional
             If we are tracking resources, this is where the file will be saved, by default None and will mirror the protocol file naming
+        resource_file_out : Optional[PathLike], optional
+            If preset, the new resource file will be saved here
         reset_when_done : bool, optional
             reset the class variables when done, by default True
         """
 
         if not self.config:
             self.load_config(config_path)
+
+        if protocol_out is None:
+            protocol_out = Path(f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py")
 
         protocol = []
 
@@ -243,30 +248,30 @@ class ProtoPiler:
 
         # TODO: anything to write for closing?
 
-        with open(out_file, "w") as f:
+        with open(protocol_out, "w") as f:
             f.write("\n".join(protocol))
 
-        resource_file_out = None
         # Hierarchy:
-        # 1. resource file given, and writing resources is true
-        # 2. self.resources is not none, we are writing resources, and can overwrite it if present
-        # 3. we are writing resources but do not have either file, dump it here with generated name
-        if resource_file and write_resources:
-            print("saving option 1")
+        # 1. resource out given
+        # 2. resource file given, and writing resources is true
+        # 3. self.resources is not none, we are writing resources, and can overwrite it if present
+        # 4. we are writing resources but do not have either file, dump it here with generated name
+        if resource_file_out is not None:
+            resource_file_out = self.resource_manager.dump_resource_json(out_file=resource_file_out)
+
+        elif resource_file and write_resources:
             resource_file_out = self.resource_manager.dump_resource_json(out_file=resource_file)
 
         elif self.resource_file and write_resources and overwrite_resources_json:
-            print("saving option 2")
             resource_file_out = self.resource_manager.dump_resource_json(out_file=self.resource_file)
 
         elif write_resources:
-            print("saving option 3")
             resource_file_out = self.resource_manager.dump_resource_json()
 
         if reset_when_done:
             self._reset()
 
-        return out_file, resource_file_out
+        return protocol_out, resource_file_out
 
     def _create_commands(self) -> List[str]:
         """Creates the flow of commands for the OT2 to run
@@ -305,9 +310,7 @@ class ProtoPiler:
 
                     # TODO: define flag to grab from specific well or just use the ones defined by the OT2
                     if True:
-                        print(self.resource_manager.resources)
                         rack_location, well_location = self.resource_manager.get_next_tip(pipette_name)
-                        print(self.resource_manager.resources)
 
                         location_string = f'deck["{rack_location}"].wells()[{well_location}]'
                         load_command = load_command.replace("#location#", location_string)
