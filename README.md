@@ -47,7 +47,7 @@ Below is an example of what I refer to as the `robot_config`
 ```
 # OT2 in lab
 - ip: IP.ADDRESS
-  ssh_key: full/path/to/ssh/key 
+  ssh_key: full/path/to/ssh/key # optional of http, just have a dummy string for now
   model: OT2
   version: 5 # If unsure, leave at 5
 
