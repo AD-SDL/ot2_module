@@ -1,5 +1,5 @@
 opentrons
-pydantic
+pydantic==1.8.2
 pyyaml
 Fabric
 paramiko==2.8
