@@ -42,13 +42,13 @@ For prototyping in the RPL, connect via the wire and wait for the robot to becom
 
 ### Robot config 
 
-Below is an example of what i refer to as the `robot_config` 
+Below is an example of what I refer to as the `robot_config` 
 ```
 # OT2 in lab
 - ip: IP.ADDRESS
   ssh_key: full/path/to/ssh/key 
   model: OT2
-  version: 5 # If insure, leave at 5
+  version: 5 # If unsure, leave at 5
 
 ```
 
