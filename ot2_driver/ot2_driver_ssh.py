@@ -3,10 +3,12 @@ import fabric
 import subprocess
 from pathlib import Path
 from pydantic import BaseModel
-from typing import Optional, Union
+from typing import List, Optional
 from argparse import ArgumentParser
 
+
 from protopiler.protopiler import ProtoPiler
+from protopiler.config import PathLike
 
 
 class OT2_Config(BaseModel):
@@ -33,16 +35,46 @@ class OT2_Driver:
             },
         )
 
-    def compile_protocol(self, config_path, resource_file=None):
+    def compile_protocol(self, config_path, resource_file=None, protocol_out=None, resource_out=None):
+        """Compile the protocols via protopiler
+
+        Can skip this step if you already have a full protocol
+
+        Parameters
+        ----------
+        config_path : PathLike
+            path to the configuration file (the one with the ot2 commands )
+        resource_file : PathLike, optional
+            path to an existing resource file, by default None, will be created if None
+
+        Returns
+        -------
+        Tuple: [str, str]
+            path to the protocol file and resource file
+        """
         self.protopiler.load_config(config_path=config_path, resource_file=resource_file)
 
         protocol_out_path, protocol_resource_file = self.protopiler.yaml_to_protocol(
-            config_path, resource_file=resource_file
+            config_path, protocol_out=protocol_out, resource_file=resource_file, resource_file_out=resource_out
         )
 
         return protocol_out_path, protocol_resource_file
 
-    def transfer(self, protocol_path: Union[Path, str], out_path: str = "/root"):
+    def transfer(self, protocol_path: PathLike, out_path: str = "/root") -> None:
+        """Transfer the file via scp to the robot
+
+        Parameters
+        ----------
+        protocol_path : PathLike
+            path to protocol path (locally)
+        out_path : str, optional
+            path to protocol on OT2, by default "/root"
+
+        Returns
+        -------
+        int
+            return code from scp command
+        """
         cmd = ["scp", "-r", protocol_path, f"root@{self.config.ip}:{out_path}"]
 
         proc = subprocess.run(cmd)
@@ -50,31 +82,59 @@ class OT2_Driver:
         return proc.returncode
 
     def execute(self, remote_protcol_path: str):
+        """Execute the protocol at a given path
+
+        Parameters
+        ----------
+        remote_protcol_path : str
+            the path to the protocol on the OT2, should have come from `transfer()`
+        """
         conn = self._connect()
         cmd = f"opentrons_execute {remote_protcol_path}"
         print(conn.run(cmd))
 
 
-def main(args):
+def load_ot2_config(robot_config: PathLike) -> List[OT2_Driver]:
     ot2s = []
     for ot2_raw_cfg in yaml.safe_load(open(args.robot_config)):
         ot2s.append(OT2_Driver(OT2_Config(**ot2_raw_cfg)))
 
-    ot2: OT2_Driver = ot2s[0]
+    return ot2s
 
-    protocol_file, resource_file = ot2.compile_protocol(
-        config_path=args.protocol_config, resource_file=args.resource_file
-    )
+
+def main(args):
+    # returns list of ot2s, but we just have one
+    ot2 = load_ot2_config(args.robot_config)[0]
+
+    # if the extension is not py, compile it to a protocol.py
+    if "py" not in str(args.protocol_config):
+        if args.verbose:
+            print("Configuration found, compiling")
+        protocol_file, resource_file = ot2.compile_protocol(
+            config_path=args.protocol_config,
+            resource_file=args.resource_file,
+            protocol_out=args.protocol_out,
+            resource_out=args.resource_out,
+        )
+        if args.verbose:
+            print(f"Compiled protocol file to: {protocol_file}, and resource file: {resource_file}")
+    else:
+        print("Existing protocol found")
+        protocol_file = args.protocol_config
+        resource_file = None
+
     if args.simulate:
         print("Beginning simulation")
         cmd = ["opentrons_simulate", protocol_file]
         subprocess.run(cmd)
         if args.delete:
             protocol_file.unlink()
-            if not args.resource_file:
+            if not args.resource_file and resource_file:
                 resource_file.unlink()
     else:
-        print("Beginning protocol")
+        if args.verbose:
+            print("Beginning protocol")
+
         returncode = ot2.transfer(protocol_file)
         if returncode:
             print("Exception raised when transferring")
@@ -88,7 +148,13 @@ def main(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("-rc", "--robot_config", type=Path, help="Path to config for OT2(s)")
+    parser.add_argument(
+        "-rc",
+        "--robot_config",
+        type=Path,
+        help="Path to config for OT2(s), must be present even if simulating, can contain dummy data however",
+        required=True,
+    )
     parser.add_argument(
         "-pc",
         "--protocol_config",
@@ -103,6 +169,12 @@ if __name__ == "__main__":
         help="Path to resource file that currently exists",
     )
     parser.add_argument(
+        "-po", "--protocol_out", type=Path, help="Optional, name/location for protocol file to be saved to"
+    )
+    parser.add_argument(
+        "-ro", "--resource_out", type=Path, help="Optional, name/location for resources used file to be saved to"
+    )
+    parser.add_argument(
         "-s",
         "--simulate",
         default=False,
@@ -115,6 +187,7 @@ if __name__ == "__main__":
         action="store_true",
         help="Delete resource files and protocol files when done, default false",
     )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Print status along the way")
 
     args = parser.parse_args()
     main(args)
