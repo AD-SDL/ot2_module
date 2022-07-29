@@ -3,10 +3,10 @@ import requests
 import subprocess
 from pathlib import Path
 from pydantic import BaseModel
-from typing import Optional, Tuple, Union, Dict
-from argparse import ArgumentParser
+from typing import Optional, Tuple, Dict
 
 from protopiler.protopiler import ProtoPiler
+from protopiler.config import PathLike, parse_ot2_args
 
 
 class OT2_Config(BaseModel):
@@ -34,6 +34,13 @@ Running example from REPL
     >>> execute_run_resp = requests.post(url=f"http://{robot_ip_address}:31950/runs/{run_id}/actions", headers={"Opentrons-Version": "2"}, json={"data": {"actionType": "play"}})
     >>> execute_run_resp.json()
     {'data': {'id': '7c43d567-6e09-4d01-b8ac-e7e03cc807de', 'createdAt': '2022-07-25T18:54:09.529435+00:00', 'actionType': 'play'}}
+```
+
+
+# Creating a session
+```
+curl http://169.254.197.67:31950/sessions -X POST -H "accept: application/json" -H "Opentrons-Version: 2" -H "Content-Type: application/json" -d "{\"data\":{\"sessionType\":\"liveProtocol\"}}"
+
 ```
 """
 
@@ -70,7 +77,7 @@ class OT2_Driver:
 
         return protocol_out_path, protocol_resource_file
 
-    def transfer(self, protocol_path: Union[Path, str]) -> Tuple[str, str]:
+    def transfer(self, protocol_path: PathLike) -> Tuple[str, str]:
         """Transfer the protocol file to the OT2 via http
 
         Parameters
@@ -84,7 +91,10 @@ class OT2_Driver:
             returns `protocol_id`, and `run_id` in that order
         """
         transfer_url = f"http://{self.config.ip}:31950/protocols"
-        files = {"files": open(protocol_path, "rb")}
+        # TODO: maybe replace with pathlib?
+        with open(protocol_path, "rb") as f:
+            protocol_file_bin = f.read()
+        files = {"files": protocol_file_bin}
         headers = {"Opentrons-Version": "2"}
 
         # transfer the protocol
@@ -96,7 +106,7 @@ class OT2_Driver:
         run_json = {"data": {"protocolId": protocol_id}}
         run_resp = requests.post(url=run_url, headers=headers, json=run_json)
 
-        run_id = run_resp["data"]["id"]
+        run_id = run_resp.json()["data"]["id"]
 
         return protocol_id, run_id
 
@@ -144,7 +154,8 @@ def main(args):
         print("Beginning protocol")
         protocol_id, run_id = ot2.transfer(protocol_file)
 
-        ot2.execute(run_id)
+        resp_data = ot2.execute(run_id)
+        print(resp_data)
 
         if args.delete:
             # TODO: add way to delete things from ot2
@@ -152,34 +163,5 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser()
-    parser.add_argument("-rc", "--robot_config", type=Path, help="Path to config for OT2(s)")
-    parser.add_argument(
-        "-pc",
-        "--protocol_config",
-        type=Path,
-        help="Path to protocol config or protocol.py",
-        default=Path("./protopiler/example_configs/basic_config.yaml"),
-    )
-    parser.add_argument(
-        "-rf",
-        "--resource_file",
-        type=Path,
-        help="Path to resource file that currently exists",
-    )
-    parser.add_argument(
-        "-s",
-        "--simulate",
-        default=False,
-        action="store_true",
-        help="Simulate the run, don't actually connect to the opentrons",
-    )
-    parser.add_argument(
-        "-d",
-        "--delete",
-        action="store_true",
-        help="Delete resource files and protocol files when done, default false",
-    )
-
-    args = parser.parse_args()
+    args = parse_ot2_args()
     main(args)
