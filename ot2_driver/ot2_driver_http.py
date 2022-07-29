@@ -39,7 +39,12 @@ Running example from REPL
 
 # Creating a session
 ```
+# Creating the session works
 curl http://169.254.197.67:31950/sessions -X POST -H "accept: application/json" -H "Opentrons-Version: 2" -H "Content-Type: application/json" -d "{\"data\":{\"sessionType\":\"liveProtocol\"}}"
+
+# Running a command does not:
+curl http://169.254.197.67:31950/sessions/b6d87d51-264e-4dbb-979d-672b3cd815b8/commands/execute -X POST -H "accept: application/json" -H "Opentrons-Version: 2" -H "Content-Type: application/json" -d "{\"data\":{\"command\":\"calibration.deck.moveToPointThree\",\"data\":{}}}"
+{"errors":[{"id":"UnexpectedError","title":"Unexpected Internal Error","detail":"NotImplementedError: Enable useProtocolEngine feature flag to use live HTTP protocols","meta":{"stacktrace":"Traceback (most recent call last):\n  File \"usr/lib/python3.7/site-packages/fastapi/routing.py\", line 227, in app\n  File \"usr/lib/python3.7/site-packages/fastapi/routing.py\", line 159, in run_endpoint_function\n  File \"usr/lib/python3.7/site-packages/robot_server/service/session/router.py\", line 139, in session_command_execute_handler\n  File \"usr/lib/python3.7/site-packages/robot_server/service/session/session_types/base_session.py\", line 70, in execute_command\n  File \"usr/lib/python3.7/site-packages/robot_server/service/session/session_types/live_protocol/command_executor.py\", line 21, in execute\nNotImplementedError: Enable useProtocolEngine feature flag to use live HTTP protocols"}}]}
 
 ```
 """
