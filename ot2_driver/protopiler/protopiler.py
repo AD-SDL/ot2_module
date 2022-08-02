@@ -109,6 +109,7 @@ class ProtoPiler:
         The inside alias will always overrule the outside alias.
         """
         # TODO: do more testing of this function
+        # TODO: can we make this better?
         for command in self.commands:
             if ":[" in command.source:
                 new_locations = []
@@ -444,14 +445,14 @@ class ProtoPiler:
             # since we are here we know at least one of the things is a list
             iter_len = 0
             if isinstance(command_block.volume, list):
-                # handle if forgot to change list of one value to scalar
+                # handle if user forgot to change list of one value to scalar
                 if len(command_block.volume) == 1:
                     command_block.volume = command_block.volume[0]
                 else:
                     iter_len = len(command_block.volume)
             if isinstance(command_block.source, list):
                 if iter_len != 0 and len(command_block.source) != iter_len:
-                    # handle if forgot to change list of one value to scalar
+                    # handle if user forgot to change list of one value to scalar
                     if len(command_block.source) == 1:
                         command_block.source = command_block.source[0]
                     else:
@@ -459,7 +460,7 @@ class ProtoPiler:
                 iter_len = len(command_block.source)
             if isinstance(command_block.destination, list):
                 if iter_len != 0 and len(command_block.destination) != iter_len:
-                    # handle if forgot to change list of one value to scalar
+                    # handle if user forgot to change list of one value to scalar
                     if len(command_block.destination) == 1:
                         command_block.destination = command_block.destination[0]
                     else:
