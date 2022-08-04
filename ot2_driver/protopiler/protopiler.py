@@ -44,14 +44,13 @@ class ProtoPiler:
         self.resource_file = resource_file
 
         self.config = ProtocolConfig.from_yaml(config_path)
+
+        self.load_resources(self.config.resources)
         self.metadata = self.config.metadata
         self.resource_manager = ResourceManager(self.config.equipment, self.resource_file)
 
         self.commands = self.config.commands
         self._postprocess_commands()
-
-        self.load_resources(self.config.resources)
-        print(self.resources)
 
     def _postprocess_commands(self) -> None:  # Could use more testing
         """Processes the commands to support the alias syntax.
@@ -76,6 +75,7 @@ class ProtoPiler:
         """
         # TODO: do more testing of this function
         # TODO: can we make this better?
+        resource_key = list(self.resources.keys())[0]
         for command in self.commands:
             if ":[" in command.source:
                 new_locations = []
@@ -93,6 +93,24 @@ class ProtoPiler:
                         new_locations.append(new_location)
                     else:
                         new_locations.append(location)
+
+                command.source = new_locations
+
+            # Add logic for taking well names from files
+            # peek into the source, check the well destination part
+            peek_elem = command.source
+            if isinstance(command.source, list):  # No mixing and matching
+                peek_elem = command.source[0]
+
+            peek_well: str = peek_elem.split(":")[-1]
+            # check if it follows naming convention`[A-Z,a-z]?[0-9]{1,3}`
+            # TODO better way to check the naming conventions for the wells
+            if not peek_well.isdigit() or not peek_well[1:].isdigit():
+                # read from file
+                new_locations = []
+                for orig_command, loc in zip(repeat(command.source), self.resources[resource_key][peek_well]):
+                    orig_deck_location = orig_command.split(":")[0]
+                    new_locations.append(f"{orig_deck_location}:{loc}")
 
                 command.source = new_locations
 
@@ -116,10 +134,32 @@ class ProtoPiler:
 
                 command.destination = new_locations
 
+            # Add logic for reading well names from file
+            # peek into the source, check the well destination part
+            peek_elem = command.destination
+            if isinstance(command.destination, list):  # No mixing and matching
+                peek_elem = command.destination[0]
+            # TODO better way to check the naming conventions for the well
+            if not peek_well.isdigit() or not peek_well[1:].isdigit():
+                # read from file
+                new_locations = []
+                for orig_command, loc in zip(repeat(command.destination), self.resources[resource_key][peek_well]):
+                    orig_deck_location = orig_command.split(":")[0]
+                    new_locations.append(f"{orig_deck_location}:{loc}")
+
+                command.destination = new_locations
+        # have to check if volumes comes from the files
+        if not isinstance(command.volume, int) or not isinstance(command.volume, list):
+            new_volumes = []
+            for vol in self.resources[resource_key][command.volume]:
+                new_volumes.append(int(vol))
+
+            command.volume = new_volumes
+
     def load_resources(self, resources):
         self.resources = {}
         for resource in resources:
-            self.resources[resource.name] = pd.read_excel(resource.location, header=1)
+            self.resources[resource.name] = pd.read_excel(resource.location, header=0)
 
     def _reset(
         self,

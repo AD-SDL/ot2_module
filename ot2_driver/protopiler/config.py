@@ -50,7 +50,7 @@ class Command(BaseSettings):
     name: Optional[str]
     source: Union[List[str], str]
     destination: Union[str, List[str]]
-    volume: Union[int, List[int]]
+    volume: Union[int, List[int], str]
     drop_tip: bool = True
 
 
