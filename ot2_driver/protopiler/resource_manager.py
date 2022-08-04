@@ -1,3 +1,4 @@
+"""Class to manage/keep track of resources used by a protocol"""
 import re
 import json
 from pathlib import Path
@@ -29,6 +30,15 @@ class ResourceManager:
         equiment_config: Optional[List[Union[Labware, Pipette]]] = None,
         resource_file: Optional[PathLike] = None,
     ) -> None:
+        """This class manages the resources used as specified by a config
+
+        Parameters
+        ----------
+        equiment_config : Optional[List[Union[Labware, Pipette]]], optional
+            list of the labware used in protocol, by default None
+        resource_file : Optional[PathLike], optional
+            path to the resource file, by default None
+        """
         self.init = False
 
         if equiment_config:
@@ -40,6 +50,15 @@ class ResourceManager:
         equipment_config: List[Union[Labware, Pipette]],
         resource_file: Optional[PathLike] = None,
     ) -> None:
+        """This pulls the equipment data and establishes relationships about location-> name and vice versa
+
+        Parameters
+        ----------
+        equipment_config : List[Union[Labware, Pipette]]
+            List of labware used in protocol
+        resource_file : Optional[PathLike], optional
+            path to the resource file, will be loaded if exists, by default None
+        """
         self.resource_file = resource_file
 
         # setup the necesary data relationships
@@ -61,6 +80,20 @@ class ResourceManager:
         self.init = True
 
     def _generate_location_name_relationships(self, equipment_config: List[Union[Labware, Pipette]]) -> None:
+        """Generate the location and name relationships for use in tracking resources
+
+        Parameters
+        ----------
+        equipment_config : List[Union[Labware, Pipette]]
+            List of equipment to use in the protocol
+
+        Raises
+        ------
+        Exception
+            If labware is loaded into the same deck location
+        Exception
+            If a pipette is loaded into an occupied mount
+        """
         labware = []
         pipettes = []
 
@@ -108,6 +141,24 @@ class ResourceManager:
                 self.pipette_to_mount[element.name] = [element.mount]
 
     def _create_default_resources(self, resources: Optional[Dict] = None):
+        """Create the resource dictionary. If existing status not given, will default to assuming everything is in a starting state
+        (tip racks full, plates empty)
+
+        Parameters
+        ----------
+        resources : Optional[Dict], optional
+            A resource dictionary that tells what equipment has been used and how much, by default None
+
+        Returns
+        -------
+        Dict
+            The description of the resources used.
+
+        Raises
+        ------
+        Exception
+            _description_
+        """
         # TODO: figure out how I want this to be handled
         # Should i plan to make this thing take in other
         # instances of things that need to be tracked?
@@ -133,6 +184,18 @@ class ResourceManager:
         return resources
 
     def get_available_tips(self, pipette_name) -> int:
+        """Get the number of available tips given current resource
+
+        Parameters
+        ----------
+        pipette_name : str
+            The name (opentrons name) of the pipette we need to find tips for
+
+        Returns
+        -------
+        int
+            Number of tips available
+        """
         num_available = 0
         valid_tipracks_locations = self.find_valid_tipracks(pipette_name)
 
@@ -145,7 +208,19 @@ class ResourceManager:
 
         return num_available
 
-    def get_used_tips(self, pipette_name) -> int:
+    def get_used_tips(self, pipette_name: str) -> int:
+        """See how many tips have been used from this OT2
+
+        Parameters
+        ----------
+        pipette_name : str
+            The opentrons name of the pipette we are looking at
+
+        Returns
+        -------
+        int
+            Total number of tips used for this pipette type
+        """
         valid_tiprack_locations = self.find_valid_tipracks(pipette_name)
 
         num_used = 0
@@ -154,7 +229,26 @@ class ResourceManager:
 
         return num_used
 
-    def get_next_tip(self, pipette_name) -> str:
+    def get_next_tip(self, pipette_name: str) -> str:
+        """Find the next populated tip from a list of tipracks
+
+        Parameters
+        ----------
+        pipette_name : str
+            The name of the pipette for which we need a tip
+
+        Returns
+        -------
+        str
+            the string location of the next available tip
+
+        Raises
+        ------
+        Exception
+            If the resource file is not consistent with itself
+        Exception
+            If there are no tips left
+        """
         valid_tiprack_locations = self.find_valid_tipracks(pipette_name)
         for loc in valid_tiprack_locations:
             tiprack_name = self.location_to_labware[loc]
@@ -185,7 +279,19 @@ class ResourceManager:
 
         raise Exception(f"Not enough tips found for '{pipette_name}'...")
 
-    def update_tip_usage(self, pipette_name) -> None:
+    def update_tip_usage(self, pipette_name: str) -> None:
+        """Tell the resource manager a new tip has been used
+
+        Parameters
+        ----------
+        pipette_name : str
+            The name of the pipette we are using a tip on
+
+        Raises
+        ------
+        Exception
+            There were no more tips found
+        """
         valid_tiprack_locations = self.find_valid_tipracks(pipette_name)
         for loc in valid_tiprack_locations:
             tiprack_name = self.location_to_labware[loc]
@@ -203,6 +309,15 @@ class ResourceManager:
         raise Exception("No more tips found...")
 
     def update_well_usage(self, location: str, well: Optional[str] = None) -> None:
+        """Update the used wells
+
+        Parameters
+        ----------
+        location : str
+            the deck location of the plate where a well was used
+        well : Optional[str], optional
+            the location of the well on the wellplate, by default None
+        """
         if well:
             self.resources[location]["wells_used"].add(well)
 
@@ -275,6 +390,18 @@ class ResourceManager:
         return pipette
 
     def dump_resource_json(self, out_file: Optional[PathLike] = None) -> str:
+        """Save the resource file
+
+        Parameters
+        ----------
+        out_file : Optional[PathLike], optional
+            place to save the resource file, if none it will be created, by default None
+
+        Returns
+        -------
+        str
+            path to where the file was saved
+        """
         out_resources = deepcopy(self.resources)
         for location in out_resources.keys():
             if "wells_used" in out_resources[location]:

@@ -1,3 +1,4 @@
+"""Protopiler is designed to compile a config yaml into a working protocol"""
 import copy
 import argparse
 from pathlib import Path
@@ -7,7 +8,7 @@ from typing import List, Optional, Tuple
 
 import pandas as pd
 
-from config import PathLike, Command, ProtocolConfig
+from config import PathLike, Command, ProtocolConfig, Resource
 from resource_manager import ResourceManager
 
 
@@ -23,12 +24,25 @@ from resource_manager import ResourceManager
 
 
 class ProtoPiler:
+    """Class that takes in a parses configs and outputs a completed protocol.py file"""
+
     def __init__(
         self,
         config_path: Optional[PathLike] = None,
         template_dir: PathLike = Path("./protocol_templates"),
         resource_file: Optional[PathLike] = None,
     ) -> None:
+        """Can initialize with the resources we need, or it can be done after initialization
+
+        Parameters
+        ----------
+        config_path : Optional[PathLike], optional
+            path to the yaml configuration, by default None
+        template_dir : PathLike, optional
+            path to the template directory, by default Path("./protocol_templates")
+        resource_file : Optional[PathLike], optional
+            path to the resource file, if using a config and it does not exist, it will be created, by default None
+        """
         self.template_dir = template_dir
         self.resource_file = resource_file
 
@@ -40,6 +54,17 @@ class ProtoPiler:
             self.load_config(config_path=config_path, resource_file=resource_file)
 
     def load_config(self, config_path: PathLike, resource_file: Optional[PathLike] = None) -> None:
+        """Loading the config and generating necesary information for compiling a config
+
+        This is what allows for nothing to be passed in during obj creation, if a user calls
+        this method, it will load all the necesary things
+        Parameters
+        ----------
+        config_path : PathLike
+            path to the configuration file
+        resource_file : Optional[PathLike], optional
+            path to the resource file, if does not exist it will be created, by default None
+        """
         self.config_path = config_path
         self.resource_file = resource_file
 
@@ -156,7 +181,17 @@ class ProtoPiler:
 
             command.volume = new_volumes
 
-    def load_resources(self, resources):
+    def load_resources(self, resources: List[Resource]):
+        """Load the other resources (files) specified in the config
+
+        Currently only accepts *.xls or *.xlsx files
+
+        Parameters
+        ----------
+        resources : List[Resource]
+            the dataclasses of resource objects
+
+        """
         self.resources = {}
         for resource in resources:
             self.resources[resource.name] = pd.read_excel(resource.location, header=0)
@@ -197,15 +232,24 @@ class ProtoPiler:
         Parameters
         ----------
         config_path : Optional[PathLike], optional
-            Path to the config.yml file, by default None, can be passed to constructor
+            path to yaml configuration file, if not present, will look to self, by default None
         protocol_out : PathLike, optional
-            path to save the protocol file to, by default Path(f"./protocol_{datetime.now().strftime('%Y%m-%d%H-%M%S')}.py")
+            path to save the protocol to, by default Path(f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py")
         resource_file : Optional[PathLike], optional
-            If we are tracking resources, this is where the file will be saved, by default None and will mirror the protocol file naming
+           path to existing resource file, if config is used, it will be created, by default None
         resource_file_out : Optional[PathLike], optional
-            If preset, the new resource file will be saved here
+            if you want to specify the creation of new resource file, by default None
+        write_resources : bool, optional
+            whether you want to save the resource file or clean it up, by default True
+        overwrite_resources_json : bool, optional
+            whether you want to rewrite a resource file, by default True
         reset_when_done : bool, optional
-            reset the class variables when done, by default True
+            whether to reset the class when finished compiling, by default False
+
+        Returns
+        -------
+        Tuple[Path]
+            returns the path to the protocol.py file as well as the resource file (if it does not exist, None)
         """
 
         if not self.config:

@@ -24,8 +24,14 @@ class OT2_Driver:
             template_dir=(Path(__file__).parent.resolve() / "protopiler/protocol_templates")
         )
 
-    def _connect(self):
+    def _connect(self) -> fabric.Connection:
+        """Connect via fabric to the OT2
 
+        Returns
+        -------
+        fabric.Connection
+            The connection object with the OT2
+        """
         return fabric.Connection(
             host=self.config.ip,
             user="root",

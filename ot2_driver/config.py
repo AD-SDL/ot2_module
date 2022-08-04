@@ -1,11 +1,19 @@
+"""Stores dataclasses/args/config for the ot2 drivers"""
 from typing import Union
 from pathlib import Path
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 
 PathLike = Union[str, Path]
 
 
-def parse_ot2_args():
+def parse_ot2_args() -> Namespace:
+    """Parse command line args
+
+    Returns
+    -------
+    Namespace
+        A namespace of the arguments
+    """
     parser = ArgumentParser()
     parser.add_argument(
         "-rc",

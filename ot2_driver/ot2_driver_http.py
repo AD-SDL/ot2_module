@@ -1,3 +1,4 @@
+"""Driver implemented using HTTP protocol supported by Opentrons"""
 import yaml
 import requests
 import subprocess
@@ -141,10 +142,53 @@ class OT2_Driver:
 
         return execute_run_resp.json()
 
-    def stream(self, command, params, run_id=None, execute=True, intent="setup"):
+    def stream(
+        self, command: str, params: dict, run_id: str = None, execute: bool = True, intent: str = "setup"
+    ) -> str:
+        """Wrapper for streaming individual commands to the OT2
+
+        Parameters
+        ----------
+        command : str
+            command type, to be executed on the OT2
+        params : dict
+            The arguments of the command, must follow api rules
+        run_id : str, optional
+            The run id to add this command to, by default will create a new run on the OT2, by default None
+        execute : bool, optional
+            Whether to execute the command now, or postpone execution of the run to later, by default True
+        intent : str, optional
+            either `protocol` or `setup`, whether the command should be executed immediately, or one a play action, by default "setup"
+
+        Returns
+        -------
+        str
+            The run id that was either given or created
+        """
+
         return self._stream(command, params, run_id, execute=execute, intent=intent)
 
     def _stream(self, command, params, run_id=None, execute=True, intent="setup"):
+        """Helper method that runs the streaming
+
+                Parameters
+        ----------
+        command : str
+            command type, to be executed on the OT2
+        params : dict
+            The arguments of the command, must follow api rules
+        run_id : str, optional
+            The run id to add this command to, by default will create a new run on the OT2, by default None
+        execute : bool, optional
+            Whether to execute the command now, or postpone execution of the run to later, by default True
+        intent : str, optional
+            either `protocol` or `setup`, whether the command should be executed immediately, or one a play action, by default "setup"
+
+        Returns
+        -------
+        str
+            The run id that was either given or created
+        """
         headers = {"Opentrons-Version": "2"}
 
         if not run_id:
