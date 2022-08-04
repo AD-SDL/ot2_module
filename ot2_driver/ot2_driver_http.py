@@ -66,7 +66,7 @@ class OT2_Driver:
     def compile_protocol(self, config_path, resource_file=None) -> Tuple[str, str]:
         """Compile the protocols via protopiler
 
-        Can skip this step if you already have a full protocol
+        This step will be skipped if a full protocol file is detected
 
         Parameters
         ----------
@@ -80,13 +80,16 @@ class OT2_Driver:
         Tuple: [str, str]
             path to the protocol file and resource file
         """
-        self.protopiler.load_config(config_path=config_path, resource_file=resource_file)
+        if ".py" not in str(config_path):
+            self.protopiler.load_config(config_path=config_path, resource_file=resource_file)
 
-        protocol_out_path, protocol_resource_file = self.protopiler.yaml_to_protocol(
-            config_path, resource_file=resource_file
-        )
+            protocol_out_path, protocol_resource_file = self.protopiler.yaml_to_protocol(
+                config_path, resource_file=resource_file
+            )
 
-        return protocol_out_path, protocol_resource_file
+            return protocol_out_path, protocol_resource_file
+        else:
+            return config_path, None
 
     def transfer(self, protocol_path: PathLike) -> Tuple[str, str]:
         """Transfer the protocol file to the OT2 via http
@@ -103,9 +106,7 @@ class OT2_Driver:
         """
         transfer_url = f"http://{self.config.ip}:31950/protocols"
         # TODO: maybe replace with pathlib?
-        with open(protocol_path, "rb") as f:
-            protocol_file_bin = f.read()
-        files = {"files": protocol_file_bin}
+        files = {"files": open(protocol_path, "rb")}
         headers = {"Opentrons-Version": "2"}
 
         # transfer the protocol
@@ -290,6 +291,7 @@ def main(args):
     if args.test_streaming:
         test_streaming(ot2)
 
+    # Can pass in a full python file here, no resource files will be created, but it won't break the system
     protocol_file, resource_file = ot2.compile_protocol(
         config_path=args.protocol_config, resource_file=args.resource_file
     )
@@ -306,7 +308,7 @@ def main(args):
         protocol_id, run_id = ot2.transfer(protocol_file)
 
         resp_data = ot2.execute(run_id)
-        print(resp_data)
+        print(f"Protocol execution response data: {resp_data}")
 
         if args.delete:
             # TODO: add way to delete things from ot2

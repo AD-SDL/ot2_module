@@ -55,5 +55,8 @@ def parse_ot2_args() -> Namespace:
         help="Delete resource files and protocol files when done, default false",
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Print status along the way")
+    parser.add_argument(
+        "-ts", "--test_streaming", help="Option to test streaming line item commands", action="store_true"
+    )
 
     return parser.parse_args()
