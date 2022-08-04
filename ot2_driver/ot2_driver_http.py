@@ -43,7 +43,7 @@ Running example from REPL
 # Creating the session works
 (miniconda3) ❯ curl http://169.254.170.12:31950/sessions -X POST -H "accept: application/json" -H "Opentrons-Version: 2" -H "Content-Type: application/json" -d "{\"data\":{\"sessionType\":\"liveProtocol\"}}"
 
-#Running a command does not 
+#Running a command does not
 {"data":{"id":"4dd62cc2-7bad-4bcc-9aec-c3052289bb65","createdAt":"2022-08-01T16:27:45.551969+00:00","details":{},"sessionType":"liveProtocol","createParams":null},"links":{"self":{"href":"/sessions/4dd62cc2-7bad-4bcc-9aec-c3052289bb65","meta":null},"commandExecute":{"href":"/sessions/4dd62cc2-7bad-4bcc-9aec-c3052289bb65/commands/execute","meta":null},"sessions":{"href":"/sessions","meta":null},"sessionById":{"href":"/sessions/{sessionId}","meta":null}}}%
 (miniconda3) 130 ❯ curl http://169.254.170.12:31950/sessions/4dd62cc2-7bad-4bcc-9aec-c3052289bb65/commands/execute -X POST -H "accept: application/json" -H "Opentrons-Version: 2" -H "Content-Type: application/json" -d "{\"data\":{\"command\":\"calibration.deck.moveToPointThree\",\"data\":{}}}"
 
