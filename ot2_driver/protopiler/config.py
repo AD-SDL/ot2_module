@@ -27,6 +27,12 @@ class BaseSettings(_BaseSettings):
         return cls(**raw_data)  # type: ignore[call-arg]
 
 
+# Resources
+class Resource(BaseSettings):
+    location: Path
+    name: str
+
+
 # Labware containers
 class Labware(BaseSettings):
     name: str
@@ -54,3 +60,10 @@ class Metadata(BaseSettings):
     author: Optional[str]
     description: Optional[str]
     apiLevel: Optional[str] = "2.12"
+
+
+class ProtocolConfig(BaseSettings):
+    resources: Optional[List[Resource]]
+    equipment: List[Union[Labware, Pipette]]
+    commands: List[Command]
+    metadata: Metadata

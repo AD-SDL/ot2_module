@@ -1,13 +1,13 @@
 import re
-import yaml
 import json
 from pathlib import Path
 from copy import deepcopy
 from datetime import datetime
 from argparse import ArgumentParser
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
 
-from protopiler.config import PathLike, Labware, Pipette
+from config import PathLike, Labware, Pipette, ProtocolConfig
+
 
 """
 Notes
@@ -26,7 +26,7 @@ Code:
 class ResourceManager:
     def __init__(
         self,
-        equiment_config: Optional[List[Dict[str, str]]] = None,
+        equiment_config: Optional[List[Union[Labware, Pipette]]] = None,
         resource_file: Optional[PathLike] = None,
     ) -> None:
         self.init = False
@@ -37,13 +37,13 @@ class ResourceManager:
 
     def load_equipment(
         self,
-        equipment_config: List[Dict[str, str]],
+        equipment_config: List[Union[Labware, Pipette]],
         resource_file: Optional[PathLike] = None,
     ) -> None:
         self.resource_file = resource_file
 
         # setup the necesary data relationships
-        self._parse_equipment_config(equipment_config=equipment_config)
+        self._generate_location_name_relationships(equipment_config=equipment_config)
 
         # setup the resource tracker, if exists leave as is, else, create it
         resources = None
@@ -55,26 +55,20 @@ class ResourceManager:
                 if resource_file.exists():
                     resources = json.load(open(resource_file))
 
+        # Will leave existing resources as is, will default init new resources not in existing file
         self.resources = self._create_default_resources(resources=resources)
 
         self.init = True
 
-    def _parse_equipment_config(self, equipment_config: List[Dict[str, str]]) -> None:
+    def _generate_location_name_relationships(self, equipment_config: List[Union[Labware, Pipette]]) -> None:
         labware = []
         pipettes = []
 
-        for data in equipment_config:
-            if isinstance(data, dict) and len(data) == 1:  # it is in form {"labware_type": {"key": "val" }}
-                for _name, elem_data in data.items():
-                    if "location" in elem_data.keys():
-                        labware.append(Labware(**elem_data))
-                    elif "mount" in elem_data.keys():
-                        pipettes.append(Pipette(**elem_data))
-            else:  # in form {"key": "val"}
-                if "location" in data.keys():
-                    labware.append(Labware(**data))
-                elif "mount" in data.keys():
-                    pipettes.append(Pipette(**data))
+        for resource in equipment_config:
+            if isinstance(resource, Labware):
+                labware.append(resource)
+            if isinstance(resource, Pipette):
+                pipettes.append(resource)
 
         # generate name -> location and location -> name relationships for labware
         self.labware_to_location = {}
@@ -304,15 +298,14 @@ class ResourceManager:
 
 
 def main(args):
-    equipment_config = yaml.safe_load(open(args.config))["equipment"]
+    config = ProtocolConfig.from_yaml(args.config)
+    rm = ResourceManager(equiment_config=config.equipment, resource_file=args.resource_file)
 
-    rf = ResourceManager(equiment_config=equipment_config, resource_file=args.resource_file)
+    print(rm.resources)
+    print(rm.get_next_tip("p1000_single_gen2"))
 
-    print(rf.resources)
-    print(rf.get_next_tip("p1000_single_gen2"))
-
-    print(rf.resources)
-    print(rf.get_next_tip("p1000_single_gen2"))
+    print(rm.resources)
+    print(rm.get_next_tip("p1000_single_gen2"))
 
 
 if __name__ == "__main__":

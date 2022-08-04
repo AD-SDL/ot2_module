@@ -1,14 +1,14 @@
 import copy
-import json
-import yaml
 import argparse
 from pathlib import Path
 from itertools import repeat
 from datetime import datetime
 from typing import List, Optional, Tuple
 
-from protopiler.config import PathLike, Command
-from protopiler.resource_manager import ResourceManager
+import pandas as pd
+
+from config import PathLike, Command, ProtocolConfig
+from resource_manager import ResourceManager
 
 
 """ Things to do:
@@ -37,55 +37,21 @@ class ProtoPiler:
 
         self.config = None
         if config_path:
-            self.load_config(config_path)
+            self.load_config(config_path=config_path, resource_file=resource_file)
 
     def load_config(self, config_path: PathLike, resource_file: Optional[PathLike] = None) -> None:
         self.config_path = config_path
         self.resource_file = resource_file
 
-        self.config = yaml.safe_load(open(config_path))
-        self._parse_config()
+        self.config = ProtocolConfig.from_yaml(config_path)
+        self.metadata = self.config.metadata
+        self.resource_manager = ResourceManager(self.config.equipment, self.resource_file)
 
-    def _parse_config(self) -> None:
-        """Create a programatic representation of ot2 protocol setup and execution
-            provided by YAML
+        self.commands = self.config.commands
+        self._postprocess_commands()
 
-        Things we need:
-            - Equipment: need location -> name and name -> location info?
-                - pipettes installed
-                - tipracks
-                - wellplates
-            - Commands
-                - name: optional
-                - source: str (may need wellplate name/location as well as cell location)
-                - destination: str/[str]
-                - volume: int/[int]
-
-
-
-        Args:
-            None: None
-
-        Returns:
-            None : None
-        """
-        # TODO: include more flexibility for file format. Types should allow for dict like assignments
-        # as well as list like assignment
-        # i.e i should be able to tell if a block is a labware/pipette vs a command block
-
-        if isinstance(self.config, dict) and "equipment" in self.config and "commands" in self.config:
-            # load metadata, optional
-            self.metadata = self.config.get("metadata", None)
-
-            self.resource_manager = ResourceManager(self.config["equipment"], resource_file=self.resource_file)
-
-            # load the commands
-            self.commands = [Command(**data) for data in self.config["commands"]]
-            # post process on commands to accept alias:[str...] and [alias:loc] form
-            self._postprocess_commands()
-
-        else:
-            raise Exception("Unknown configuration file format")
+        self.load_resources(self.config.resources)
+        print(self.resources)
 
     def _postprocess_commands(self) -> None:  # Could use more testing
         """Processes the commands to support the alias syntax.
@@ -150,6 +116,11 @@ class ProtoPiler:
 
                 command.destination = new_locations
 
+    def load_resources(self, resources):
+        self.resources = {}
+        for resource in resources:
+            self.resources[resource.name] = pd.read_excel(resource.location, header=1)
+
     def _reset(
         self,
     ) -> None:
@@ -208,7 +179,7 @@ class ProtoPiler:
         # Header and run() declaration with initial deck and pipette dicts
         header = open((self.template_dir / "header.template")).read()
         if self.metadata is not None:
-            header = header.replace("#metadata#", f"metadata = {json.dumps(self.metadata, indent=4)}")
+            header = header.replace("#metadata#", f"metadata = {self.metadata.json(indent=4)}")
         else:
             header = header.replace("#metadata#", "")
         protocol.append(header)
@@ -490,11 +461,13 @@ def main(config_path):
     # TODO: Think about how a user would want to interact with this, do they want to interact with something like a
     # SeqIO from Biopython? Or more like a interpreter kind of thing? That will guide some of this... not sure where
     # its going right now
-    ppiler = ProtoPiler()
+    ppiler = ProtoPiler(
+        config_path,
+    )
 
     ppiler.yaml_to_protocol(
         config_path=config_path,
-        out_file="./test_protocol.py",
+        protocol_out="./test_protocol.py",
         resource_file="./test_resources.json",
         reset_when_done=True,
     )
