@@ -1,0 +1,25 @@
+.DEFAULT_GOAL := all
+isort = isort ot2_driver
+black = black --target-version py39 ot2_driver
+
+.PHONY: format
+format:
+	$(isort)
+	$(black)
+
+.PHONY: lint
+lint:
+	$(black) --check --diff
+	flake8 ot2_driver/
+	#pylint ot2_driver/
+	pydocstyle ot2_driver/
+
+
+.PHONY: mypy
+mypy:
+	mypy --config-file setup.cfg --package ot2util
+	mypy --config-file setup.cfg ot2util/
+	mypy --config-file setup.cfg examples/
+
+.PHONY: all
+all: format lint

@@ -1,9 +1,9 @@
 """Dataclasses and other configuration used in the protopiler"""
 import json
-import yaml
 from pathlib import Path
-from typing import TypeVar, Union, Type, Optional, List
+from typing import List, Optional, Type, TypeVar, Union
 
+import yaml
 from pydantic import BaseSettings as _BaseSettings
 
 _T = TypeVar("_T")

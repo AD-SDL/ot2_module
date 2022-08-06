@@ -1,7 +1,7 @@
 """Stores dataclasses/args/config for the ot2 drivers"""
-from typing import Union
-from pathlib import Path
 from argparse import ArgumentParser, Namespace
+from pathlib import Path
+from typing import Union
 
 PathLike = Union[str, Path]
 
@@ -36,10 +36,16 @@ def parse_ot2_args() -> Namespace:
         help="Path to resource file that currently exists",
     )
     parser.add_argument(
-        "-po", "--protocol_out", type=Path, help="Optional, name/location for protocol file to be saved to"
+        "-po",
+        "--protocol_out",
+        type=Path,
+        help="Optional, name/location for protocol file to be saved to",
     )
     parser.add_argument(
-        "-ro", "--resource_out", type=Path, help="Optional, name/location for resources used file to be saved to"
+        "-ro",
+        "--resource_out",
+        type=Path,
+        help="Optional, name/location for resources used file to be saved to",
     )
     parser.add_argument(
         "-s",
@@ -54,9 +60,14 @@ def parse_ot2_args() -> Namespace:
         action="store_true",
         help="Delete resource files and protocol files when done, default false",
     )
-    parser.add_argument("-v", "--verbose", action="store_true", help="Print status along the way")
     parser.add_argument(
-        "-ts", "--test_streaming", help="Option to test streaming line item commands", action="store_true"
+        "-v", "--verbose", action="store_true", help="Print status along the way"
+    )
+    parser.add_argument(
+        "-ts",
+        "--test_streaming",
+        help="Option to test streaming line item commands",
+        action="store_true",
     )
 
     return parser.parse_args()

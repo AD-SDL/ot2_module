@@ -1,7 +1,7 @@
-opentrons
-pydantic==1.8.2
-pyyaml
-Fabric
-paramiko==2.8
-cryptography==36.0.2
-requests
+# As well as these dev tools:
+black
+flake8
+pytest
+isort
+pylint
+pydocstyle

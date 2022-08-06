@@ -29,9 +29,10 @@ Packages **must** follow ROS 2 python package format, see useful commands below!
 3. I would recommend a conda/venv environment. The following assusumes conda. 
     1. `conda create -n ot2-driver python=3.9`
     1. `conda activate ot2-driver`
-    1. `pip install -r requirements.txt` 
+    1. `pip install -r requirements/requirements.txt` 
 
-### Getting the OT2 setup for ssh 
+### Getting the OT2 setup for ssh
+*This is not required (or used) for the HTTP driver* 
 When setting up an ssh key to connect to the opentrons, it is helpful to make a new one without a passphrase. For more information on setting up an ssh connection see:
 
 *Note, you have to have the Opentrons App installed*
@@ -88,11 +89,12 @@ To run the `protopiler/example_configs/basic_config.yaml` with verbose settings 
 python ot2_driver_ssh.py -rc [insert/robot/config/path] -pc protopiler/example_configs/basic_config.yaml -po ./test_protocol.py -ro ./test_resources.json -v 
 ```
 
-To run your own protocol.py file, replace the `-pc` option with the path to your protocol.py file
+To run your own protocol.py file, replace data in the `-pc` option with the path to your protocol.py file
 ```
 python ot2_driver_ssh.py -rc [insert/robot/config/path] -pc ./test_protocol.py
 ```
 
+*The process is the same for the HTTP driver* 
 
 If you would like to write your own code using the ot2 driver you can start with something like this
 ```python
@@ -123,3 +125,8 @@ if returncode:
 ot2.execute(protocol_file)
 
 ```
+
+### Running Dev Tools 
+ 
+1. Install `pip install -r requirements/dev.txt`
+1. Run `make` in project root

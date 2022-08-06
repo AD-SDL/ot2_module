@@ -1,13 +1,13 @@
 """Driver implemented using HTTP protocol supported by Opentrons"""
-import yaml
-import fabric
 import subprocess
 from pathlib import Path
-from pydantic import BaseModel
 from typing import Optional
 
+import fabric
+import yaml
+from pydantic import BaseModel
 
-from ot2_driver.config import parse_ot2_args, PathLike
+from ot2_driver.config import PathLike, parse_ot2_args
 from ot2_driver.protopiler.protopiler import ProtoPiler
 
 
@@ -26,7 +26,9 @@ class OT2_Driver:
     def __init__(self, config: OT2_Config) -> None:
         self.config: OT2_Config = config
         self.protopiler: ProtoPiler = ProtoPiler(
-            template_dir=(Path(__file__).parent.resolve() / "protopiler/protocol_templates")
+            template_dir=(
+                Path(__file__).parent.resolve() / "protopiler/protocol_templates"
+            )
         )
 
     def _connect(self) -> fabric.Connection:
@@ -45,7 +47,9 @@ class OT2_Driver:
             },
         )
 
-    def compile_protocol(self, config_path, resource_file=None, protocol_out=None, resource_out=None):
+    def compile_protocol(
+        self, config_path, resource_file=None, protocol_out=None, resource_out=None
+    ):
         """Compile the protocols via protopiler
 
         Can skip this step if you already have a full protocol
@@ -62,10 +66,15 @@ class OT2_Driver:
         Tuple: [str, str]
             path to the protocol file and resource file
         """
-        self.protopiler.load_config(config_path=config_path, resource_file=resource_file)
+        self.protopiler.load_config(
+            config_path=config_path, resource_file=resource_file
+        )
 
         protocol_out_path, protocol_resource_file = self.protopiler.yaml_to_protocol(
-            config_path, protocol_out=protocol_out, resource_file=resource_file, resource_file_out=resource_out
+            config_path,
+            protocol_out=protocol_out,
+            resource_file=resource_file,
+            resource_file_out=resource_out,
         )
 
         return protocol_out_path, protocol_resource_file
@@ -123,7 +132,9 @@ def main(args):
             resource_out=args.resource_out,
         )
         if args.verbose:
-            print(f"Compiled protocol file to: {protocol_file}, and resource file: {resource_file}")
+            print(
+                f"Compiled protocol file to: {protocol_file}, and resource file: {resource_file}"
+            )
     else:
         print("Existing protocol found")
         protocol_file = args.protocol_config

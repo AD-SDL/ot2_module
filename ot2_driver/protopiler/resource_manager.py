@@ -1,14 +1,13 @@
 """Class to manage/keep track of resources used by a protocol"""
-import re
 import json
-from pathlib import Path
+import re
+from argparse import ArgumentParser
 from copy import deepcopy
 from datetime import datetime
-from argparse import ArgumentParser
-from typing import Optional, Dict, List, Union
+from pathlib import Path
+from typing import Dict, List, Optional, Union
 
-from ot2_driver.protopiler.config import PathLike, Labware, Pipette, ProtocolConfig
-
+from ot2_driver.protopiler.config import Labware, PathLike, Pipette, ProtocolConfig
 
 """
 Notes
@@ -42,7 +41,9 @@ class ResourceManager:
         self.init = False
 
         if equiment_config:
-            self.load_equipment(equipment_config=equiment_config, resource_file=resource_file)
+            self.load_equipment(
+                equipment_config=equiment_config, resource_file=resource_file
+            )
             self.init = True
 
     def load_equipment(
@@ -79,7 +80,9 @@ class ResourceManager:
 
         self.init = True
 
-    def _generate_location_name_relationships(self, equipment_config: List[Union[Labware, Pipette]]) -> None:
+    def _generate_location_name_relationships(
+        self, equipment_config: List[Union[Labware, Pipette]]
+    ) -> None:
         """Generate the location and name relationships for use in tracking resources
 
         Parameters
@@ -119,7 +122,9 @@ class ResourceManager:
                 self.labware_to_location[element.name] = [element.location]
 
             if element.location in self.location_to_labware:
-                raise Exception("Labware location overloaded, please check configuration")
+                raise Exception(
+                    "Labware location overloaded, please check configuration"
+                )
             self.location_to_labware[element.location] = element.name
 
             if element.alias:
@@ -131,7 +136,9 @@ class ResourceManager:
         for element in pipettes:
             # Generate pipette -> mount association
             if element.mount in self.mount_to_pipette:
-                raise Exception("Pipette location overloaded, please check configuration")
+                raise Exception(
+                    "Pipette location overloaded, please check configuration"
+                )
 
             self.mount_to_pipette[element.mount] = element.name
 
@@ -179,7 +186,9 @@ class ResourceManager:
                 resources[location]["wells_used"] = set()
             # if exists, convert it to set from list (set not serializable)
             if "wellplate" in name and "wells_used" in resources[location]:
-                resources[location]["wells_used"] = set(resources[location]["wells_used"])
+                resources[location]["wells_used"] = set(
+                    resources[location]["wells_used"]
+                )
 
         return resources
 
@@ -258,13 +267,17 @@ class ResourceManager:
             if self.resources[loc]["used"] >= capacity:
                 # data sanitization
                 if not self.resources[loc]["depleted"]:
-                    raise Exception("Resource data manipulation suspected... check resource file")
+                    raise Exception(
+                        "Resource data manipulation suspected... check resource file"
+                    )
 
                 continue
 
             # data sanitization
             if self.resources[loc]["depleted"]:
-                raise Exception("Resource data manipulation suspected... check resource file")
+                raise Exception(
+                    "Resource data manipulation suspected... check resource file"
+                )
 
             # leveraging the 0 indexing of the rack and the 1 indexing of the count
             # has to be a str because of the protocol writing
@@ -298,7 +311,10 @@ class ResourceManager:
             # dependent on opentrons naming scheme
             capacity = int(tiprack_name.split("_")[1])
             # just in case someone manually messed with the json...
-            if self.resources[loc]["depleted"] or self.resources[loc]["used"] >= capacity:
+            if (
+                self.resources[loc]["depleted"]
+                or self.resources[loc]["used"] >= capacity
+            ):
                 continue
 
             # update usage
@@ -321,7 +337,9 @@ class ResourceManager:
         if well:
             self.resources[location]["wells_used"].add(well)
 
-            self.resources[location]["used"] = len(self.resources[location]["wells_used"])
+            self.resources[location]["used"] = len(
+                self.resources[location]["wells_used"]
+            )
 
         else:
             self.resources[location]["used"] += 1
@@ -349,7 +367,9 @@ class ResourceManager:
         pip_volume_pattern = re.compile(r"p\d{2,}")
         rack_volume_pattern = re.compile(r"\d{2,}ul$")
         # find suitable tipracks
-        pip_volume = int(pip_volume_pattern.search(pipette_name).group().replace("p", ""))
+        pip_volume = int(
+            pip_volume_pattern.search(pipette_name).group().replace("p", "")
+        )
         valid_tipracks = []
         for labware_name, locations in self.labware_to_location.items():
             matches = rack_volume_pattern.search(labware_name)
@@ -405,7 +425,9 @@ class ResourceManager:
         out_resources = deepcopy(self.resources)
         for location in out_resources.keys():
             if "wells_used" in out_resources[location]:
-                out_resources[location]["wells_used"] = list(out_resources[location]["wells_used"])
+                out_resources[location]["wells_used"] = list(
+                    out_resources[location]["wells_used"]
+                )
 
             # determine out_path,
             # `out_file` param takes priority, then `resouce_file` from class, then a auto_generated name
@@ -426,7 +448,9 @@ class ResourceManager:
 
 def main(args):
     config = ProtocolConfig.from_yaml(args.config)
-    rm = ResourceManager(equiment_config=config.equipment, resource_file=args.resource_file)
+    rm = ResourceManager(
+        equiment_config=config.equipment, resource_file=args.resource_file
+    )
 
     print(rm.resources)
     print(rm.get_next_tip("p1000_single_gen2"))
@@ -437,7 +461,9 @@ def main(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("-rf", "--resource_file", type=Path, help="Path to json resources file")
+    parser.add_argument(
+        "-rf", "--resource_file", type=Path, help="Path to json resources file"
+    )
     parser.add_argument(
         "-c",
         "--config",
