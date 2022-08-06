@@ -1,5 +1,0 @@
-pyzmq
-mysql-connector
-paramiko
-rich
-scp

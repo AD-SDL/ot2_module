@@ -1,0 +1,25 @@
+equipment:
+  - name: corning_96_wellplate_360ul_flat
+    location: "2"
+    alias: source
+  - name: corning_96_wellplate_360ul_flat
+    location: "3"
+    alias: dest
+  - name: opentrons_96_tiprack_1000ul
+    location: "8"
+  - name: p1000_single_gen2
+    mount: right
+commands:
+  - name: example command
+    source: source:A1
+    destination: dest:A1
+    volume: 100
+  - name: other command
+    source: source:A2
+    destination: dest:A2
+    volume: 100
+metadata:
+  protocolName: Example Name
+  author: Kyle khippe@anl.gov
+  description: some detailed description
+  apiLevel: "2.12"
