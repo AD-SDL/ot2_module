@@ -7,7 +7,7 @@ from datetime import datetime
 from argparse import ArgumentParser
 from typing import Optional, Dict, List, Union
 
-from config import PathLike, Labware, Pipette, ProtocolConfig
+from ot2_driver.protopiler.config import PathLike, Labware, Pipette, ProtocolConfig
 
 
 """

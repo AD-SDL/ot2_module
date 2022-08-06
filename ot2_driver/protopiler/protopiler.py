@@ -8,8 +8,8 @@ from typing import List, Optional, Tuple
 
 import pandas as pd
 
-from config import PathLike, Command, ProtocolConfig, Resource
-from resource_manager import ResourceManager
+from ot2_driver.protopiler.config import PathLike, Command, ProtocolConfig, Resource
+from ot2_driver.protopiler.resource_manager import ResourceManager
 
 
 """ Things to do:
@@ -100,7 +100,8 @@ class ProtoPiler:
         """
         # TODO: do more testing of this function
         # TODO: can we make this better?
-        resource_key = list(self.resources.keys())[0]
+        if self.resources:
+            resource_key = list(self.resources.keys())[0]
         for command in self.commands:
             if ":[" in command.source:
                 new_locations = []
@@ -130,7 +131,7 @@ class ProtoPiler:
             peek_well: str = peek_elem.split(":")[-1]
             # check if it follows naming convention`[A-Z,a-z]?[0-9]{1,3}`
             # TODO better way to check the naming conventions for the wells
-            if not peek_well.isdigit() or not peek_well[1:].isdigit():
+            if not peek_well.isdigit() and not peek_well[1:].isdigit():
                 # read from file
                 new_locations = []
                 for orig_command, loc in zip(repeat(command.source), self.resources[resource_key][peek_well]):
@@ -165,7 +166,7 @@ class ProtoPiler:
             if isinstance(command.destination, list):  # No mixing and matching
                 peek_elem = command.destination[0]
             # TODO better way to check the naming conventions for the well
-            if not peek_well.isdigit() or not peek_well[1:].isdigit():
+            if not peek_well.isdigit() and not peek_well[1:].isdigit():
                 # read from file
                 new_locations = []
                 for orig_command, loc in zip(repeat(command.destination), self.resources[resource_key][peek_well]):
@@ -174,7 +175,7 @@ class ProtoPiler:
 
                 command.destination = new_locations
         # have to check if volumes comes from the files
-        if not isinstance(command.volume, int) or not isinstance(command.volume, list):
+        if not isinstance(command.volume, int) and not isinstance(command.volume, list):
             new_volumes = []
             for vol in self.resources[resource_key][command.volume]:
                 new_volumes.append(int(vol))
@@ -193,8 +194,9 @@ class ProtoPiler:
 
         """
         self.resources = {}
-        for resource in resources:
-            self.resources[resource.name] = pd.read_excel(resource.location, header=0)
+        if self.resources:
+            for resource in resources:
+                self.resources[resource.name] = pd.read_excel(resource.location, header=0)
 
     def _reset(
         self,

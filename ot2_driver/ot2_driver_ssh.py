@@ -1,16 +1,19 @@
+"""Driver implemented using HTTP protocol supported by Opentrons"""
 import yaml
 import fabric
 import subprocess
 from pathlib import Path
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional
 
 
-from protopiler.protopiler import ProtoPiler
-from protopiler.config import PathLike, parse_ot2_args
+from ot2_driver.config import parse_ot2_args, PathLike
+from ot2_driver.protopiler.protopiler import ProtoPiler
 
 
 class OT2_Config(BaseModel):
+    """OT2 dataclass"""
+
     ip: str
     ssh_key: str
     model: str = "OT2"
@@ -18,6 +21,8 @@ class OT2_Config(BaseModel):
 
 
 class OT2_Driver:
+    """Driver code for the OT2 utilizing ssh."""
+
     def __init__(self, config: OT2_Config) -> None:
         self.config: OT2_Config = config
         self.protopiler: ProtoPiler = ProtoPiler(
@@ -99,17 +104,13 @@ class OT2_Driver:
         print(conn.run(cmd))
 
 
-def load_ot2_config(robot_config: PathLike) -> List[OT2_Driver]:
+def main(args):
+    """Shows how to use ot2 driver in programmatic way"""
     ot2s = []
     for ot2_raw_cfg in yaml.safe_load(open(args.robot_config)):
         ot2s.append(OT2_Driver(OT2_Config(**ot2_raw_cfg)))
-
-    return ot2s
-
-
-def main(args):
-    # returns list of ot2s, but we just have one
-    ot2 = load_ot2_config(args.robot_config)[0]
+    # we just want the first one
+    ot2 = ot2s[0]
 
     # if the extension is not py, compile it to a protocol.py
     if "py" not in str(args.protocol_config):

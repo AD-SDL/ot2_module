@@ -136,3 +136,7 @@ dmypy.json
 # Config files
 # we will leave the *.yaml files public
 *.yml
+
+# DS store
+.DS_Store
+*/.DS_Store

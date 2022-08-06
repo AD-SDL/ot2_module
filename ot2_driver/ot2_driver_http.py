@@ -6,8 +6,8 @@ from pathlib import Path
 from pydantic import BaseModel
 from typing import Optional, Tuple, Dict
 
-from config import PathLike, parse_ot2_args
-from protopiler.protopiler import ProtoPiler
+from ot2_driver.config import PathLike, parse_ot2_args
+from ot2_driver.protopiler.protopiler import ProtoPiler
 
 
 class OT2_Config(BaseModel):
@@ -57,6 +57,8 @@ Running example from REPL
 
 
 class OT2_Driver:
+    """Driver code for the OT2 utilizing the built in HTTP server."""
+
     def __init__(self, config: OT2_Config) -> None:
         self.config: OT2_Config = config
         self.protopiler: ProtoPiler = ProtoPiler(
@@ -218,7 +220,7 @@ class OT2_Driver:
         return run_id
 
 
-def test_streaming(ot2: OT2_Driver):
+def _test_streaming(ot2: OT2_Driver):
     run_id = ot2.stream(
         command="loadLabware",
         params={
@@ -281,6 +283,7 @@ def test_streaming(ot2: OT2_Driver):
 
 
 def main(args):
+    """Shows how to use ot2 driver in programmatic way"""
     ot2s = []
     for ot2_raw_cfg in yaml.safe_load(open(args.robot_config)):
         ot2s.append(OT2_Driver(OT2_Config(**ot2_raw_cfg)))
@@ -289,7 +292,7 @@ def main(args):
 
     # testing streaming
     if args.test_streaming:
-        test_streaming(ot2)
+        _test_streaming(ot2)
 
     # Can pass in a full python file here, no resource files will be created, but it won't break the system
     protocol_file, resource_file = ot2.compile_protocol(
