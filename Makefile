@@ -11,8 +11,7 @@ format:
 lint:
 	$(black) --check --diff
 	flake8 ot2_driver/
-	#pylint ot2_driver/
-	pydocstyle ot2_driver/
+	pydocstyle ot2_driver/ --count
 
 
 .PHONY: mypy

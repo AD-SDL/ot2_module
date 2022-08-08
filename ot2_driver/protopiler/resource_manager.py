@@ -24,6 +24,8 @@ Code:
 
 
 class ResourceManager:
+    """Class designed to keep track of used resources in a protocol"""
+
     def __init__(
         self,
         equiment_config: Optional[List[Union[Labware, Pipette]]] = None,
@@ -446,7 +448,7 @@ class ResourceManager:
         return str(out_path)
 
 
-def main(args):
+def main(args):  # noqa: D103
     config = ProtocolConfig.from_yaml(args.config)
     rm = ResourceManager(
         equiment_config=config.equipment, resource_file=args.resource_file
