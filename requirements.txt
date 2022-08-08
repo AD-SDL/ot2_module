@@ -5,3 +5,4 @@ Fabric
 paramiko==2.8
 cryptography==36.0.2
 requests
+pandas
