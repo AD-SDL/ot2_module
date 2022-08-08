@@ -4,7 +4,7 @@ import copy
 from datetime import datetime
 from itertools import repeat
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import pandas as pd
 
@@ -107,27 +107,7 @@ class ProtoPiler:
             resource_key = list(self.resources.keys())[0]
         for command in self.commands:
             if ":[" in command.source:
-                new_locations = []
-                alias = command.source.split(":")[0]
-                process_source = copy.deepcopy(command.source)
-                process_source = ":".join(
-                    process_source.split(":")[1:]
-                )  # split and rejoin after first colon
-                process_source = process_source.strip("][").split(", ")
-
-                for location in process_source:
-                    if (
-                        len(location) == 0
-                    ):  # Handles list that end like this: ...A3, A4, ]
-                        continue
-                    new_location = None
-                    if ":" not in location:
-                        new_location = f"{alias}:{location}"
-                        new_locations.append(new_location)
-                    else:
-                        new_locations.append(location)
-
-                command.source = new_locations
+                command.source = self._unpack_alias(command_elem=command.source)
 
             # Add logic for taking well names from files
             # peek into the source, check the well destination part
@@ -150,26 +130,7 @@ class ProtoPiler:
                 command.source = new_locations
 
             if ":[" in command.destination:
-                new_locations = []
-                alias = command.destination.split(":")[0]
-                process_destination = copy.deepcopy(command.destination)
-                process_destination = ":".join(
-                    process_destination.split(":")[1:]
-                )  # split and rejoin after first colon
-                process_destination = process_destination.strip("][").split(", ")
-                for location in process_destination:
-                    if (
-                        len(location) == 0
-                    ):  # Handles list that end like this: ...A3, A4, ]
-                        continue
-                    new_location = None
-                    if ":" not in location:
-                        new_location = f"{alias}:{location}"
-                        new_locations.append(new_location)
-                    else:
-                        new_locations.append(location)
-
-                command.destination = new_locations
+                command.destination = self._unpack_alias(command.destination)
 
             # Add logic for reading well names from file
             # peek into the source, check the well destination part
@@ -194,6 +155,27 @@ class ProtoPiler:
                 new_volumes.append(int(vol))
 
             command.volume = new_volumes
+
+    def _unpack_alias(self, command_elem: Union[str, List[str]]) -> List[str]:
+        new_locations = []
+        alias = command_elem.split(":")[0]
+        process_source = copy.deepcopy(command_elem)
+        process_source = ":".join(
+            process_source.split(":")[1:]
+        )  # split and rejoin after first colon
+        process_source = process_source.strip("][").split(", ")
+
+        for location in process_source:
+            if len(location) == 0:  # Handles list that end like this: ...A3, A4, ]
+                continue
+            new_location = None
+            if ":" not in location:
+                new_location = f"{alias}:{location}"
+                new_locations.append(new_location)
+            else:
+                new_locations.append(location)
+
+        return new_locations
 
     def load_resources(self, resources: List[Resource]):
         """Load the other resources (files) specified in the config
@@ -273,6 +255,9 @@ class ProtoPiler:
 
         if not self.config:
             self.load_config(config_path)
+
+        if resource_file and not self.resource_file:
+            self.load_config(self.config_path, resource_file)
 
         if protocol_out is None:
             protocol_out = Path(
@@ -609,18 +594,19 @@ class ProtoPiler:
                 yield vol, src, dst
 
 
-def main(config_path):
+def main(args):  # noqa: D103
     # TODO: Think about how a user would want to interact with this, do they want to interact with something like a
     # SeqIO from Biopython? Or more like a interpreter kind of thing? That will guide some of this... not sure where
     # its going right now
     ppiler = ProtoPiler(
-        config_path,
+        args.config, template_dir=Path("ot2_driver/protopiler/protocol_templates")
     )
 
     ppiler.yaml_to_protocol(
-        config_path=config_path,
-        protocol_out="./test_protocol.py",
-        resource_file="./test_resources.json",
+        config_path=args.config,
+        protocol_out=args.protocol_out,
+        resource_file=args.resource_in,
+        resource_file_out=args.resource_out,
         reset_when_done=True,
     )
 
@@ -628,7 +614,30 @@ def main(config_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-c", "--config", help="YAML config file", type=str, required=True
+        "-c",
+        "--config",
+        help="YAML config file",
+        type=str,
+        required=True,
     )
+    parser.add_argument(
+        "-po",
+        "--protocol_out",
+        help="Path to save the protocol to",
+        type=Path,
+    )
+    parser.add_argument(
+        "-ro",
+        "--resource_out",
+        help="Path to save the resource file to",
+        type=Path,
+    )
+    parser.add_argument(
+        "-ri",
+        "--resource_in",
+        help="Path to existing resource file to update",
+        type=Path,
+    )
+
     args = parser.parse_args()
-    main(args.config)
+    main(args)

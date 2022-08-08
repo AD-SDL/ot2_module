@@ -12,6 +12,8 @@ from ot2_driver.protopiler.protopiler import ProtoPiler
 
 
 class OT2_Config(BaseModel):
+    """OT2 config dataclass."""
+
     ip: str
     port: int = 31950
     model: str = "OT2"
@@ -61,6 +63,13 @@ class OT2_Driver:
     """Driver code for the OT2 utilizing the built in HTTP server."""
 
     def __init__(self, config: OT2_Config) -> None:
+        """Initialize OT2 driver.
+
+        Parameters
+        ----------
+        config : OT2_Config
+            Dataclass of the ot2_config
+        """
         self.config: OT2_Config = config
         self.protopiler: ProtoPiler = ProtoPiler(
             template_dir=(
@@ -303,8 +312,7 @@ def _test_streaming(ot2: OT2_Driver):
     exit()
 
 
-def main(args):
-    """Shows how to use ot2 driver in programmatic way"""
+def main(args):  # noqa: D103
     ot2s = []
     for ot2_raw_cfg in yaml.safe_load(open(args.robot_config)):
         ot2s.append(OT2_Driver(OT2_Config(**ot2_raw_cfg)))

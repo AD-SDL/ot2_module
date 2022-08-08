@@ -53,11 +53,7 @@ class BaseSettings(_BaseSettings):
 
 # Resources
 class Resource(BaseSettings):
-    """Wrapper for a file-based resource used in a configuration
-
-    Parameters
-    ----------
-    """
+    """Wrapper for a file-based resource used in a configuration"""
 
     location: Path
     """The location to the file"""
