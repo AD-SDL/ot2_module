@@ -14,6 +14,7 @@ lint:
 	pydocstyle ot2_driver/ --count
 
 
+
 .PHONY: mypy
 mypy:
 	mypy --config-file setup.cfg --package ot2util
