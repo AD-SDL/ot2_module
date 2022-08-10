@@ -17,9 +17,8 @@ lint:
 
 .PHONY: mypy
 mypy:
-	mypy --config-file setup.cfg --package ot2util
-	mypy --config-file setup.cfg ot2util/
-	mypy --config-file setup.cfg examples/
+	mypy --config-file setup.cfg --package ot2_driver/
+	mypy --config-file setup.cfg ot2_driver/
 
 .PHONY: all
 all: format lint

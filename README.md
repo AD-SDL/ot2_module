@@ -1,38 +1,13 @@
-# OT2 abstraction requirments
-Moving OT2 abstractions out of ROS network. 
-
-## Naming Conventions
-Package **must** be named `ot2_driver_pkg`, and file must be named `ot2_driver`. **No other package** will be imported into the ROS network, and thus invisible to the ROS layer.  
-
-Packages **must** follow ROS 2 python package format, see useful commands below! (Note, the way you link internal packges **must** also follow ROS 2 package formats)
-
-## Functions needed 
-* load_protocol(protocol_path, robot_id)
-    * Loads the protocol to the ot2_driver (knows what protocol code is, current driver does this via database)
-    * Inserts in error handling into the protocol
-* run_protocol(protocol_id, username, ip, port)
-    * Runs the given protocol id on the specified internal RPI4
-    * TODO: get that internal RPI4 specifications from config file not passed via arguments
-
-## Useful ROS Commands
-* `ros2 pkg create --build-type ament_python <package_name>` Creates the barebones for a new ROS 2 package
-* `colcon graph --dot | dot -Tpng -o deps.png` Generates a dependency graph
-
-## Installation Instructions
-1. `git clone https://github.com/AD-SDL/ot2_driver_pkg.git`
-
-## Instructions for Kyle's driver 
-
 ### Installation 
 1. `git clone https://github.com/KPHippe/ot2_driver.git`
 2. Switch to my dev branch `git checkout dev-kyle`
 3. I would recommend a conda/venv environment. The following assusumes conda. 
     1. `conda create -n ot2-driver python=3.9`
     1. `conda activate ot2-driver`
-    1. `pip install -r requirements/requirements.txt` 
+    1. `pip install -r requirements.txt` 
     1. `pip install -e .`
-
-*This installs ot2_driver as a package.* 
+    
+*This installs ot2_driver as a package*
 
 ### Getting the OT2 setup for ssh
 *This is not required (or used) for the HTTP driver* 
