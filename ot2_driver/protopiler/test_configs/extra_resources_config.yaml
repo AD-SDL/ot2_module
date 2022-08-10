@@ -1,0 +1,39 @@
+resources:
+  - location: /Users/kyle/github/ot2_driver/ot2_driver/protopiler/example_configs/simple_provided_info.xlsx
+    name: simple_data
+
+equipment:
+  - name: corning_96_wellplate_360ul_flat
+    location: "1"
+    alias: forward
+  - name: corning_96_wellplate_360ul_flat
+    location: "2"
+    alias: backward
+  - name: corning_96_wellplate_360ul_flat
+    location: "3"
+    alias: dna
+  - name: corning_96_wellplate_360ul_flat
+    location: "4"
+    alias: dest
+  - name: opentrons_96_tiprack_1000ul
+    location: "8"
+  - name: opentrons_96_tiprack_1000ul
+    location: "9"
+  - name: p1000_single_gen2
+    mount: right
+
+commands:
+  - name: forward primer
+    source: forward:Forward Primer
+    destination: dest:Destination
+    volume: 100
+  - name: backward primer
+    source: backward:Backward Primer
+    destination: dest:Destination
+    volume: Volume
+
+metadata:
+  protocolName: Example Name
+  author: Kyle khippe@anl.gov
+  description: example of reading wells from file
+  apiLevel: "2.12"
