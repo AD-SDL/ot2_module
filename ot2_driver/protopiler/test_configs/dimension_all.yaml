@@ -18,5 +18,5 @@ commands:
 metadata:
   protocolName: Example Name
   author: Kyle khippe@anl.gov
-  description: some detailed description
+  description: dimension_all.yml
   apiLevel: "2.12"
