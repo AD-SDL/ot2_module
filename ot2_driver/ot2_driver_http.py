@@ -72,9 +72,7 @@ class OT2_Driver:
         """
         self.config: OT2_Config = config
         self.protopiler: ProtoPiler = ProtoPiler(
-            template_dir=(
-                Path(__file__).parent.resolve() / "protopiler/protocol_templates"
-            )
+            template_dir=(Path(__file__).parent.resolve() / "protopiler/protocol_templates")
         )
 
     def compile_protocol(self, config_path, resource_file=None) -> Tuple[str, str]:
@@ -95,14 +93,9 @@ class OT2_Driver:
             path to the protocol file and resource file
         """
         if ".py" not in str(config_path):
-            self.protopiler.load_config(
-                config_path=config_path, resource_file=resource_file
-            )
+            self.protopiler.load_config(config_path=config_path, resource_file=resource_file)
 
-            (
-                protocol_out_path,
-                protocol_resource_file,
-            ) = self.protopiler.yaml_to_protocol(
+            protocol_out_path, protocol_resource_file = self.protopiler.yaml_to_protocol(
                 config_path, resource_file=resource_file
             )
 
@@ -158,9 +151,7 @@ class OT2_Driver:
         headers = {"Opentrons-Version": "2"}
         execute_json = {"data": {"actionType": "play"}}
 
-        execute_run_resp = requests.post(
-            url=execute_url, headers=headers, json=execute_json
-        )
+        execute_run_resp = requests.post(url=execute_url, headers=headers, json=execute_json)
 
         return execute_run_resp.json()
 
@@ -228,9 +219,7 @@ class OT2_Driver:
             run_id = run_resp.json()["data"]["id"]
 
         # queue the command
-        enqueue_payload = {
-            "data": {"commandType": command, "params": params, "intent": intent}
-        }
+        enqueue_payload = {"data": {"commandType": command, "params": params, "intent": intent}}
         enqueue_resp = requests.post(
             url=f"http://{self.config.ip}:31950/runs/{run_id}/commands",
             headers=headers,
