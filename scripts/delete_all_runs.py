@@ -20,10 +20,15 @@ def main(args):
     for run in runs_resp.json()["data"]:
         run_id = run["id"]
 
-        delete_resp = requests.delete(
-            url=base_url.format(ip_address=args.ip_address, extension=f"runs/{run_id}"),
-            headers=headers,
-        )
+        if run["status"] != "running" and run["current"] != "true":
+            delete_resp = requests.delete(
+                url=base_url.format(ip_address=args.ip_address, extension=f"runs/{run_id}"),
+                headers=headers,
+            )
+        else:
+            print(f"Run {run_id} is currently running, skipping...")
+            continue
+
         if delete_resp.status_code != 200:
             print(f"Could not delete run with ID {run_id}, response: {delete_resp.json()}")
         else:
