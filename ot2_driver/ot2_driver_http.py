@@ -167,7 +167,7 @@ class OT2_Driver:
 
         return Status.IDLE
 
-    def send_request(self, request_extension: str, **kwargs) -> requests.Request:
+    def send_request(self, request_extension: str, **kwargs) -> requests.Response:
         """Allows us to send arbitrary requests to the ot2 http server.
 
         Parameters
