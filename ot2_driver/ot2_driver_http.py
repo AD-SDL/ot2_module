@@ -92,7 +92,7 @@ class OT2_Driver:
         Tuple[str, str]
             returns `protocol_id`, and `run_id` in that order
         """
-        transfer_url = f"http://{self.config.ip}:31950/protocols"
+        transfer_url = f"http://{self.config.ip}:{self.config.port}/protocols"
         # TODO: maybe replace with pathlib?
         files = {"files": open(protocol_path, "rb")}
         headers = {"Opentrons-Version": "2"}
@@ -102,7 +102,7 @@ class OT2_Driver:
         protocol_id = transfer_resp.json()["data"]["id"]
 
         # create the run
-        run_url = f"http://{self.config.ip}:31950/runs"
+        run_url = f"http://{self.config.ip}:{self.config.port}/runs"
         run_json = {"data": {"protocolId": protocol_id}}
         run_resp = requests.post(url=run_url, headers=headers, json=run_json)
 
@@ -123,7 +123,7 @@ class OT2_Driver:
         Dict[str, Dict[str, str]]
             the json response from the OT2 execute command
         """
-        execute_url = f"http://{self.config.ip}:31950/runs/{run_id}/actions"
+        execute_url = f"http://{self.config.ip}:{self.config.port}/runs/{run_id}/actions"
         headers = {"Opentrons-Version": "2"}
         execute_json = {"data": {"actionType": "play"}}
 
@@ -139,7 +139,7 @@ class OT2_Driver:
         Optional[List[Dict[str, str]]]
             Returns a list of dictionaries that contain simplified information about the runs
         """
-        runs_url = f"http://{self.config.ip}:31950/runs"
+        runs_url = f"http://{self.config.ip}:{self.config.port}/runs"
         headers = {"Opentrons-Version": "2"}
 
         runs_resp = requests.get(url=runs_url, headers=headers)
@@ -187,7 +187,7 @@ class OT2_Driver:
         """
         # sanitize preceeding '/'
         request_extension = request_extension if "/" != request_extension[0] else request_extension[1:]
-        url = f"http://{self.config.ip}:31950/{request_extension}"
+        url = f"http://{self.config.ip}:{self.config.port}/{request_extension}"
 
         # check for headers
         if "headers" not in kwargs:
@@ -259,7 +259,7 @@ class OT2_Driver:
         if not run_id:
             # create a run
             run_resp = requests.post(
-                url=f"http://{self.config.ip}:31950/runs",
+                url=f"http://{self.config.ip}:{self.config.port}/runs",
                 headers=headers,
                 json={"data": {}},
                 max_retries=self.retry_strategy,
@@ -269,7 +269,7 @@ class OT2_Driver:
         # queue the command
         enqueue_payload = {"data": {"commandType": command, "params": params, "intent": intent}}
         enqueue_resp = requests.post(
-            url=f"http://{self.config.ip}:31950/runs/{run_id}/commands",
+            url=f"http://{self.config.ip}:{self.config.port}/runs/{run_id}/commands",
             headers=headers,
             json=enqueue_payload,
             max_retries=self.retry_strategy,
@@ -279,7 +279,7 @@ class OT2_Driver:
         # run the command
         if execute:
             execute_command_resp = requests.post(
-                url=f"http://{self.config.ip}:31950/runs/{run_id}/actions",
+                url=f"http://{self.config.ip}:{self.config.port}/runs/{run_id}/actions",
                 headers=headers,
                 json={"data": {"actionType": "play"}},
                 max_retries=self.retry_strategy,
