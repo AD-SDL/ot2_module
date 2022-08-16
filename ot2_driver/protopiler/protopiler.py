@@ -28,7 +28,7 @@ class ProtoPiler:
     def __init__(
         self,
         config_path: Optional[PathLike] = None,
-        template_dir: PathLike = Path("./protocol_templates"),
+        template_dir: PathLike = (Path(__file__).parent.resolve() / "protocol_templates"),
         resource_file: Optional[PathLike] = None,
     ) -> None:
         """Can initialize with the resources we need, or it can be done after initialization
@@ -565,15 +565,15 @@ if __name__ == "__main__":
         type=Path,
     )
     parser.add_argument(
-        "-ro",
-        "--resource_out",
-        help="Path to save the resource file to",
-        type=Path,
-    )
-    parser.add_argument(
         "-ri",
         "--resource_in",
         help="Path to existing resource file to update",
+        type=Path,
+    )
+    parser.add_argument(
+        "-ro",
+        "--resource_out",
+        help="Path to save the resource file to",
         type=Path,
     )
 
