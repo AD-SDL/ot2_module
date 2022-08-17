@@ -28,7 +28,9 @@ class ProtoPiler:
     def __init__(
         self,
         config_path: Optional[PathLike] = None,
-        template_dir: PathLike = (Path(__file__).parent.resolve() / "protocol_templates"),
+        template_dir: PathLike = (
+            Path(__file__).parent.resolve() / "protocol_templates"
+        ),
         resource_file: Optional[PathLike] = None,
     ) -> None:
         """Can initialize with the resources we need, or it can be done after initialization
@@ -52,7 +54,9 @@ class ProtoPiler:
         if config_path:
             self.load_config(config_path=config_path, resource_file=resource_file)
 
-    def load_config(self, config_path: PathLike, resource_file: Optional[PathLike] = None) -> None:
+    def load_config(
+        self, config_path: PathLike, resource_file: Optional[PathLike] = None
+    ) -> None:
         """Loading the config and generating necesary information for compiling a config
 
         This is what allows for nothing to be passed in during obj creation, if a user calls
@@ -71,7 +75,9 @@ class ProtoPiler:
 
         self.load_resources(self.config.resources)
         self.metadata = self.config.metadata
-        self.resource_manager = ResourceManager(self.config.equipment, self.resource_file)
+        self.resource_manager = ResourceManager(
+            self.config.equipment, self.resource_file
+        )
 
         self.commands = self.config.commands
         self._postprocess_commands()
@@ -117,7 +123,9 @@ class ProtoPiler:
             if not peek_well.isdigit() and not peek_well[1:].isdigit():
                 # read from file
                 new_locations = []
-                for orig_command, loc in zip(repeat(command.source), self.resources[resource_key][peek_well]):
+                for orig_command, loc in zip(
+                    repeat(command.source), self.resources[resource_key][peek_well]
+                ):
                     orig_deck_location = orig_command.split(":")[0]
                     new_locations.append(f"{orig_deck_location}:{loc}")
 
@@ -135,7 +143,9 @@ class ProtoPiler:
             if not peek_well.isdigit() and not peek_well[1:].isdigit():
                 # read from file
                 new_locations = []
-                for orig_command, loc in zip(repeat(command.destination), self.resources[resource_key][peek_well]):
+                for orig_command, loc in zip(
+                    repeat(command.destination), self.resources[resource_key][peek_well]
+                ):
                     orig_deck_location = orig_command.split(":")[0]
                     new_locations.append(f"{orig_deck_location}:{loc}")
 
@@ -152,7 +162,9 @@ class ProtoPiler:
         new_locations = []
         alias = command_elem.split(":")[0]
         process_source = copy.deepcopy(command_elem)
-        process_source = ":".join(process_source.split(":")[1:])  # split and rejoin after first colon
+        process_source = ":".join(
+            process_source.split(":")[1:]
+        )  # split and rejoin after first colon
         process_source = process_source.strip("][").split(", ")
 
         for location in process_source:
@@ -181,7 +193,9 @@ class ProtoPiler:
         self.resources = {}
         if self.resources:
             for resource in resources:
-                self.resources[resource.name] = pd.read_excel(resource.location, header=0)
+                self.resources[resource.name] = pd.read_excel(
+                    resource.location, header=0
+                )
 
     def _reset(
         self,
@@ -207,7 +221,9 @@ class ProtoPiler:
     def yaml_to_protocol(
         self,
         config_path: Optional[PathLike] = None,
-        protocol_out: PathLike = Path(f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"),
+        protocol_out: PathLike = Path(
+            f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
+        ),
         resource_file: Optional[PathLike] = None,
         resource_file_out: Optional[PathLike] = None,
         write_resources: bool = True,
@@ -246,20 +262,26 @@ class ProtoPiler:
             self.load_config(self.config_path, resource_file)
 
         if protocol_out is None:
-            protocol_out = Path(f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py")
+            protocol_out = Path(
+                f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
+            )
 
         protocol = []
 
         # Header and run() declaration with initial deck and pipette dicts
         header = open((self.template_dir / "header.template")).read()
         if self.metadata is not None:
-            header = header.replace("#metadata#", f"metadata = {self.metadata.json(indent=4)}")
+            header = header.replace(
+                "#metadata#", f"metadata = {self.metadata.json(indent=4)}"
+            )
         else:
             header = header.replace("#metadata#", "")
         protocol.append(header)
 
         # load labware and pipette
-        protocol.append("\n    ################\n    # load labware #\n    ################")
+        protocol.append(
+            "\n    ################\n    # load labware #\n    ################"
+        )
 
         labware_block = open((self.template_dir / "load_labware.template")).read()
         # TODO: think of some better software design for accessing members of resource manager
@@ -287,7 +309,9 @@ class ProtoPiler:
             protocol.append(pipette_command)
 
         # execute commands
-        protocol.append("\n    ####################\n    # execute commands #\n    ####################")
+        protocol.append(
+            "\n    ####################\n    # execute commands #\n    ####################"
+        )
 
         commands_python = self._create_commands()
         protocol.extend(commands_python)
@@ -303,13 +327,19 @@ class ProtoPiler:
         # 3. self.resources is not none, we are writing resources, and can overwrite it if present
         # 4. we are writing resources but do not have either file, dump it here with generated name
         if resource_file_out is not None:
-            resource_file_out = self.resource_manager.dump_resource_json(out_file=resource_file_out)
+            resource_file_out = self.resource_manager.dump_resource_json(
+                out_file=resource_file_out
+            )
 
         elif resource_file and write_resources:
-            resource_file_out = self.resource_manager.dump_resource_json(out_file=resource_file)
+            resource_file_out = self.resource_manager.dump_resource_json(
+                out_file=resource_file
+            )
 
         elif self.resource_file and write_resources and overwrite_resources_json:
-            resource_file_out = self.resource_manager.dump_resource_json(out_file=self.resource_file)
+            resource_file_out = self.resource_manager.dump_resource_json(
+                out_file=self.resource_file
+            )
 
         elif write_resources:
             resource_file_out = self.resource_manager.dump_resource_json()
@@ -340,17 +370,23 @@ class ProtoPiler:
         tip_loaded = {"left": False, "right": False}
         for i, command_block in enumerate(self.commands):
 
-            block_name = command_block.name if command_block.name is not None else f"command {i}"
+            block_name = (
+                command_block.name if command_block.name is not None else f"command {i}"
+            )
             commands.append(f"\n    # {block_name}")
             for (volume, src, dst) in self._process_instruction(command_block):
                 # determine which pipette to use
                 pipette_mount = self.resource_manager.determine_pipette(volume)
                 if pipette_mount is None:
-                    raise Exception(f"No pipette available for {block_name} with volume: {volume}")
+                    raise Exception(
+                        f"No pipette available for {block_name} with volume: {volume}"
+                    )
 
                 # check for tip
                 if not tip_loaded[pipette_mount]:
-                    load_command = pick_tip_template.replace("#pipette#", f'pipettes["{pipette_mount}"]')
+                    load_command = pick_tip_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
                     # TODO: think of some better software design for accessing members of resource manager
                     pipette_name = self.resource_manager.mount_to_pipette[pipette_mount]
 
@@ -361,8 +397,12 @@ class ProtoPiler:
                             well_location,
                         ) = self.resource_manager.get_next_tip(pipette_name)
 
-                        location_string = f'deck["{rack_location}"].wells()[{well_location}]'
-                        load_command = load_command.replace("#location#", location_string)
+                        location_string = (
+                            f'deck["{rack_location}"].wells()[{well_location}]'
+                        )
+                        load_command = load_command.replace(
+                            "#location#", location_string
+                        )
                     else:
                         load_command = load_command.replace("#location#", "")
                         self.resource_manager.update_tip_usage(pipette_name)
@@ -375,28 +415,40 @@ class ProtoPiler:
                 # should handle things not formed like loc:well
                 src_well = src.split(":")[-1]
 
-                aspirate_command = aspirate_template.replace("#pipette#", f'pipettes["{pipette_mount}"]')
+                aspirate_command = aspirate_template.replace(
+                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                )
                 aspirate_command = aspirate_command.replace("#volume#", str(volume))
                 aspirate_command = aspirate_command.replace(
                     "#src#", f'deck["{src_wellplate_location}"]["{src_well}"]'
                 )
                 commands.append(aspirate_command)
                 # update resource usage
-                self.resource_manager.update_well_usage(src_wellplate_location, src_well)
+                self.resource_manager.update_well_usage(
+                    src_wellplate_location, src_well
+                )
 
                 dst_wellplate_location = self._parse_wellplate_location(dst)
-                dst_well = dst.split(":")[-1]  # should handle things not formed like loc:well
-                dispense_command = dispense_template.replace("#pipette#", f'pipettes["{pipette_mount}"]')
+                dst_well = dst.split(":")[
+                    -1
+                ]  # should handle things not formed like loc:well
+                dispense_command = dispense_template.replace(
+                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                )
                 dispense_command = dispense_command.replace("#volume#", str(volume))
                 dispense_command = dispense_command.replace(
                     "#dst#", f'deck["{dst_wellplate_location}"]["{dst_well}"]'
                 )
                 commands.append(dispense_command)
                 # update resource usage
-                self.resource_manager.update_well_usage(dst_wellplate_location, dst_well)
+                self.resource_manager.update_well_usage(
+                    dst_wellplate_location, dst_well
+                )
 
                 if command_block.drop_tip:
-                    drop_command = drop_tip_template.replace("#pipette#", f'pipettes["{pipette_mount}"]')
+                    drop_command = drop_tip_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
                     commands.append(drop_command)
                     tip_loaded[pipette_mount] = False
 
@@ -404,7 +456,9 @@ class ProtoPiler:
 
         for mount, status in tip_loaded.items():
             if status:
-                commands.append(drop_tip_template.replace("#pipette#", f'pipettes["{mount}"]'))
+                commands.append(
+                    drop_tip_template.replace("#pipette#", f'pipettes["{mount}"]')
+                )
                 tip_loaded[mount] = False
 
         return commands
@@ -428,11 +482,15 @@ class ProtoPiler:
             If the command is not formatted correctly, it should get caught before this, but if not I check here
         """
         location = None
-        if ":" in command_location:  # new format, pass a wellplate location, then well location
+        if (
+            ":" in command_location
+        ):  # new format, pass a wellplate location, then well location
             try:
                 plate, _ = command_location.split(":")
             except ValueError:
-                raise Exception(f"Command: {command_location} is not formatted correctly...")
+                raise Exception(
+                    f"Command: {command_location} is not formatted correctly..."
+                )
 
             # TODO: think of some better software design for accessing members of resource manager
             location = self.resource_manager.alias_to_location[plate]
@@ -440,7 +498,9 @@ class ProtoPiler:
             for name, loc in self.resource_manager.labware_to_location.items():
                 if "well" in name:
                     if location is not None:
-                        print(f"Location {location} is overwritten with {loc}, multiple wellplates present")
+                        print(
+                            f"Location {location} is overwritten with {loc}, multiple wellplates present"
+                        )
                     if type(loc) is list and len(loc) > 1:
                         print(
                             f"Ambiguous command '{command_location}', multiple plates satisfying params (locations: {loc}) found, choosing location: {loc[0]}..."
@@ -504,7 +564,9 @@ class ProtoPiler:
                     if len(command_block.source) == 1:
                         command_block.source = command_block.source[0]
                     else:
-                        raise Exception("Multiple iterables found, cannot deterine dimension to iterate over")
+                        raise Exception(
+                            "Multiple iterables found, cannot deterine dimension to iterate over"
+                        )
                 iter_len = len(command_block.source)
             if isinstance(command_block.destination, list):
                 if iter_len != 0 and len(command_block.destination) != iter_len:

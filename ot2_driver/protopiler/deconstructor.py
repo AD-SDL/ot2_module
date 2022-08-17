@@ -1,11 +1,17 @@
 """Deconstructor, parses a protocol and turns it into a config"""
 import re
 import subprocess
+from argparse import ArgumentParser
 from pathlib import Path
 from typing import Dict, Optional
-from argparse import ArgumentParser
 
-from ot2_driver.protopiler.config import Metadata, ProtocolConfig, Command, Labware, Pipette
+from ot2_driver.protopiler.config import (
+    Command,
+    Labware,
+    Metadata,
+    Pipette,
+    ProtocolConfig,
+)
 
 
 class Deconstructor:
@@ -34,7 +40,9 @@ class Deconstructor:
 
         self.opentrons_tiprack_pattern = re.compile("Opentrons.*µL")
 
-    def deconstruct(self, protocol_path: Path, config_path: Optional[Path] = None) -> Path:
+    def deconstruct(
+        self, protocol_path: Path, config_path: Optional[Path] = None
+    ) -> Path:
         """Deconstruct a protocol.py file into a configuration.yml file
 
         Parameters
@@ -50,7 +58,9 @@ class Deconstructor:
             Path to the saved config.yml file, will be created if not given
         """
         sim_command_commands = f"{self.opentrons_simulate_bin} {protocol_path}"
-        simultation_res = subprocess.run(sim_command_commands.split(), capture_output=True, text=True)
+        simultation_res = subprocess.run(
+            sim_command_commands.split(), capture_output=True, text=True
+        )
 
         if simultation_res.returncode:
             print(f"Simulation failed with error: {simultation_res.stdout}")
@@ -91,7 +101,9 @@ class Deconstructor:
 
         # find the pipette tips
         sim_command_labware = f"{self.opentrons_simulate_bin} {protocol_path} -l info"
-        simulatation_labware_res = subprocess.run(sim_command_labware.split(), capture_output=True, text=True)
+        simulatation_labware_res = subprocess.run(
+            sim_command_labware.split(), capture_output=True, text=True
+        )
 
         if simulatation_labware_res.returncode:
             raise Exception("Cannot run simulation with long info")
@@ -99,7 +111,10 @@ class Deconstructor:
         for new_pipette in self._find_pipettes(simulatation_labware_res.stdout):
             occupied = False
             for resource in self.resources:
-                if isinstance(resource, Pipette) and new_pipette.mount == resource.mount:
+                if (
+                    isinstance(resource, Pipette)
+                    and new_pipette.mount == resource.mount
+                ):
                     if len(resource.name) == 0:
                         continue
                     occupied = True
@@ -110,7 +125,9 @@ class Deconstructor:
         metadata = Metadata()
 
         # Now construct config
-        protocol_config = ProtocolConfig(equipment=self.resources, commands=self.commands, metadata=metadata)
+        protocol_config = ProtocolConfig(
+            equipment=self.resources, commands=self.commands, metadata=metadata
+        )
         protocol_config.dump_yaml(args.config_out)
 
     def _parse_raw_command(self, command: str) -> Dict:
@@ -119,7 +136,10 @@ class Deconstructor:
             if key in command:
                 return strategy(raw_command=command)
 
-        return {"command": command, "info": {"error": f"Not matching key for command: {command}"}}
+        return {
+            "command": command,
+            "info": {"error": f"Not matching key for command: {command}"},
+        }
 
     def _parse_picking_up_tip(self, raw_command: str) -> Dict:
         # going with brittle solution for now...
@@ -180,23 +200,31 @@ class Deconstructor:
     def _parse_dropping_tip(self, raw_command: str) -> Dict:
         return {"command": "drop_tip", "info": {}}
 
-    def _parse_liminal_command(self, liminal_command: dict, partial_command: Command = None) -> Optional[Command]:
+    def _parse_liminal_command(
+        self, liminal_command: dict, partial_command: Command = None
+    ) -> Optional[Command]:
 
         if "pickup_tip" == liminal_command["command"]:
             return partial_command
 
         if "aspirate" == liminal_command["command"]:
             if partial_command is not None and partial_command.destination == "NA":
-                raise Exception("Cannot aspirate more than once without dispense, error parsing protocol")
+                raise Exception(
+                    "Cannot aspirate more than once without dispense, error parsing protocol"
+                )
             location = liminal_command["info"]["labware_location"]
             well_location = liminal_command["info"]["well_location"]
             volume = int(liminal_command["info"]["volume"])
-            partial_command = Command(source=f"{location}:{well_location}", destination="NA", volume=volume)
+            partial_command = Command(
+                source=f"{location}:{well_location}", destination="NA", volume=volume
+            )
             return partial_command
 
         if "dispense" == liminal_command["command"]:
             if partial_command is None:
-                raise Exception("Cannot dispense without aspiration, error parsing protocol")
+                raise Exception(
+                    "Cannot dispense without aspiration, error parsing protocol"
+                )
             location = liminal_command["info"]["labware_location"]
             well_location = liminal_command["info"]["well_location"]
             volume = int(liminal_command["info"]["volume"])
@@ -232,10 +260,17 @@ def main(args):  # noqa: D103
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("-p", "--protocol", type=Path, help="Path to the input protocol", required=True)
-    parser.add_argument("-co", "--config_out", type=Path, help="Path to output config file")
     parser.add_argument(
-        "-os", "--opentrons_simulate", type=str, help="Path to the opentrons simulate program, optional"
+        "-p", "--protocol", type=Path, help="Path to the input protocol", required=True
+    )
+    parser.add_argument(
+        "-co", "--config_out", type=Path, help="Path to output config file"
+    )
+    parser.add_argument(
+        "-os",
+        "--opentrons_simulate",
+        type=str,
+        help="Path to the opentrons simulate program, optional",
     )
 
     args = parser.parse_args()
