@@ -55,9 +55,7 @@ class OT2_Driver:
         """
         self.config: OT2_Config = config
         self.protopiler: ProtoPiler = ProtoPiler(
-            template_dir=(
-                Path(__file__).parent.resolve() / "protopiler/protocol_templates"
-            )
+            template_dir=(Path(__file__).parent.resolve() / "protopiler/protocol_templates")
         )
 
         self.retry_strategy = Retry(
@@ -84,16 +82,12 @@ class OT2_Driver:
             path to the protocol file and resource file
         """
         if ".py" not in str(config_path):
-            self.protopiler.load_config(
-                config_path=config_path, resource_file=resource_file
-            )
+            self.protopiler.load_config(config_path=config_path, resource_file=resource_file)
 
             (
                 protocol_out_path,
                 protocol_resource_file,
-            ) = self.protopiler.yaml_to_protocol(
-                config_path, resource_file=resource_file
-            )
+            ) = self.protopiler.yaml_to_protocol(config_path, resource_file=resource_file)
 
             return protocol_out_path, protocol_resource_file
         else:
@@ -112,9 +106,11 @@ class OT2_Driver:
         Tuple[str, str]
             returns `protocol_id`, and `run_id` in that order
         """
+        # Make sure its a path object
+        protocol_path = Path(protocol_path)
+
         transfer_url = f"http://{self.config.ip}:{self.config.port}/protocols"
-        # TODO: maybe replace with pathlib?
-        files = {"files": open(protocol_path, "rb")}
+        files = {"files": protocol_path.open("rb")}
         headers = {"Opentrons-Version": "2"}
 
         # transfer the protocol
@@ -143,19 +139,13 @@ class OT2_Driver:
         Dict[str, Dict[str, str]]
             the json response from the OT2 execute command
         """
-        execute_url = (
-            f"http://{self.config.ip}:{self.config.port}/runs/{run_id}/actions"
-        )
+        execute_url = f"http://{self.config.ip}:{self.config.port}/runs/{run_id}/actions"
         headers = {"Opentrons-Version": "2"}
         execute_json = {"data": {"actionType": "play"}}
 
         # TODO: do some error checking/handling on execute
-        execute_run_resp = requests.post(
-            url=execute_url, headers=headers, json=execute_json
-        )
-        if (
-            execute_run_resp.status_code != 201
-        ):  # this is the good respcode for this endpoint
+        execute_run_resp = requests.post(url=execute_url, headers=headers, json=execute_json)
+        if execute_run_resp.status_code != 201:  # this is the good respcode for this endpoint
             print(f"Could not run play action on {run_id}")
             print(execute_run_resp.json())
 
@@ -275,9 +265,7 @@ class OT2_Driver:
             If there is no `method` keyword argument, This method does not specify the http request method, user must provide as keyword argument
         """
         # sanitize preceeding '/'
-        request_extension = (
-            request_extension if "/" != request_extension[0] else request_extension[1:]
-        )
+        request_extension = request_extension if "/" != request_extension[0] else request_extension[1:]
         url = f"http://{self.config.ip}:{self.config.port}/{request_extension}"
 
         # check for headers
@@ -358,9 +346,7 @@ class OT2_Driver:
             run_id = run_resp.json()["data"]["id"]
 
         # queue the command
-        enqueue_payload = {
-            "data": {"commandType": command, "params": params, "intent": intent}
-        }
+        enqueue_payload = {"data": {"commandType": command, "params": params, "intent": intent}}
         enqueue_resp = requests.post(
             url=f"http://{self.config.ip}:{self.config.port}/runs/{run_id}/commands",
             headers=headers,
