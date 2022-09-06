@@ -1,11 +1,14 @@
 """Driver implemented using HTTP protocol supported by Opentrons"""
 import subprocess
+import time
+from enum import Enum
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import requests
 import yaml
 from pydantic import BaseModel
+from urllib3 import Retry
 
 from ot2_driver.config import PathLike, parse_ot2_args
 from ot2_driver.protopiler.protopiler import ProtoPiler
@@ -20,49 +23,29 @@ class OT2_Config(BaseModel):
     version: Optional[int]
 
 
-"""
-Running example from REPL
-```
-    >>> import requests
-    >>> robot_ip_address = "169.254.197.67"
-    >>> upload_resp = requests.post(url=f"http://{robot_ip_address}:31950/protocols", files={'files': open('test_protocol.py', 'rb')}, headers={"Opentrons-Version": "2"})
-    >>> run_resp = requests.post(url=f"http://{robot_ip_address}:31950/runs", headers={"Opentrons-Version": "2"}, json={"data": {"protocolId": upload_resp.json()['data']['id']}})
-    >>> upload_resp.json()['data']['id']
-    'dc3e49dd-15ba-444c-b7d7-4b2b26c53938'
-    >>> run_resp.json()
-    {'data': {'id': '0de315c8-a2d0-46c0-9df6-12ed88848321', 'createdAt': '2022-07-25T18:51:51.987747+00:00', 'status': 'idle', 'current': True, 'actions': [], 'errors': [], 'pipettes': [], 'modules': [], 'labware': [{'id': 'fixedTrash', 'loadName': 'opentrons_1_trash_1100ml_fixed', 'definitionUri': 'opentrons/opentrons_1_trash_1100ml_fixed/1', 'location': {'slotName': '12'}}], 'labwareOffsets': [], 'protocolId': 'dc3e49dd-15ba-444c-b7d7-4b2b26c53938'}}
-    >>> run_id = run_resp.json()['data']['id']
-    >>> executre_run_resp = requests.post(url=f"http://{robot_ip_address}:31950/runs/{run_id}", headers={"Opentrons-Version": "2"}, json={"data": {"actionType": "play"}})
-    >>> executre_run_resp.json()
-    {'errors': [{'id': 'BadRequest', 'title': 'Bad Request', 'detail': 'Method Not Allowed'}]}
-    >>> execute_run_resp = requests.post(url=f"http://{robot_ip_address}:31950/runs/{run_id}/actions", headers={"Opentrons-Version": "2"}, json={"data": {"actionType": "play"}})
-    >>> execute_run_resp.json()
-    {'data': {'id': '7c43d567-6e09-4d01-b8ac-e7e03cc807de', 'createdAt': '2022-07-25T18:54:09.529435+00:00', 'actionType': 'play'}}
-```
+class RobotStatus(Enum):
+    IDLE = "idle"
+    RUNNING = "running"
 
 
-# Creating a session
-```
-# Creating the session works
-(miniconda3) ❯ curl http://169.254.170.12:31950/sessions -X POST -H "accept: application/json" -H "Opentrons-Version: 2" -H "Content-Type: application/json" -d "{\"data\":{\"sessionType\":\"liveProtocol\"}}"
-
-#Running a command does not
-{"data":{"id":"4dd62cc2-7bad-4bcc-9aec-c3052289bb65","createdAt":"2022-08-01T16:27:45.551969+00:00","details":{},"sessionType":"liveProtocol","createParams":null},"links":{"self":{"href":"/sessions/4dd62cc2-7bad-4bcc-9aec-c3052289bb65","meta":null},"commandExecute":{"href":"/sessions/4dd62cc2-7bad-4bcc-9aec-c3052289bb65/commands/execute","meta":null},"sessions":{"href":"/sessions","meta":null},"sessionById":{"href":"/sessions/{sessionId}","meta":null}}}%
-(miniconda3) 130 ❯ curl http://169.254.170.12:31950/sessions/4dd62cc2-7bad-4bcc-9aec-c3052289bb65/commands/execute -X POST -H "accept: application/json" -H "Opentrons-Version: 2" -H "Content-Type: application/json" -d "{\"data\":{\"command\":\"calibration.deck.moveToPointThree\",\"data\":{}}}"
-
-{"errors":[{"id":"UnexpectedError","title":"Unexpected Internal Error","detail":"NotImplementedError: Enable useProtocolEngine feature flag to use live HTTP protocols","meta":{"stacktrace":"Traceback (most recent call last):\n  File \"usr/lib/python3.7/site-packages/fastapi/routing.py\", line 227, in app\n  File \"usr/lib/python3.7/site-packages/fastapi/routing.py\", line 159, in run_endpoint_function\n  File \"usr/lib/python3.7/site-packages/robot_server/service/session/router.py\", line 139, in session_command_execute_handler\n  File \"usr/lib/python3.7/site-packages/robot_server/service/session/session_types/base_session.py\", line 70, in execute_command\n  File \"usr/lib/python3.7/site-packages/robot_server/service/session/session_types/live_protocol/command_executor.py\", line 21, in execute\nNotImplementedError: Enable useProtocolEngine feature flag to use live HTTP protocols"}}]}%
-# When I check the settings, useProtocolEnginge is not an option (appears to be removed sometime between opentrons v4 and now)
-(miniconda3) ❯ curl http://169.254.170.12:31950/settings -H "accept: application/json" -H "Opentrons-Version: 2"                          ~
-
-{"settings":[{"id":"shortFixedTrash","old_id":"short-fixed-trash","title":"Short (55mm) fixed trash","description":"Trash box is 55mm tall (rather than the 77mm default)","restart_required":false,"value":null},{"id":"deckCalibrationDots","old_id":"dots-deck-type","title":"Deck calibration to dots","description":"Perform deck calibration to dots rather than crosses, for robots that do not have crosses etched on the deck","restart_required":false,"value":null},{"id":"disableHomeOnBoot","old_id":"disable-home-on-boot","title":"Disable home on boot","description":"Prevent robot from homing motors on boot","restart_required":false,"value":null},{"id":"useOldAspirationFunctions","old_id":null,"title":"Use older aspirate behavior","description":"Aspirate with the less accurate volumetric calibrations that were used before version 3.7.0. Use this if you need consistency with pre-v3.7.0 results. This only affects GEN1 P10S, P10M, P50S, P50M, and P300S pipettes.","restart_required":false,"value":null},{"id":"enableDoorSafetySwitch","old_id":null,"title":"Enable robot door safety switch","description":"Automatically pause protocols when robot door opens. Opening the robot door during a run will pause your robot only after it has completed its current motion.","restart_required":false,"value":null},{"id":"disableLogAggregation","old_id":null,"title":"Disable Opentrons Log Collection","description":"Prevent the robot from sending its logs to Opentrons for analysis. Opentrons uses these logs to troubleshoot robot issues and spot error trends.","restart_required":false,"value":true},{"id":"disableFastProtocolUpload","old_id":null,"title":"Use older protocol analysis method","description":"Use an older, slower method of analyzing uploaded protocols. This changes how the OT-2 validates your protocol during the upload step, but does not affect how your protocol actually runs. Opentrons Support might ask you to change this setting if you encounter problems with the newer, faster protocol analysis method.","restart_required":false,"value":null},{"id":"enableOT3HardwareController","old_id":null,"title":"Enable experimental OT3 hardware controller","description":"Do not enable. This is an Opentrons-internal setting to test new hardware.","restart_required":true,"value":null},{"id":"enableHeaterShakerPAPI","old_id":null,"title":"Enable Heater-Shaker Python API support","description":"Do not enable. This is an Opentrons internal setting to test a new module.","restart_required":false,"value":null}],"links":{}}%
-```
-"""
+class RunStatus(Enum):
+    IDLE = "idle"
+    RUNNING = "running"
+    FINISHING = "finishing"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
 
 
 class OT2_Driver:
     """Driver code for the OT2 utilizing the built in HTTP server."""
 
-    def __init__(self, config: OT2_Config) -> None:
+    def __init__(
+        self,
+        config: OT2_Config,
+        retries: int = 5,
+        retry_backoff: float = 1.0,
+        retry_status_codes: Optional[list[int]] = None,
+    ) -> None:
         """Initialize OT2 driver.
 
         Parameters
@@ -75,6 +58,12 @@ class OT2_Driver:
             template_dir=(
                 Path(__file__).parent.resolve() / "protopiler/protocol_templates"
             )
+        )
+
+        self.retry_strategy = Retry(
+            total=retries,
+            backoff_factor=retry_backoff,
+            status_forcelist=retry_status_codes,
         )
 
     def compile_protocol(self, config_path, resource_file=None) -> Tuple[str, str]:
@@ -123,9 +112,11 @@ class OT2_Driver:
         Tuple[str, str]
             returns `protocol_id`, and `run_id` in that order
         """
-        transfer_url = f"http://{self.config.ip}:31950/protocols"
-        # TODO: maybe replace with pathlib?
-        files = {"files": open(protocol_path, "rb")}
+        # Make sure its a path object
+        protocol_path = Path(protocol_path)
+
+        transfer_url = f"http://{self.config.ip}:{self.config.port}/protocols"
+        files = {"files": protocol_path.open("rb")}
         headers = {"Opentrons-Version": "2"}
 
         # transfer the protocol
@@ -133,7 +124,7 @@ class OT2_Driver:
         protocol_id = transfer_resp.json()["data"]["id"]
 
         # create the run
-        run_url = f"http://{self.config.ip}:31950/runs"
+        run_url = f"http://{self.config.ip}:{self.config.port}/runs"
         run_json = {"data": {"protocolId": protocol_id}}
         run_resp = requests.post(url=run_url, headers=headers, json=run_json)
 
@@ -154,15 +145,155 @@ class OT2_Driver:
         Dict[str, Dict[str, str]]
             the json response from the OT2 execute command
         """
-        execute_url = f"http://{self.config.ip}:31950/runs/{run_id}/actions"
+        execute_url = (
+            f"http://{self.config.ip}:{self.config.port}/runs/{run_id}/actions"
+        )
         headers = {"Opentrons-Version": "2"}
         execute_json = {"data": {"actionType": "play"}}
 
+        # TODO: do some error checking/handling on execute
         execute_run_resp = requests.post(
             url=execute_url, headers=headers, json=execute_json
         )
+        if (
+            execute_run_resp.status_code != 201
+        ):  # this is the good respcode for this endpoint
+            print(f"Could not run play action on {run_id}")
+            print(execute_run_resp.json())
 
-        return execute_run_resp.json()
+        while self.check_run_status(run_id) not in {
+            RunStatus.FAILED,
+            RunStatus.SUCCEEDED,
+        }:
+            time.sleep(1)
+
+        return self.get_run(run_id)
+
+    def check_run_status(self, run_id) -> RunStatus:
+        """Checks the status of a run
+
+        Parameters
+        ----------
+        run_id : str
+            The run id, given by the opentrons API
+
+        Returns
+        -------
+        RunStatus
+            A enum of the current run status as reported by the ot2 (IDLE, RUNNING, FINISHING, FAILED, SUCCEEDED)
+        """
+        # check run
+        check_run_url = f"http://{self.config.ip}:{self.config.port}/runs/{run_id}"
+        headers = {"Opentrons-Version": "2"}
+
+        check_run_resp = requests.get(url=check_run_url, headers=headers)
+        if check_run_resp.status_code != 200:
+            print(f"Cannot check run {run_id}")
+        status = RunStatus(check_run_resp.json()["data"]["status"])
+
+        return status
+
+    def get_run(self, run_id) -> Dict:
+        """Get the OT2 summary of a specific run
+
+        Parameters
+        ----------
+        run_id : str
+            The run id given by the OT2 api
+
+        Returns
+        -------
+        Dict
+            The response json dictionary
+        """
+        run_url = f"http://{self.config.ip}:{self.config.port}/runs/{run_id}"
+        headers = {"Opentrons-Version": "2"}
+
+        run_resp = requests.get(url=run_url, headers=headers)
+
+        if run_resp.status_code != 200:
+            print(f"Could not get run {run_id}")
+
+        return run_resp.json()
+
+    def get_runs(self) -> Optional[List[Dict[str, str]]]:
+        """Get all the runs currently stored on the ot2
+
+        Returns
+        -------
+        Optional[List[Dict[str, str]]]
+            Returns a list of dictionaries that contain simplified information about the runs
+        """
+        runs_url = f"http://{self.config.ip}:{self.config.port}/runs"
+        headers = {"Opentrons-Version": "2"}
+
+        runs_resp = requests.get(url=runs_url, headers=headers)
+
+        if runs_resp.status_code == 200:
+            runs_simplified = []
+            for run in runs_resp.json()["data"]:
+                runs_simplified.append(
+                    {
+                        "runID": run["id"],
+                        "protocolID": run["protocolId"],
+                        "status": run["status"],
+                    }
+                )
+
+            return runs_simplified
+
+        return None
+
+    def get_robot_status(self) -> RobotStatus:
+        """Return the status of the robot currently.
+
+        Returns
+        -------
+        Status
+            Either IDLE or RUNNING
+        """
+        for run in self.get_runs():
+            if run["status"] == RobotStatus.RUNNING.value:
+                return RobotStatus.RUNNING
+
+        return RobotStatus.IDLE
+
+    def send_request(self, request_extension: str, **kwargs) -> requests.Response:
+        """Allows us to send arbitrary requests to the ot2 http server.
+
+        Parameters
+        ----------
+        request_extension : str
+            The extension (following the ip:port/) of the url we are requesting
+
+        Returns
+        -------
+        requests.Request
+            The request object returned from the OT2
+
+        Raises
+        ------
+        Exception
+            If there is no `method` keyword argument, This method does not specify the http request method, user must provide as keyword argument
+        """
+        # sanitize preceeding '/'
+        request_extension = (
+            request_extension if "/" != request_extension[0] else request_extension[1:]
+        )
+        url = f"http://{self.config.ip}:{self.config.port}/{request_extension}"
+
+        # check for headers
+        if "headers" not in kwargs:
+            kwargs["headers"] = {"Opentrons-Version": "2"}
+
+        if "method" not in kwargs:
+            raise Exception(
+                "No request method specified, please provide GET, POST, UPDATE, DELETE as keyword argument"
+            )
+        else:
+            kwargs["method"] = kwargs["method"].upper()
+
+        return requests.request(url=url, **kwargs)
 
     def get_run(self, run_id: str) -> Dict[str, Dict[str, str]]:
         """Execute a `get status` command for a given protocol-id
@@ -242,9 +373,10 @@ class OT2_Driver:
         if not run_id:
             # create a run
             run_resp = requests.post(
-                url=f"http://{self.config.ip}:31950/runs",
+                url=f"http://{self.config.ip}:{self.config.port}/runs",
                 headers=headers,
                 json={"data": {}},
+                max_retries=self.retry_strategy,
             )
             run_id = run_resp.json()["data"]["id"]
 
@@ -253,18 +385,20 @@ class OT2_Driver:
             "data": {"commandType": command, "params": params, "intent": intent}
         }
         enqueue_resp = requests.post(
-            url=f"http://{self.config.ip}:31950/runs/{run_id}/commands",
+            url=f"http://{self.config.ip}:{self.config.port}/runs/{run_id}/commands",
             headers=headers,
             json=enqueue_payload,
+            max_retries=self.retry_strategy,
         )
         print(f"Enqueue return: {enqueue_resp.json()}")
 
         # run the command
         if execute:
             execute_command_resp = requests.post(
-                url=f"http://{self.config.ip}:31950/runs/{run_id}/actions",
+                url=f"http://{self.config.ip}:{self.config.port}/runs/{run_id}/actions",
                 headers=headers,
                 json={"data": {"actionType": "play"}},
+                max_retries=self.retry_strategy,
             )
             print(f"Execute return: {execute_command_resp.json()}")
 

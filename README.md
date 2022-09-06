@@ -4,7 +4,10 @@
 3. I would recommend a conda/venv environment. The following assusumes conda. 
     1. `conda create -n ot2-driver python=3.9`
     1. `conda activate ot2-driver`
-    1. `pip install -r requirements/requirements.txt` 
+    1. `pip install -r requirements.txt` 
+    1. `pip install -e .`
+    
+*This installs ot2_driver as a package*
 
 ### Getting the OT2 setup for ssh
 *This is not required (or used) for the HTTP driver* 
