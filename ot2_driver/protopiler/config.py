@@ -102,11 +102,11 @@ class Command(BaseSettings):
 class Metadata(BaseSettings):
     """Container for the run metadata"""
 
-    protocolName: Optional[str]
+    protocolName: Optional[str] = "NA"
     """Name to give to the protocol"""
-    author: Optional[str]
+    author: Optional[str] = "NA"
     """Author"""
-    description: Optional[str]
+    description: Optional[str] = "NA"
     """Description of the protocol, can be longer"""
     apiLevel: Optional[str] = "2.12"
     """Current api version of the Opentrons"""

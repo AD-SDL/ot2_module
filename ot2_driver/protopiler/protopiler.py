@@ -28,7 +28,9 @@ class ProtoPiler:
     def __init__(
         self,
         config_path: Optional[PathLike] = None,
-        template_dir: PathLike = Path("./protocol_templates"),
+        template_dir: PathLike = (
+            Path(__file__).parent.resolve() / "protocol_templates"
+        ),
         resource_file: Optional[PathLike] = None,
     ) -> None:
         """Can initialize with the resources we need, or it can be done after initialization
@@ -493,7 +495,7 @@ class ProtoPiler:
             # TODO: think of some better software design for accessing members of resource manager
             location = self.resource_manager.alias_to_location[plate]
         else:  # older format of passing location
-            for name, loc in self.labware_to_location.items():
+            for name, loc in self.resource_manager.labware_to_location.items():
                 if "well" in name:
                     if location is not None:
                         print(
@@ -598,9 +600,7 @@ def main(args):  # noqa: D103
     # TODO: Think about how a user would want to interact with this, do they want to interact with something like a
     # SeqIO from Biopython? Or more like a interpreter kind of thing? That will guide some of this... not sure where
     # its going right now
-    ppiler = ProtoPiler(
-        args.config, template_dir=Path("ot2_driver/protopiler/protocol_templates")
-    )
+    ppiler = ProtoPiler(args.config)
 
     ppiler.yaml_to_protocol(
         config_path=args.config,
@@ -627,15 +627,15 @@ if __name__ == "__main__":
         type=Path,
     )
     parser.add_argument(
-        "-ro",
-        "--resource_out",
-        help="Path to save the resource file to",
-        type=Path,
-    )
-    parser.add_argument(
         "-ri",
         "--resource_in",
         help="Path to existing resource file to update",
+        type=Path,
+    )
+    parser.add_argument(
+        "-ro",
+        "--resource_out",
+        help="Path to save the resource file to",
         type=Path,
     )
 
