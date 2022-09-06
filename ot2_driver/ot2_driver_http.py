@@ -164,6 +164,27 @@ class OT2_Driver:
 
         return execute_run_resp.json()
 
+    def get_run(self, run_id: str) -> Dict[str, Dict[str, str]]:
+        """Execute a `get status` command for a given protocol-id
+
+        Parameters
+        ----------
+        run_id : str
+            the run ID coming from `transfer()`
+
+        Returns
+        -------
+        Dict[str, Dict[str, str]]
+            the json response from the OT2 execute command
+        """
+        
+        execute_url = f"http://{self.config.ip}:31950/runs/{run_id}"
+        headers = {"Opentrons-Version": "2"}
+
+        get_run_resp = requests.get(url=execute_url, headers=headers)
+
+        return get_run_resp.json()
+
     def stream(
         self,
         command: str,
