@@ -44,7 +44,7 @@ class OT2_Driver:
         config: OT2_Config,
         retries: int = 5,
         retry_backoff: float = 1.0,
-        retry_status_codes: Optional[list[int]] = None,
+        retry_status_codes: Optional[List[int]] = None,
     ) -> None:
         """Initialize OT2 driver.
 
