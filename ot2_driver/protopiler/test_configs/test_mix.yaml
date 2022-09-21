@@ -14,7 +14,7 @@ commands:
     source: [A1, A2, A3]
     destination: [B1, B2, B3]
     volume: [15, 100, 700]
-    mix: [True, False, True]
+    mix: [3, 0, 5]
 
 metadata:
   protocolName: Example Name

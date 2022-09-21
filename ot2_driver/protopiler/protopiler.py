@@ -375,8 +375,7 @@ class ProtoPiler:
                 command_block.name if command_block.name is not None else f"command {i}"
             )
             commands.append(f"\n    # {block_name}")
-            # TODO: add mix
-            for (volume, src, dst) in self._process_instruction(command_block):
+            for (volume, src, dst, mix) in self._process_instruction(command_block):
                 # determine which pipette to use
                 pipette_mount = self.resource_manager.determine_pipette(volume)
                 if pipette_mount is None:
@@ -448,6 +447,26 @@ class ProtoPiler:
                 )
 
                 #TODO: add mix
+                if mix >= 1:
+                    # hardcoded to destination well for now
+                    mix_command = mix_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                    mix_command = mix_command.replace(
+                        "#volume#", str(volume/2)
+                        )
+                    mix_command = mix_command.replace(
+                        "#loc#", f'deck["{dst_wellplate_location}"]["{dst_well}"]' # same as destination
+                    )
+                    mix_command = mix_command.replace(
+                        "#reps#", mix
+                    )
+
+                    commands.append(mix_command)
+                    
+                    # no change in resources
+
+
 
                 if command_block.drop_tip:
                     drop_command = drop_tip_template.replace(
@@ -542,7 +561,7 @@ class ProtoPiler:
             type(command_block.volume) is int
             and type(command_block.source) is str
             and type(command_block.destination) is str
-            and type(command_block.mix) is bool
+            and type(command_block.mix) is int
         ):
 
             yield command_block.volume, command_block.source, command_block.destination, command_block.mix
