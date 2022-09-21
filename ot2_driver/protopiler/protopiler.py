@@ -584,7 +584,17 @@ class ProtoPiler:
                         )
                 iter_len = len(command_block.destination)
             
-            #TODO: mixing 
+            if isinstance(command_block.mix, list):
+                if iter_len != 0 and len(command_block.mix) != iter_len:
+                    # handle if user forgot to change list of one value to scalar
+                    if len(command_block.mix) == 1:
+                        command_block.mix = command_block.mix[0]
+                    else:
+                        raise Exception(
+                            "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
+                        )
+                iter_len = len(command_block.mix)
+
 
             if not isinstance(command_block.volume, list):
                 volumes = repeat(command_block.volume, iter_len)
@@ -598,11 +608,14 @@ class ProtoPiler:
                 destinations = repeat(command_block.destination, iter_len)
             else:
                 destinations = command_block.destination
+            if not isinstance(command_block.mix, list):
+                mixing = repeat(command_block.mix, iter_len)
+            else:
+                mixing = command_block.mix
             
-            #TODO: mix
 
-            for vol, src, dst in zip(volumes, sources, destinations):
-                yield vol, src, dst#todo mix
+            for vol, src, dst, mix in zip(volumes, sources, destinations, mixing):
+                yield vol, src, dst, mix
 
 
 def main(args):  # noqa: D103
