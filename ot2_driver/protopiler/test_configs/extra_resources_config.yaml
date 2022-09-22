@@ -1,5 +1,5 @@
 resources:
-  - location: /Users/kyle/github/ot2_driver/ot2_driver/protopiler/example_configs/simple_provided_info.xlsx
+  - location: /Users/kyle/github/ot2_driver/ot2_driver/protopiler/test_configs/simple_provided_info.xlsx
     name: simple_data
 
 equipment:
