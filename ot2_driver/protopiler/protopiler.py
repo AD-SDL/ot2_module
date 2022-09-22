@@ -191,7 +191,7 @@ class ProtoPiler:
 
         """
         self.resources = {}
-        if self.resources:
+        if len(resources) > 0:
             for resource in resources:
                 self.resources[resource.name] = pd.read_excel(
                     resource.location, header=0
