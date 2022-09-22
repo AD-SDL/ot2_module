@@ -191,7 +191,8 @@ class ProtoPiler:
 
         """
         self.resources = {}
-        if len(resources) > 0:
+        # if len(resources) > 0:
+        if self.resources:
             for resource in resources:
                 self.resources[resource.name] = pd.read_excel(
                     resource.location, header=0
@@ -459,7 +460,7 @@ class ProtoPiler:
                         "#loc#", f'deck["{dst_wellplate_location}"]["{dst_well}"]' # same as destination
                     )
                     mix_command = mix_command.replace(
-                        "#reps#", mix
+                        "#reps#", str(mix)
                     )
 
                     commands.append(mix_command)

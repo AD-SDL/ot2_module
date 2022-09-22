@@ -94,6 +94,8 @@ class Command(BaseSettings):
     """Destination for the command, should refer to a wellplate and well(s)"""
     volume: Union[int, List[int], str]
     """Volume to transfer, can be a single int (microliters) or a list of int"""
+    mix: Union[int, List[int]]
+    """Num mixes"""
     drop_tip: bool = True
     """Drop the tip once a transfer is done"""
 
