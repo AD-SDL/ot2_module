@@ -106,7 +106,6 @@ class ProtoPiler:
         # TODO: do more testing of this function
         # TODO: can we make this better?
         if self.resources:
-            print("Getting resources")
             resource_key = list(self.resources.keys())[0]
         for command in self.commands:
             if ":[" in command.source:
@@ -193,7 +192,6 @@ class ProtoPiler:
         """
         self.resources = {}
         if len(resources) > 0:
-            print("in if")
             for resource in resources:
                 self.resources[resource.name] = pd.read_excel(
                     resource.location, header=0
