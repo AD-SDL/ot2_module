@@ -1,0 +1,27 @@
+{
+  "1": {
+    "name": "opentrons_15_tuberack_nest_15ml_conical",
+    "used": 6,
+    "depleted": false,
+    "wells_used": [
+      "A5",
+      "C3",
+      "A3",
+      "A2",
+      "A1",
+      "A4"
+    ]
+  },
+  "8": {
+    "name": "opentrons_96_tiprack_20ul",
+    "used": 2,
+    "depleted": false,
+    "wells_used": []
+  },
+  "9": {
+    "name": "opentrons_96_tiprack_1000ul",
+    "used": 6,
+    "depleted": false,
+    "wells_used": []
+  }
+}

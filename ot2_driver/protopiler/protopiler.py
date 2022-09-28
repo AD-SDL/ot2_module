@@ -425,7 +425,6 @@ class ProtoPiler:
                     "#src#", f'deck["{src_wellplate_location}"]["{src_well}"]'
                 )
                 commands.append(aspirate_command)
-                # update resource usage
                 self.resource_manager.update_well_usage(
                     src_wellplate_location, src_well
                 )
