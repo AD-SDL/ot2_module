@@ -150,7 +150,8 @@ class ProtoPiler:
                     new_locations.append(f"{orig_deck_location}:{loc}")
 
                 command.destination = new_locations
-        # have to check if volumes comes from the files
+        #TODO: adding a 0 to volumes
+        # have to check if volumes comes from the files # TODO: different volumes for templates and primers
         if not isinstance(command.volume, int) and not isinstance(command.volume, list):
             new_volumes = []
             for vol in self.resources[resource_key][command.volume]:
@@ -191,8 +192,9 @@ class ProtoPiler:
 
         """
         self.resources = {}
-        # if len(resources) > 0:
-        if self.resources:
+        #if len(resources) > 0:
+        #if self.resources:
+        if resources:
             for resource in resources:
                 self.resources[resource.name] = pd.read_excel(
                     resource.location, header=0
