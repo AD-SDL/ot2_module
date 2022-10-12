@@ -1,6 +1,7 @@
 resources:
-  - location: /Users/abestroka/Argonne/ot2_driver/ot2_driver/protopiler/test_configs/simple_provided_info.xlsx #/Users/kyle/github/ot2_driver/ot2_driver/protopiler/test_configs/simple_provided_info.xlsx
-    name: simple_data
+
+  - location: /Users/kyle/github/ot2_driver/ot2_driver/protopiler/test_configs/simple_provided_info.xlsx
+
 
 equipment:
   - name: corning_96_wellplate_360ul_flat
