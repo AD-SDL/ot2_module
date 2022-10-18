@@ -81,6 +81,8 @@ class ProtoPiler:
 
         self.commands = self.config.commands
         self._postprocess_commands()
+        for command in self.commands:
+            print('COMMAND', command)
 
     def _postprocess_commands(self) -> None:  # Could use more testing
         """Processes the commands to support the alias syntax.
@@ -130,13 +132,16 @@ class ProtoPiler:
                     new_locations.append(f"{orig_deck_location}:{loc}")
 
                 command.source = new_locations
-
+            print('DESTINATION', command.destination)
             if ":[" in command.destination:
                 command.destination = self._unpack_alias(command.destination)
 
             # Add logic for reading well names from file
             # peek into the source, check the well destination part
             peek_elem = command.destination
+            peek_well: str = peek_elem.split(":")[-1]
+            print('PEEK ELEM', peek_elem)
+            print('PEEK WELL', peek_well)
             if isinstance(command.destination, list):  # No mixing and matching
                 peek_elem = command.destination[0]
             # TODO better way to check the naming conventions for the well
