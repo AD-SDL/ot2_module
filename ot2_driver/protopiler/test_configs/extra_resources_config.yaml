@@ -1,6 +1,7 @@
 resources:
+
   - location: /Users/kyle/github/ot2_driver/ot2_driver/protopiler/test_configs/simple_provided_info.xlsx
-    name: simple_data
+
 
 equipment:
   - name: corning_96_wellplate_360ul_flat
@@ -27,10 +28,14 @@ commands:
     source: forward:Forward Primer
     destination: dest:Destination
     volume: 100
+    mix_cycles: 3
+    mix_volume: 100
   - name: backward primer
     source: backward:Backward Primer
     destination: dest:Destination
     volume: Volume
+    mix_cycles: 3
+    mix_volume: 100
 
 metadata:
   protocolName: Example Name

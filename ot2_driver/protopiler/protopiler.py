@@ -150,7 +150,8 @@ class ProtoPiler:
                     new_locations.append(f"{orig_deck_location}:{loc}")
 
                 command.destination = new_locations
-        # have to check if volumes comes from the files
+        #TODO: adding a 0 to volumes
+        # have to check if volumes comes from the files # TODO: different volumes for templates and primers
         if not isinstance(command.volume, int) and not isinstance(command.volume, list):
             new_volumes = []
             for vol in self.resources[resource_key][command.volume]:
@@ -191,7 +192,8 @@ class ProtoPiler:
 
         """
         self.resources = {}
-        if len(resources) > 0:
+
+        if resources:
             for resource in resources:
                 self.resources[resource.name] = pd.read_excel(
                     resource.location, header=0
@@ -366,6 +368,7 @@ class ProtoPiler:
         dispense_template = open((self.template_dir / "dispense.template")).read()
         pick_tip_template = open((self.template_dir / "pick_tip.template")).read()
         drop_tip_template = open((self.template_dir / "drop_tip.template")).read()
+        mix_template = open((self.template_dir / "mix.template")).read()
 
         tip_loaded = {"left": False, "right": False}
         for i, command_block in enumerate(self.commands):
@@ -374,7 +377,7 @@ class ProtoPiler:
                 command_block.name if command_block.name is not None else f"command {i}"
             )
             commands.append(f"\n    # {block_name}")
-            for (volume, src, dst) in self._process_instruction(command_block):
+            for (volume, src, dst, mix_cycles, mix_vol) in self._process_instruction(command_block):
                 # determine which pipette to use
                 pipette_mount = self.resource_manager.determine_pipette(volume)
                 if pipette_mount is None:
@@ -423,7 +426,6 @@ class ProtoPiler:
                     "#src#", f'deck["{src_wellplate_location}"]["{src_well}"]'
                 )
                 commands.append(aspirate_command)
-                # update resource usage
                 self.resource_manager.update_well_usage(
                     src_wellplate_location, src_well
                 )
@@ -444,6 +446,28 @@ class ProtoPiler:
                 self.resource_manager.update_well_usage(
                     dst_wellplate_location, dst_well
                 )
+
+                #TODO: add mix
+                if mix_cycles >= 1:
+                    # hardcoded to destination well for now
+                    mix_command = mix_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                    mix_command = mix_command.replace(
+                        "#volume#", str(mix_vol)
+                        )
+                    mix_command = mix_command.replace(
+                        "#loc#", f'deck["{dst_wellplate_location}"]["{dst_well}"]' # same as destination
+                    )
+                    mix_command = mix_command.replace(
+                        "#reps#", str(mix_cycles)
+                    )
+
+                    commands.append(mix_command)
+                    
+                    # no change in resources
+
+
 
                 if command_block.drop_tip:
                     drop_command = drop_tip_template.replace(
@@ -538,9 +562,11 @@ class ProtoPiler:
             type(command_block.volume) is int
             and type(command_block.source) is str
             and type(command_block.destination) is str
+            and type(command_block.mix_cycles) is int
+            and type(command_block.mix_volume) is int
         ):
 
-            yield command_block.volume, command_block.source, command_block.destination
+            yield command_block.volume, command_block.source, command_block.destination, command_block.mix_cycles, command_block.mix_volume
         else:
             # could be one source (either list of volumes or one volume) to many desitnation
             # could be many sources (either list of volumes or one volume) to one destination
@@ -578,6 +604,29 @@ class ProtoPiler:
                             "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
                         )
                 iter_len = len(command_block.destination)
+            
+            if isinstance(command_block.mix_cycles, list):
+                if iter_len != 0 and len(command_block.mix_cycles) != iter_len:
+                    # handle if user forgot to change list of one value to scalar
+                    if len(command_block.mix_cycles) == 1:
+                        command_block.mix_cycles = command_block.mix_cycles[0]
+                    else:
+                        raise Exception(
+                            "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
+                        )
+                iter_len = len(command_block.mix_cycles)
+            
+            if isinstance(command_block.mix_volume, list):
+                if iter_len != 0 and len(command_block.mix_volume) != iter_len:
+                    # handle if user forgot to change list of one value to scalar
+                    if len(command_block.mix_volume) == 1:
+                        command_block.mix_volume = command_block.mix_volume[0]
+                    else:
+                        raise Exception(
+                            "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
+                        )
+                iter_len = len(command_block.mix_volume)
+
 
             if not isinstance(command_block.volume, list):
                 volumes = repeat(command_block.volume, iter_len)
@@ -591,9 +640,18 @@ class ProtoPiler:
                 destinations = repeat(command_block.destination, iter_len)
             else:
                 destinations = command_block.destination
+            if not isinstance(command_block.mix_cycles, list):
+                mixing_cycles = repeat(command_block.mix_cycles, iter_len)
+            else:
+                mixing_cycles = command_block.mix_cycles
+            if not isinstance(command_block.mix_volume, list):
+                mixing_volume = repeat(command_block.mix_volume, iter_len)
+            else:
+                mixing_volume = command_block.mix_volume
+            
 
-            for vol, src, dst in zip(volumes, sources, destinations):
-                yield vol, src, dst
+            for vol, src, dst, mix_cycles, mix_vol in zip(volumes, sources, destinations, mixing_cycles, mixing_volume):
+                yield vol, src, dst, mix_cycles, mix_vol
 
 
 def main(args):  # noqa: D103
