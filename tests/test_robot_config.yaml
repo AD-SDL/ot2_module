@@ -1,0 +1,6 @@
+# TODO. This.
+# Need to figure out how a list of ot2s works
+
+ip: 1.1.1.1 # Replace with real ot2 thing later
+port: 31950
+model: OT2

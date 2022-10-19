@@ -7,20 +7,10 @@ from typing import Dict, List, Optional, Tuple
 
 import requests
 import yaml
-from pydantic import BaseModel
 from urllib3 import Retry
 
-from ot2_driver.config import PathLike, parse_ot2_args
+from ot2_driver.config import PathLike, parse_ot2_args, OT2_Config
 from ot2_driver.protopiler.protopiler import ProtoPiler
-
-
-class OT2_Config(BaseModel):
-    """OT2 config dataclass."""
-
-    ip: str
-    port: int = 31950
-    model: str = "OT2"
-    version: Optional[int]
 
 
 class RobotStatus(Enum):
@@ -295,27 +285,6 @@ class OT2_Driver:
 
         return requests.request(url=url, **kwargs)
 
-    def get_run(self, run_id: str) -> Dict[str, Dict[str, str]]:
-        """Execute a `get status` command for a given protocol-id
-
-        Parameters
-        ----------
-        run_id : str
-            the run ID coming from `transfer()`
-
-        Returns
-        -------
-        Dict[str, Dict[str, str]]
-            the json response from the OT2 execute command
-        """
-        
-        execute_url = f"http://{self.config.ip}:31950/runs/{run_id}"
-        headers = {"Opentrons-Version": "2"}
-
-        get_run_resp = requests.get(url=execute_url, headers=headers)
-
-        return get_run_resp.json()
-
     def stream(
         self,
         command: str,
@@ -405,78 +374,12 @@ class OT2_Driver:
         return run_id
 
 
-def _test_streaming(ot2: OT2_Driver):
-    run_id = ot2.stream(
-        command="loadLabware",
-        params={
-            "location": {"slotName": "1"},
-            "loadName": "corning_96_wellplate_360ul_flat",
-            "namespace": "opentrons",
-            "version": "1",
-            "labwareId": "wellplate_1",
-        },
-        execute=False,
-        intent="setup",
-    )
-    print()
-    print()
-
-    ot2.stream(
-        command="loadLabware",
-        params={
-            "location": {"slotName": "2"},
-            "loadName": "opentrons_96_tiprack_300ul",
-            "namespace": "opentrons",
-            "version": "1",
-            # "labwareId": "tiprack_1",
-        },
-        run_id=run_id,
-        execute=False,
-        intent="setup",
-    )
-    print()
-    print()
-
-    ot2.stream(
-        command="loadPipette",
-        params={
-            "pipetteName": "p300_multi_gen2",
-            "mount": "right",
-            "pipetteId": "p300_right",
-        },
-        run_id=run_id,
-        execute=False,
-        intent="setup",
-    )
-    print()
-    print()
-
-    ot2.stream(
-        command="moveRelative",
-        params={"pipetteId": "p300_right", "axis": "x", "distance": "-100"},
-        run_id=run_id,
-        execute=False,
-    )
-    ot2.stream(
-        command="moveRelative",
-        params={"pipetteId": "p300_right", "axis": "x", "distance": "-200"},
-        run_id=run_id,
-        execute=True,
-    )
-
-    exit()
-
-
 def main(args):  # noqa: D103
     ot2s = []
     for ot2_raw_cfg in yaml.safe_load(open(args.robot_config)):
         ot2s.append(OT2_Driver(OT2_Config(**ot2_raw_cfg)))
 
     ot2: OT2_Driver = ot2s[0]
-
-    # testing streaming
-    if args.test_streaming:
-        _test_streaming(ot2)
 
     # Can pass in a full python file here, no resource files will be created, but it won't break the system
     protocol_file, resource_file = ot2.compile_protocol(
