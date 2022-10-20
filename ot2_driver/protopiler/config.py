@@ -90,8 +90,12 @@ class Command(BaseSettings):
     """Name of the command, optional"""
     source: Union[List[str], str]
     """Source of the command, this should refer to a wellplate and well(s)"""
+    aspirate_clearance: Union[List[float], float]
+    """height of pipette when performing aspirate"""
     destination: Union[str, List[str]]
     """Destination for the command, should refer to a wellplate and well(s)"""
+    dispense_clearance: Union[float, List[float]]
+    """height of pipette when performing dispense"""
     volume: Union[int, List[int], str]
     """Volume to transfer, can be a single int (microliters) or a list of int"""
     mix_cycles: Union[int, List[int]]

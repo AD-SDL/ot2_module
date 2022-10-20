@@ -81,8 +81,6 @@ class ProtoPiler:
 
         self.commands = self.config.commands
         self._postprocess_commands()
-        for command in self.commands:
-            print('COMMAND', command)
 
     def _postprocess_commands(self) -> None:  # Could use more testing
         """Processes the commands to support the alias syntax.
@@ -132,7 +130,6 @@ class ProtoPiler:
                     new_locations.append(f"{orig_deck_location}:{loc}")
 
                 command.source = new_locations
-            print('DESTINATION', command.destination)
             if ":[" in command.destination:
                 command.destination = self._unpack_alias(command.destination)
 
@@ -140,8 +137,6 @@ class ProtoPiler:
             # peek into the source, check the well destination part
             peek_elem = command.destination
             peek_well: str = peek_elem.split(":")[-1]
-            print('PEEK ELEM', peek_elem)
-            print('PEEK WELL', peek_well)
             if isinstance(command.destination, list):  # No mixing and matching
                 peek_elem = command.destination[0]
             # TODO better way to check the naming conventions for the well
@@ -374,6 +369,8 @@ class ProtoPiler:
         pick_tip_template = open((self.template_dir / "pick_tip.template")).read()
         drop_tip_template = open((self.template_dir / "drop_tip.template")).read()
         mix_template = open((self.template_dir / "mix.template")).read()
+        dispense_clearance_template = open((self.template_dir / "dispense_clearance.template")).read()
+        aspirate_clearance_template = open((self.template_dir / "aspirate_clearance.template")).read()
 
         tip_loaded = {"left": False, "right": False}
         for i, command_block in enumerate(self.commands):
@@ -382,7 +379,7 @@ class ProtoPiler:
                 command_block.name if command_block.name is not None else f"command {i}"
             )
             commands.append(f"\n    # {block_name}")
-            for (volume, src, dst, mix_cycles, mix_vol) in self._process_instruction(command_block):
+            for (volume, src, dst, mix_cycles, mix_vol, asp_height, disp_height) in self._process_instruction(command_block):
                 # determine which pipette to use
                 pipette_mount = self.resource_manager.determine_pipette(volume)
                 if pipette_mount is None:
@@ -419,6 +416,13 @@ class ProtoPiler:
                     tip_loaded[pipette_mount] = True
 
                 # aspirate and dispense
+                # set aspirate clearance
+                aspirate_clearance_command = aspirate_clearance_template.replace(
+                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                )
+                aspirate_clearance_command = aspirate_clearance_command.replace("#height#", str(asp_height))
+                commands.append(aspirate_clearance_command)
+
                 src_wellplate_location = self._parse_wellplate_location(src)
                 # should handle things not formed like loc:well
                 src_well = src.split(":")[-1]
@@ -434,6 +438,13 @@ class ProtoPiler:
                 self.resource_manager.update_well_usage(
                     src_wellplate_location, src_well
                 )
+
+                #set dispense clearance
+                dispense_clearance_commmand = dispense_clearance_template.replace(
+                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                )
+                dispense_clearance_commmand = dispense_clearance_commmand.replace("#height#", str(disp_height))
+                commands.append(dispense_clearance_commmand)
 
                 dst_wellplate_location = self._parse_wellplate_location(dst)
                 dst_well = dst.split(":")[
@@ -452,7 +463,6 @@ class ProtoPiler:
                     dst_wellplate_location, dst_well
                 )
 
-                #TODO: add mix
                 if mix_cycles >= 1:
                     # hardcoded to destination well for now
                     mix_command = mix_template.replace(
@@ -569,9 +579,11 @@ class ProtoPiler:
             and type(command_block.destination) is str
             and type(command_block.mix_cycles) is int
             and type(command_block.mix_volume) is int
+            and type(command_block.aspirate_clearance) is float
+            and type(command_block.dispense_clearance) is float
         ):
 
-            yield command_block.volume, command_block.source, command_block.destination, command_block.mix_cycles, command_block.mix_volume
+            yield command_block.volume, command_block.source, command_block.destination, command_block.mix_cycles, command_block.mix_volume, command_block.aspirate_clearance, command_block.dispense_clearance
         else:
             # could be one source (either list of volumes or one volume) to many desitnation
             # could be many sources (either list of volumes or one volume) to one destination
@@ -631,6 +643,26 @@ class ProtoPiler:
                             "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
                         )
                 iter_len = len(command_block.mix_volume)
+            
+            if isinstance(command_block.aspirate_clearance, list):
+                if iter_len != 0 and len(command_block.aspirate_clearance) != iter_len:
+                    # handle if user forgot to change list of one value to scalar
+                    if len(command_block.aspirate_clearance) == 1:
+                        command_block.aspirate_clearance = command_block.aspirate_clearance[0]
+                    else:
+                        raise Exception(
+                            "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
+                        )
+            
+            if isinstance(command_block.dispense_clearance, list):
+                if iter_len != 0 and len(command_block.dispense_clearance) != iter_len:
+                    # handle if user forgot to change list of one value to scalar
+                    if len(command_block.dispense_clearance) == 1:
+                        command_block.dispense_clearance = command_block.dispense_clearance[0]
+                    else:
+                        raise Exception(
+                            "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
+                        )
 
 
             if not isinstance(command_block.volume, list):
@@ -653,10 +685,18 @@ class ProtoPiler:
                 mixing_volume = repeat(command_block.mix_volume, iter_len)
             else:
                 mixing_volume = command_block.mix_volume
+            if not isinstance(command_block.aspirate_clearance, list):
+                aspirate_clearance = repeat(command_block.aspirate_clearance, iter_len)
+            else:
+                aspirate_clearance = command_block.aspirate_clearance
+            if not isinstance(command_block.dispense_clearance, list):
+                dispense_clearance = repeat(command_block.dispense_clearance, iter_len)
+            else:
+                dispense_clearance = command_block.dispense_clearance
             
 
-            for vol, src, dst, mix_cycles, mix_vol in zip(volumes, sources, destinations, mixing_cycles, mixing_volume):
-                yield vol, src, dst, mix_cycles, mix_vol
+            for vol, src, dst, mix_cycles, mix_vol, asp_height, disp_height in zip(volumes, sources, destinations, mixing_cycles, mixing_volume, aspirate_clearance, dispense_clearance):
+                yield vol, src, dst, mix_cycles, mix_vol, asp_height, disp_height
 
 
 def main(args):  # noqa: D103

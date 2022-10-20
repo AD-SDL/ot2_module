@@ -12,31 +12,41 @@ equipment:
 commands:
   - name: DNA Polymerase
     source: 1:[A1, A1]
+    aspirate_clearance: 0.5
     destination: 1:C3
+    dispense_clearance: 4
     volume: [12, 12]
     mix_cycles: 0
     mix_volume: 0
   - name: 5x Reaction Buffer
     source: 1:A2
+    aspirate_clearance: 1
     destination: 1:C3
+    dispense_clearance: 4
     volume: 720
     mix_cycles: 3
     mix_volume: 400
   - name: Dantes
     source: 1:A3
+    aspirate_clearance: 0.5
     destination: 1:C3
+    dispense_clearance: 1
     volume: 108
     mix_cycles: 3
     mix_volume: 500
   - name: BioWater
     source: 1:[A4, A4, A4]
+    aspirate_clearance: 1
     destination: 1:C3
+    dispense_clearance: 1
     volume: [676, 676, 676]
     mix_cycles: [3, 3, 3]
     mix_volume: [900, 900, 900]
   - name: GC Enhancer
     source: 1:A5
+    aspirate_clearance: 1
     destination: 1:C3
+    dispense_clearance: 1
     volume: 720
     mix_cycles: 7
     mix_volume: 900
