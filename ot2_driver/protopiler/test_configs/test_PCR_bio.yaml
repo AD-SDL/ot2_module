@@ -1,0 +1,60 @@
+equipment:
+  - name: opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap
+    location: "1"
+  - name: opentrons_10_tuberack_nest_4x50ml_6x15ml_conical
+    location: "3"
+  - name: opentrons_96_tiprack_20ul
+    location: "8"
+  - name: opentrons_96_tiprack_300ul
+    location: "9"
+  - name: p20_single_gen2
+    mount: right
+  - name: p300_single_gen2
+    mount: left
+commands:
+  - name: BioWater # FILL TO 10 ML SO PIPETTE DOESNT GET WET
+    source: 3:A1
+    aspirate_clearance: 50
+    destination: 3:C2
+    dispense_clearance: 3
+    volume: [253.5, 253.5, 253.5, 253.5, 253.5, 253.5, 253.5, 253.5,]
+    mix_cycles: [0, 0, 0, 0, 0, 0, 0, 0]
+    mix_volume: [0, 0, 0, 0, 0, 0, 0, 0]
+  - name: DNA Polymerase
+    source: 1:[A1, A1]
+    aspirate_clearance: 1
+    destination: 3:C2
+    dispense_clearance: 10
+    volume: [12, 12]
+    mix_cycles: [3, 3]
+    mix_volume: [20, 20]
+  - name: 5x Reaction Buffer
+    source: 1:A3
+    aspirate_clearance: 1
+    destination: 3:C2
+    dispense_clearance: 3
+    volume: [240, 240, 240]
+    mix_cycles: [3, 3, 3]
+    mix_volume: [280, 280, 280]
+  - name: DNTPs
+    source: 1:A5
+    aspirate_clearance: 1
+    destination: 3:C2
+    dispense_clearance: 3
+    volume: 108
+    mix_cycles: 3
+    mix_volume: 280
+  - name: GC Enhancer
+    source: 1:B3
+    aspirate_clearance: 1
+    destination: 3:C2
+    dispense_clearance: 3
+    volume: [240, 240, 240]
+    mix_cycles: [7, 7, 7]
+    mix_volume: [280, 280, 280]
+
+metadata:
+  protocolName: PCR master mix example
+  author: Abe astroka@anl.gov
+  description: Mixes master mix for PCR protocol using reagents in 15 well tube rack
+  apiLevel: "2.12"
