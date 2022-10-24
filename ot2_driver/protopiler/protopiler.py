@@ -139,7 +139,8 @@ class ProtoPiler:
             peek_elem = command.destination
             if isinstance(command.destination, list):  # No mixing and matching
                 peek_elem = command.destination[0]
-            # TODO better way to check the naming conventions for the well
+
+            peek_well: str = peek_elem.split(":")[-1]
             if not peek_well.isdigit() and not peek_well[1:].isdigit():
                 # read from file
                 new_locations = []
@@ -150,7 +151,7 @@ class ProtoPiler:
                     new_locations.append(f"{orig_deck_location}:{loc}")
 
                 command.destination = new_locations
-        #TODO: adding a 0 to volumes
+        # TODO: adding a 0 to volumes
         # have to check if volumes comes from the files # TODO: different volumes for templates and primers
         if not isinstance(command.volume, int) and not isinstance(command.volume, list):
             new_volumes = []
@@ -377,7 +378,9 @@ class ProtoPiler:
                 command_block.name if command_block.name is not None else f"command {i}"
             )
             commands.append(f"\n    # {block_name}")
-            for (volume, src, dst, mix_cycles, mix_vol) in self._process_instruction(command_block):
+            for (volume, src, dst, mix_cycles, mix_vol) in self._process_instruction(
+                command_block
+            ):
                 # determine which pipette to use
                 pipette_mount = self.resource_manager.determine_pipette(volume)
                 if pipette_mount is None:
@@ -447,27 +450,22 @@ class ProtoPiler:
                     dst_wellplate_location, dst_well
                 )
 
-                #TODO: add mix
+                # TODO: add mix
                 if mix_cycles >= 1:
                     # hardcoded to destination well for now
                     mix_command = mix_template.replace(
                         "#pipette#", f'pipettes["{pipette_mount}"]'
                     )
+                    mix_command = mix_command.replace("#volume#", str(mix_vol))
                     mix_command = mix_command.replace(
-                        "#volume#", str(mix_vol)
-                        )
-                    mix_command = mix_command.replace(
-                        "#loc#", f'deck["{dst_wellplate_location}"]["{dst_well}"]' # same as destination
+                        "#loc#",
+                        f'deck["{dst_wellplate_location}"]["{dst_well}"]',  # same as destination
                     )
-                    mix_command = mix_command.replace(
-                        "#reps#", str(mix_cycles)
-                    )
+                    mix_command = mix_command.replace("#reps#", str(mix_cycles))
 
                     commands.append(mix_command)
-                    
+
                     # no change in resources
-
-
 
                 if command_block.drop_tip:
                     drop_command = drop_tip_template.replace(
@@ -604,7 +602,7 @@ class ProtoPiler:
                             "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
                         )
                 iter_len = len(command_block.destination)
-            
+
             if isinstance(command_block.mix_cycles, list):
                 if iter_len != 0 and len(command_block.mix_cycles) != iter_len:
                     # handle if user forgot to change list of one value to scalar
@@ -615,7 +613,7 @@ class ProtoPiler:
                             "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
                         )
                 iter_len = len(command_block.mix_cycles)
-            
+
             if isinstance(command_block.mix_volume, list):
                 if iter_len != 0 and len(command_block.mix_volume) != iter_len:
                     # handle if user forgot to change list of one value to scalar
@@ -626,7 +624,6 @@ class ProtoPiler:
                             "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
                         )
                 iter_len = len(command_block.mix_volume)
-
 
             if not isinstance(command_block.volume, list):
                 volumes = repeat(command_block.volume, iter_len)
@@ -648,9 +645,10 @@ class ProtoPiler:
                 mixing_volume = repeat(command_block.mix_volume, iter_len)
             else:
                 mixing_volume = command_block.mix_volume
-            
 
-            for vol, src, dst, mix_cycles, mix_vol in zip(volumes, sources, destinations, mixing_cycles, mixing_volume):
+            for vol, src, dst, mix_cycles, mix_vol in zip(
+                volumes, sources, destinations, mixing_cycles, mixing_volume
+            ):
                 yield vol, src, dst, mix_cycles, mix_vol
 
 
