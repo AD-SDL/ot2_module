@@ -96,11 +96,11 @@ class Command(BaseSettings):
     """Destination for the command, should refer to a wellplate and well(s)"""
     dispense_clearance: Union[float, List[float]]
     """height of pipette when performing dispense"""
-    volume: Union[int, List[int], str]
+    volume: Union[float, List[float], str]
     """Volume to transfer, can be a single int (microliters) or a list of int"""
-    mix_cycles: Union[int, List[int]]
+    mix_cycles: Optional[Union[int, List[int]]]
     """Num mixes"""
-    mix_volume: Union[int, List[int]]
+    mix_volume: Optional[Union[int, List[int]]]
     """Volume of each mix"""
     drop_tip: bool = True
     """Drop the tip once a transfer is done"""

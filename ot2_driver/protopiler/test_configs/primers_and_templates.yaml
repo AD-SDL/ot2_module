@@ -1,0 +1,78 @@
+resources:
+
+  - location: /Users/abestroka/Argonne/ot2_driver/ot2_driver/protopiler/test_configs/primers_and_templates.xlsx #/Users/kyle/github/ot2_driver/ot2_driver/protopiler/test_configs/simple_provided_info.xlsx
+    name: primers_and_templates
+
+equipment:
+  - name: nest_96_wellplate_2ml_deep
+    location: "1"
+    alias: forward
+  - name: nest_96_wellplate_2ml_deep
+    location: "2"
+    alias: backward
+  # - name: Temperature Module
+  #   location: "3"
+  #   alias: temp_mod
+  - name: nest_96_wellplate_100ul_pcr_full_skirt
+    location: "3"
+    alias: template
+  - name: nest_96_wellplate_2ml_deep
+    location: "4"
+    alias: dest
+  - name: opentrons_96_tiprack_20ul
+    location: "8"
+  - name: opentrons_96_tiprack_20ul
+    location: "7"
+  - name: opentrons_96_tiprack_20ul
+    location: "10"
+  - name: p20_single_gen2
+    mount: right
+  - name: opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap
+    location: "6"
+  - name: opentrons_10_tuberack_nest_4x50ml_6x15ml_conical
+    location: "5"
+  - name: opentrons_96_tiprack_20ul
+    location: "11"
+  - name: opentrons_96_tiprack_300ul
+    location: "9"
+  - name: p300_single_gen2
+    mount: left
+
+commands:
+  - name: master mix
+    source: 5:C2
+    aspirate_clearance: 1
+    destination: dest:Destination
+    dispense_clearance: 1
+    volume: 30
+
+  - name: forward primer
+    source: forward:Forward Primer
+    aspirate_clearance: 2
+    destination: dest:Destination
+    dispense_clearance: 2
+    volume: Primer Volume
+    mix_cycles: 3
+    mix_volume: 10
+  - name: backward primer
+    source: backward:Backward Primer
+    aspirate_clearance: 2
+    destination: dest:Destination
+    dispense_clearance: 2
+    volume: Primer Volume
+    mix_cycles: 3
+    mix_volume: 10
+  - name: template
+    source: template:DNA
+    aspirate_clearance: 2
+    destination: dest:Destination
+    dispense_clearance: 2
+    volume: Template Volume
+    mix_cycles: 3
+    mix_volume: 10
+
+metadata:
+  protocolName: primers and templates
+  author: Abe astroka@anl.gov
+  description: mixing primers and templates with wells read in from file
+  apiLevel: "2.12"

@@ -152,10 +152,10 @@ class ProtoPiler:
                 command.destination = new_locations
             #TODO: adding a 0 to volumes
             # have to check if volumes comes from the files # TODO: different volumes for templates and primers
-            if not isinstance(command.volume, int) and not isinstance(command.volume, list):
+            if not isinstance(command.volume, float) and not isinstance(command.volume, list):
                 new_volumes = []
                 for vol in self.resources[resource_key][command.volume]:
-                    new_volumes.append(int(vol))
+                    new_volumes.append(float(vol))
 
                 command.volume = new_volumes
 
@@ -463,22 +463,23 @@ class ProtoPiler:
                     dst_wellplate_location, dst_well
                 )
 
-                if mix_cycles >= 1:
-                    # hardcoded to destination well for now
-                    mix_command = mix_template.replace(
-                        "#pipette#", f'pipettes["{pipette_mount}"]'
-                    )
-                    mix_command = mix_command.replace(
-                        "#volume#", str(mix_vol)
+                if mix_cycles is not None:
+                    if mix_cycles >= 1:
+                        # hardcoded to destination well for now
+                        mix_command = mix_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
                         )
-                    mix_command = mix_command.replace(
-                        "#loc#", f'deck["{dst_wellplate_location}"]["{dst_well}"]' # same as destination
-                    )
-                    mix_command = mix_command.replace(
-                        "#reps#", str(mix_cycles)
-                    )
+                        mix_command = mix_command.replace(
+                            "#volume#", str(mix_vol)
+                            )
+                        mix_command = mix_command.replace(
+                            "#loc#", f'deck["{dst_wellplate_location}"]["{dst_well}"]' # same as destination
+                        )
+                        mix_command = mix_command.replace(
+                            "#reps#", str(mix_cycles)
+                        )
 
-                    commands.append(mix_command)
+                        commands.append(mix_command)
                     
                     # no change in resources
 
@@ -574,7 +575,7 @@ class ProtoPiler:
             This function either supports one field being an iterable with length >1, or they all must be iterables with the same length.
         """
         if (
-            type(command_block.volume) is int
+            type(command_block.volume) is float
             and type(command_block.source) is str
             and type(command_block.destination) is str
             and type(command_block.mix_cycles) is int

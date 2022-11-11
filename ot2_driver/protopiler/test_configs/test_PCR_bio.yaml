@@ -1,55 +1,76 @@
 equipment:
-  - name: opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap
+  - name: nest_96_wellplate_2ml_deep
     location: "1"
-  - name: opentrons_10_tuberack_nest_4x50ml_6x15ml_conical
+    alias: forward
+  - name: nest_96_wellplate_2ml_deep
+    location: "2"
+    alias: backward
+  # - name: Temperature Module
+  #   location: "3"
+  #   alias: temp_mod
+  - name: nest_96_wellplate_100ul_pcr_full_skirt
     location: "3"
+    alias: template
+  - name: nest_96_wellplate_2ml_deep
+    location: "4"
+    alias: dest
   - name: opentrons_96_tiprack_20ul
     location: "8"
-  - name: opentrons_96_tiprack_300ul
-    location: "9"
+  - name: opentrons_96_tiprack_20ul
+    location: "7"
+  - name: opentrons_96_tiprack_20ul
+    location: "10"
   - name: p20_single_gen2
     mount: right
+  - name: opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap
+    location: "6"
+  - name: opentrons_10_tuberack_nest_4x50ml_6x15ml_conical
+    location: "5"
+  - name: opentrons_96_tiprack_20ul
+    location: "11"
+  - name: opentrons_96_tiprack_300ul
+    location: "9"
   - name: p300_single_gen2
     mount: left
 commands:
   - name: BioWater # FILL TO 10 ML SO PIPETTE DOESNT GET WET
-    source: 3:A1
+    source: 5:A1
     aspirate_clearance: 50
-    destination: 3:C2
+    destination: 5:C2
     dispense_clearance: 3
-    volume: [253.5, 253.5, 253.5, 253.5, 253.5, 253.5, 253.5, 253.5,]
+    volume: [253.5, 253.5, 253.5, 253.5, 253.5, 253.5, 253.5, 253.5,] # total: 2,028 uL
     mix_cycles: [0, 0, 0, 0, 0, 0, 0, 0]
     mix_volume: [0, 0, 0, 0, 0, 0, 0, 0]
   - name: DNA Polymerase
-    source: 1:[A1, A1]
-    aspirate_clearance: 1
-    destination: 3:C2
+    source: 6:[A1, A1]
+    aspirate_clearance: 0.5
+    destination: 5:C2
     dispense_clearance: 10
-    volume: [12, 12]
+    volume: [12, 12] # total: 24 uL
     mix_cycles: [3, 3]
     mix_volume: [20, 20]
   - name: 5x Reaction Buffer
-    source: 1:A3
-    aspirate_clearance: 1
-    destination: 3:C2
+    source: 6:A3
+    aspirate_clearance: 0.5
+    destination: 5:C2
     dispense_clearance: 3
-    volume: [240, 240, 240]
+    volume: [240, 240, 240] total: # total: 720 uL
     mix_cycles: [3, 3, 3]
     mix_volume: [280, 280, 280]
   - name: DNTPs
-    source: 1:A5
-    aspirate_clearance: 1
-    destination: 3:C2
+    source: 6:A5
+    aspirate_clearance: 0.5
+    destination: 5:C2
     dispense_clearance: 3
-    volume: 108
+    volume: 108 # total: 108 uL
     mix_cycles: 3
     mix_volume: 280
   - name: GC Enhancer
-    source: 1:B3
-    aspirate_clearance: 1
-    destination: 3:C2
+    source: 6:B3
+    aspirate_clearance: 0.5
+    destination: 5:C2
     dispense_clearance: 3
-    volume: [240, 240, 240]
+    volume: [240, 240, 240] # total: 720 uL
     mix_cycles: [7, 7, 7]
     mix_volume: [280, 280, 280]
 
