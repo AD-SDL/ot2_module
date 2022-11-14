@@ -136,6 +136,9 @@ class ProtoPiler:
             # Add logic for reading well names from file
             # peek into the source, check the well destination part
             peek_elem = command.destination
+            if isinstance(command.destination, list):  # No mixing and matching
+                peek_elem = command.destination[0]
+
             peek_well: str = peek_elem.split(":")[-1]
             if isinstance(command.destination, list):  # No mixing and matching
                 peek_elem = command.destination[0]
@@ -285,11 +288,25 @@ class ProtoPiler:
             "\n    ################\n    # load labware #\n    ################"
         )
 
+ 
         labware_block = open((self.template_dir / "load_labware.template")).read()
+        module_block = open((self.template_dir / "load_module.template")).read()
         # TODO: think of some better software design for accessing members of resource manager
         for location, name in self.resource_manager.location_to_labware.items():
-            labware_command = labware_block.replace("#name#", f'"{name}"')
-            labware_command = labware_command.replace("#location#", f'"{location}"')
+            match = False
+            for loc, nm in self.resource_manager.module_info.items():
+                    if loc == location:
+                        labware_command = module_block.replace("#module_name#", f'"{nm}"')
+                        labware_command = labware_command.replace("#location#", f'"{location}"')
+                        labware_command = labware_command.replace("#nickname#", f'{"module"}')
+                        labware_command = labware_command.replace("#labware_name#", f'"{name}"')
+                        match = True
+
+
+                
+            if match == False:
+                labware_command = labware_block.replace("#name#", f'"{name}"')
+                labware_command = labware_command.replace("#location#", f'"{location}"')
 
             protocol.append(labware_command)
 

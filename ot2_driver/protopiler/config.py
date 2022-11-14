@@ -71,6 +71,8 @@ class Labware(BaseSettings):
     """String location of the labware on the deck, str representation of int [1-12]"""
     alias: Optional[str]
     """A nickname you can use to refer to this labware in the configuration"""
+    module: Optional[str]
+    """Name of labware that is attached to module in this deck position, should follow opentrons naming standards"""
 
 
 class Pipette(BaseSettings):
@@ -92,7 +94,7 @@ class Command(BaseSettings):
     """Source of the command, this should refer to a wellplate and well(s)"""
     aspirate_clearance: Union[List[float], float]
     """height of pipette when performing aspirate"""
-    destination: Union[str, List[str]]
+    destination: Union[List[str], str]
     """Destination for the command, should refer to a wellplate and well(s)"""
     dispense_clearance: Union[float, List[float]]
     """height of pipette when performing dispense"""
