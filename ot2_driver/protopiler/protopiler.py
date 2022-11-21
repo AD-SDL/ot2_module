@@ -2,6 +2,7 @@
 import argparse
 import copy
 from datetime import datetime
+from distutils import command
 from itertools import repeat
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
@@ -396,7 +397,7 @@ class ProtoPiler:
                 command_block.name if command_block.name is not None else f"command {i}"
             )
             commands.append(f"\n    # {block_name}")
-            for (volume, src, dst, mix_cycles, mix_vol, asp_height, disp_height) in self._process_instruction(command_block):
+            for (volume, src, dst, mix_cycles, mix_vol, asp_height, disp_height, drop_tip) in self._process_instruction(command_block):
                 # determine which pipette to use
                 pipette_mount = self.resource_manager.determine_pipette(volume)
                 if pipette_mount is None:
@@ -502,7 +503,7 @@ class ProtoPiler:
 
 
 
-                if command_block.drop_tip:
+                if drop_tip == True:
                     drop_command = drop_tip_template.replace(
                         "#pipette#", f'pipettes["{pipette_mount}"]'
                     )
@@ -599,10 +600,12 @@ class ProtoPiler:
             and type(command_block.mix_volume) is int
             and type(command_block.aspirate_clearance) is float
             and type(command_block.dispense_clearance) is float
+            and type(command_block.drop_tip) is bool
         ):
 
-            yield command_block.volume, command_block.source, command_block.destination, command_block.mix_cycles, command_block.mix_volume, command_block.aspirate_clearance, command_block.dispense_clearance
+            yield command_block.volume, command_block.source, command_block.destination, command_block.mix_cycles, command_block.mix_volume, command_block.aspirate_clearance, command_block.dispense_clearance, command_block.drop_tip
         else:
+
             # could be one source (either list of volumes or one volume) to many desitnation
             # could be many sources (either list of volumes or one volume) to one destination
             # could be one source/destination, many volumes
@@ -681,6 +684,16 @@ class ProtoPiler:
                         raise Exception(
                             "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
                         )
+            if isinstance(command_block.drop_tip, list):
+                if iter_len != 0 and len(command_block.drop_tip) != iter_len:
+                    # handle if user forgot to change list of one value to scalar
+                    if len(command_block.drop_tip) == 1:
+                        command_block.drop_tip = command_block.drop_tip[0]
+                    else:
+                        raise Exception(
+                            "Multiple iterables found, cannot deterine dimension to iterate over"
+                        )
+                iter_len = len(command_block.drop_tip)
 
 
             if not isinstance(command_block.volume, list):
@@ -711,10 +724,14 @@ class ProtoPiler:
                 dispense_clearance = repeat(command_block.dispense_clearance, iter_len)
             else:
                 dispense_clearance = command_block.dispense_clearance
+            if not isinstance(command_block.drop_tip, list):
+                drop_tip = repeat(command_block.drop_tip, iter_len)
+            else:
+                drop_tip = command_block.drop_tip
             
 
-            for vol, src, dst, mix_cycles, mix_vol, asp_height, disp_height in zip(volumes, sources, destinations, mixing_cycles, mixing_volume, aspirate_clearance, dispense_clearance):
-                yield vol, src, dst, mix_cycles, mix_vol, asp_height, disp_height
+            for vol, src, dst, mix_cycles, mix_vol, asp_height, disp_height, d_tip in zip(volumes, sources, destinations, mixing_cycles, mixing_volume, aspirate_clearance, dispense_clearance, drop_tip):
+                yield vol, src, dst, mix_cycles, mix_vol, asp_height, disp_height, d_tip
 
 
 def main(args):  # noqa: D103
