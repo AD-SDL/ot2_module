@@ -104,7 +104,7 @@ class Command(BaseSettings):
     """Num mixes"""
     mix_volume: Optional[Union[int, List[int]]]
     """Volume of each mix"""
-    drop_tip: bool = True
+    drop_tip: Union[bool, List[bool]]
     """Drop the tip once a transfer is done"""
 
 
