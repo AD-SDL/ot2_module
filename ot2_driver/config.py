@@ -1,9 +1,82 @@
 """Stores dataclasses/args/config for the ot2 drivers"""
+import yaml
+import json
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional, Type, TypeVar
+
+from pydantic import BaseModel as _BaseModel
+
+_T = TypeVar("_T")
 
 PathLike = Union[str, Path]
+
+
+class BaseModel(_BaseModel):
+    """Allows any sub-class to inherit methods allowing for programatic description of protocols
+    Can load a yaml into a class and write a class into a yaml file.
+    """
+
+    def dict(self, **kwargs):
+        """Return the dictionary without the hidden fields
+        Returns
+        -------
+        dict
+            Dict representation of the object
+        """
+        hidden_fields = set(
+            attribute_name
+            for attribute_name, model_field in self.__fields__.items()
+            if model_field.field_info.extra.get("hidden") is True
+        )
+        kwargs.setdefault("exclude", hidden_fields)
+        return super().dict(**kwargs)
+
+    def json(self, **kwargs) -> str:
+        """Returns the json representation of the object without the hidden fields
+        Returns
+        -------
+        str
+            returns the JSON string of the object
+        """
+        hidden_fields = set(
+            attribute_name
+            for attribute_name, model_field in self.__fields__.items()
+            if model_field.field_info.extra.get("hidden") is True
+        )
+        kwargs.setdefault("exclude", hidden_fields)
+        return super().json(**kwargs)
+
+    def write_yaml(self, cfg_path: PathLike) -> None:
+        """Allows programatic creation of ot2util objects and saving them into yaml.
+        Parameters
+        ----------
+        cfg_path : PathLike
+            Path to dump the yaml file.
+        """
+        with open(cfg_path, mode="w") as fp:
+            yaml.dump(json.loads(self.json()), fp, indent=4, sort_keys=False)
+
+    @classmethod
+    def from_yaml(cls: Type[_T], filename: PathLike) -> _T:
+        """Allows loading of yaml into ot2util objects.
+        Parameters
+        ----------
+        filename: PathLike
+            Path to yaml file location.
+        """
+        with open(filename) as fp:
+            raw_data = yaml.safe_load(fp)
+        return cls(**raw_data)  # type: ignore[call-arg]
+
+
+class OT2_Config(BaseModel):
+    """OT2 config dataclass."""
+
+    ip: str
+    port: int = 31950
+    model: str = "OT2"
+    version: Optional[int]
 
 
 def parse_ot2_args() -> Namespace:
