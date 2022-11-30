@@ -73,6 +73,8 @@ class Labware(BaseSettings):
     """A nickname you can use to refer to this labware in the configuration"""
     module: Optional[str]
     """Name of labware that is attached to module in this deck position, should follow opentrons naming standards"""
+    offset: Optional[List[float]]
+    """Labware offset data to be imported for specific protocol"""
 
 
 class Pipette(BaseSettings):
