@@ -30,3 +30,6 @@ class Test_Protopiler_Base(TestOT2_Base):
         assert cfg.exists()
         assert temp_out_py.exists()
         assert temp_out_resource.exists()
+
+        temp_out_py.unlink()
+        temp_out_resource.unlink()
