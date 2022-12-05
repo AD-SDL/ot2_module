@@ -4,7 +4,7 @@ import copy
 from datetime import datetime
 from itertools import repeat
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Dict
 
 import pandas as pd
 
@@ -120,9 +120,14 @@ class ProtoPiler:
             peek_well: str = peek_elem.split(":")[-1]
             # check if it follows naming convention`[A-Z,a-z]?[0-9]{1,3}`
             # TODO better way to check the naming conventions for the wells
-            if not peek_well.isdigit() and not peek_well[1:].isdigit():
+            if (
+                not peek_well.isdigit()
+                and not peek_well[1:].isdigit()
+                and "payload" not in peek_well
+            ):
                 # read from file
                 new_locations = []
+                print(peek_well)
                 for orig_command, loc in zip(
                     repeat(command.source), self.resources[resource_key][peek_well]
                 ):
@@ -141,7 +146,11 @@ class ProtoPiler:
                 peek_elem = command.destination[0]
 
             peek_well: str = peek_elem.split(":")[-1]
-            if not peek_well.isdigit() and not peek_well[1:].isdigit():
+            if (
+                not peek_well.isdigit()
+                and not peek_well[1:].isdigit()
+                and "payload" not in peek_well
+            ):
                 # read from file
                 new_locations = []
                 for orig_command, loc in zip(
@@ -153,7 +162,11 @@ class ProtoPiler:
                 command.destination = new_locations
         # TODO: adding a 0 to volumes
         # have to check if volumes comes from the files # TODO: different volumes for templates and primers
-        if not isinstance(command.volume, int) and not isinstance(command.volume, list):
+        if (
+            not isinstance(command.volume, int)
+            and not isinstance(command.volume, list)
+            and "payload" not in command.volume
+        ):
             new_volumes = []
             for vol in self.resources[resource_key][command.volume]:
                 new_volumes.append(int(vol))
@@ -224,6 +237,7 @@ class ProtoPiler:
     def yaml_to_protocol(
         self,
         config_path: Optional[PathLike] = None,
+        payload: Optional[Dict] = None,
         protocol_out: PathLike = Path(
             f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
         ),
@@ -316,7 +330,7 @@ class ProtoPiler:
             "\n    ####################\n    # execute commands #\n    ####################"
         )
 
-        commands_python = self._create_commands()
+        commands_python = self._create_commands(payload=payload)
         protocol.extend(commands_python)
 
         # TODO: anything to write for closing?
@@ -352,7 +366,7 @@ class ProtoPiler:
 
         return protocol_out, resource_file_out
 
-    def _create_commands(self) -> List[str]:
+    def _create_commands(self, payload: Optional[Dict]) -> List[str]:
         """Creates the flow of commands for the OT2 to run
 
         Raises:
@@ -378,6 +392,20 @@ class ProtoPiler:
                 command_block.name if command_block.name is not None else f"command {i}"
             )
             commands.append(f"\n    # {block_name}")
+            # TODO: Inject the payload here
+            # Inject the payload
+            if isinstance(payload, dict):
+
+                (arg_keys, arg_values) = zip(*command_block.__dict__.items())
+                for key, value in payload.items():
+                    if "payload." not in key:
+                        key = f"payload.{key}"
+                    if key in arg_values:
+                        idx = arg_values.index(key)
+                        step_arg_key = arg_keys[idx]
+                        # this feels slimy...
+                        setattr(command_block, step_arg_key, value)
+
             for (volume, src, dst, mix_cycles, mix_vol) in self._process_instruction(
                 command_block
             ):
@@ -504,9 +532,8 @@ class ProtoPiler:
             If the command is not formatted correctly, it should get caught before this, but if not I check here
         """
         location = None
-        if (
-            ":" in command_location
-        ):  # new format, pass a wellplate location, then well location
+        # new format, pass a wellplate location, then well location
+        if ":" in command_location:
             try:
                 plate, _ = command_location.split(":")
             except ValueError:
