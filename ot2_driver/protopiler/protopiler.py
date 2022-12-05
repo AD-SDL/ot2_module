@@ -292,6 +292,7 @@ class ProtoPiler:
 
         labware_block = open((self.template_dir / "load_labware.template")).read()
         module_block = open((self.template_dir / "load_module.template")).read()
+        offset_block = open((self.template_dir / "labware_offset.template")).read()
         # TODO: think of some better software design for accessing members of resource manager
         for location, name in self.resource_manager.location_to_labware.items():
             match = False
@@ -312,8 +313,19 @@ class ProtoPiler:
             if not match:
                 labware_command = labware_block.replace("#name#", f'"{name}"')
                 labware_command = labware_command.replace("#location#", f'"{location}"')
-
+            
             protocol.append(labware_command)
+            
+            for loc, off in self.resource_manager.offset_to_location.items():
+                if loc == location:
+                    offset_command = offset_block.replace("#x_offset#", f'{off[0]}')
+                    offset_command = offset_command.replace("#y_offset#", f'{off[1]}')
+                    offset_command = offset_command.replace("#z_offset#", f'{off[2]}')
+                    offset_command = offset_command.replace("#location#", f'"{location}"')
+
+                    protocol.append(offset_command)
+                    
+
 
         instrument_block = open((self.template_dir / "load_instrument.template")).read()
 

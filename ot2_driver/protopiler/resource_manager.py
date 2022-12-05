@@ -113,6 +113,7 @@ class ResourceManager:
         self.location_to_labware = {}
         self.alias_to_location = {}
         self.module_info = {}
+        self.offset_to_location = {}
 
         self.pipette_to_mount = {}
         self.mount_to_pipette = {}
@@ -134,6 +135,8 @@ class ResourceManager:
 
             if element.alias:
                 self.alias_to_location[element.alias] = element.location
+            if element.offset:
+                self.offset_to_location[element.location] = element.offset
 
             # adding both the alias and the location just in case the user uses it interchangeably
             self.alias_to_location[element.location] = element.location
