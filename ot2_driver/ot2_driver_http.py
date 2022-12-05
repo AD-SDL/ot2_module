@@ -44,17 +44,24 @@ class OT2_Driver:
             Dataclass of the ot2_config
         """
         self.config: OT2_Config = config
-        self.protopiler: ProtoPiler = ProtoPiler(
-            template_dir=(
-                Path(__file__).parent.resolve() / "protopiler/protocol_templates"
-            )
-        )
+        template_dir = Path(__file__).parent.resolve() / "protopiler/protocol_templates"
+        assert template_dir.exists(), f"Template dir: {template_dir} does not exist"
+        self.protopiler: ProtoPiler = ProtoPiler(template_dir=template_dir)
 
         self.retry_strategy = Retry(
             total=retries,
             backoff_factor=retry_backoff,
             status_forcelist=retry_status_codes,
         )
+
+        # Test connection
+        self.base_url = f"http://{self.config.ip}:{self.config.port}"
+        self.headers = {"Opentrons-Version": "2"}
+        test_conn_url = f"{self.base_url}/calibration/status"
+
+        resp = requests.get(test_conn_url, headers=self.headers)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Could not connect to opentrons with config {config}")
 
     def compile_protocol(self, config_path, resource_file=None) -> Tuple[str, str]:
         """Compile the protocols via protopiler
