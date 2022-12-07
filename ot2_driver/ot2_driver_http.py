@@ -3,7 +3,7 @@ import subprocess
 import time
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 import requests
 import yaml
@@ -63,7 +63,9 @@ class OT2_Driver:
         if resp.status_code != 200:
             raise RuntimeError(f"Could not connect to opentrons with config {config}")
 
-    def compile_protocol(self, config_path, resource_file=None) -> Tuple[str, str]:
+    def compile_protocol(
+        self, config_path, resource_file=None, payload: Optional[Dict[str, Any]] = None
+    ) -> Tuple[str, str]:
         """Compile the protocols via protopiler
 
         This step will be skipped if a full protocol file is detected
@@ -89,7 +91,7 @@ class OT2_Driver:
                 protocol_out_path,
                 protocol_resource_file,
             ) = self.protopiler.yaml_to_protocol(
-                config_path, resource_file=resource_file
+                config_path, resource_file=resource_file, payload=payload
             )
 
             return protocol_out_path, protocol_resource_file
