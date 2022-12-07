@@ -71,6 +71,10 @@ class Labware(BaseSettings):
     """String location of the labware on the deck, str representation of int [1-12]"""
     alias: Optional[str]
     """A nickname you can use to refer to this labware in the configuration"""
+    module: Optional[str]
+    """Name of labware that is attached to module in this deck position, should follow opentrons naming standards"""
+    offset: Optional[List[float]]
+    """Labware offset data to be imported for specific protocol"""
 
 
 class Pipette(BaseSettings):
@@ -90,15 +94,19 @@ class Command(BaseSettings):
     """Name of the command, optional"""
     source: Union[List[str], str]
     """Source of the command, this should refer to a wellplate and well(s)"""
-    destination: Union[str, List[str]]
+    aspirate_clearance: Union[List[float], float]
+    """height of pipette when performing aspirate"""
+    destination: Union[List[str], str]
     """Destination for the command, should refer to a wellplate and well(s)"""
-    volume: Union[int, List[int], str]
+    dispense_clearance: Union[float, List[float]]
+    """height of pipette when performing dispense"""
+    volume: Union[float, List[float], str]
     """Volume to transfer, can be a single int (microliters) or a list of int"""
-    mix_cycles: Union[int, List[int]] = 0
+    mix_cycles: Optional[Union[int, List[int]]]
     """Num mixes"""
-    mix_volume: Union[int, List[int]] = 0
+    mix_volume: Optional[Union[int, List[int]]]
     """Volume of each mix"""
-    drop_tip: bool = True
+    drop_tip: Union[bool, List[bool]]
     """Drop the tip once a transfer is done"""
 
 

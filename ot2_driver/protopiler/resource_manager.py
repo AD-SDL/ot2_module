@@ -112,6 +112,8 @@ class ResourceManager:
         self.labware_to_location = {}
         self.location_to_labware = {}
         self.alias_to_location = {}
+        self.module_info = {}
+        self.offset_to_location = {}
 
         self.pipette_to_mount = {}
         self.mount_to_pipette = {}
@@ -128,9 +130,13 @@ class ResourceManager:
                     "Labware location overloaded, please check configuration"
                 )
             self.location_to_labware[element.location] = element.name
+            if element.module:
+                self.module_info[element.location] = element.module
 
             if element.alias:
                 self.alias_to_location[element.alias] = element.location
+            if element.offset:
+                self.offset_to_location[element.location] = element.offset
 
             # adding both the alias and the location just in case the user uses it interchangeably
             self.alias_to_location[element.location] = element.location
@@ -346,7 +352,6 @@ class ResourceManager:
 
         else:
             self.resources[location]["used"] += 1
-
         capacity = int(self.resources[location]["name"].split("_")[1])
         if self.resources[location]["used"] >= capacity:
             self.resources[location]["depleted"] = True
