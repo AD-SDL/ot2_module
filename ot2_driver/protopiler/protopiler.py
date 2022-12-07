@@ -167,7 +167,10 @@ class ProtoPiler:
         if (
             not isinstance(command.volume, int)
             and not isinstance(command.volume, list)
-            and "payload" not in command.volume
+            and (
+                hasattr(command.volume, "__contains__")
+                and "payload" not in command.volume
+            )
         ):
             new_volumes = []
             for vol in self.resources[resource_key][command.volume]:
