@@ -24,6 +24,7 @@ class RunStatus(Enum):
     FINISHING = "finishing"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
+    PAUSED = "paused"
 
 
 class OT2_Driver:
