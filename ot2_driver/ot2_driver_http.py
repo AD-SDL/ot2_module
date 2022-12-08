@@ -64,10 +64,11 @@ class OT2_Driver:
             raise RuntimeError(f"Could not connect to opentrons with config {config}")
 
         if "on" in resp.json() and not resp.json()["on"]:
-            requests.post(test_conn_url, headers=self.headers, json={"on": True})
+            self.change_lights_status(status=True)
         else:
-            requests.post(test_conn_url, headers=self.headers, json={"on": False})
-            requests.post(test_conn_url, headers=self.headers, json={"on": True})
+            self.change_lights_status(status=False)
+            time.sleep(1)  # Can mix later
+            self.change_lights_status(status=True)
 
     def compile_protocol(
         self, config_path, resource_file=None, payload: Optional[Dict[str, Any]] = None
@@ -255,6 +256,12 @@ class OT2_Driver:
                 return RobotStatus.RUNNING
 
         return RobotStatus.IDLE
+
+    def change_lights_status(self, status: bool = False):
+        change_lights_url = f"{self.base_url}/robot/lights"
+        payload = {"on": status}
+
+        requests.post(change_lights_url, headers=self.headers, json=payload)
 
     def send_request(self, request_extension: str, **kwargs) -> requests.Response:
         """Allows us to send arbitrary requests to the ot2 http server.
