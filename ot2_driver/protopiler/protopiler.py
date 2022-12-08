@@ -424,6 +424,7 @@ class ProtoPiler:
         aspirate_clearance_template = open(
             (self.template_dir / "aspirate_clearance.template")
         ).read()
+        blow_out_template = open((self.template_dir / "blow_out.template")).read()
 
         tip_loaded = {"left": False, "right": False}
         for i, command_block in enumerate(self.commands):
@@ -454,6 +455,7 @@ class ProtoPiler:
                 mix_vol,
                 asp_height,
                 disp_height,
+                blow_out,
                 drop_tip,
             ) in self._process_instruction(command_block):
                 # determine which pipette to use
@@ -559,6 +561,11 @@ class ProtoPiler:
                         commands.append(mix_command)
 
                     # no change in resources
+                if blow_out:
+                    blowout_command = blow_out_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                    commands.append(blowout_command)
 
                 if drop_tip:
                     drop_command = drop_tip_template.replace(
@@ -656,10 +663,11 @@ class ProtoPiler:
             and type(command_block.mix_volume) is int
             and type(command_block.aspirate_clearance) is float
             and type(command_block.dispense_clearance) is float
+            and type(command_block.blow_out) is bool
             and type(command_block.drop_tip) is bool
         ):
 
-            yield command_block.volume, command_block.source, command_block.destination, command_block.mix_cycles, command_block.mix_volume, command_block.aspirate_clearance, command_block.dispense_clearance, command_block.drop_tip
+            yield command_block.volume, command_block.source, command_block.destination, command_block.mix_cycles, command_block.mix_volume, command_block.aspirate_clearance, command_block.dispense_clearance, command_block.blow_out, command_block.drop_tip
         else:
 
             # could be one source (either list of volumes or one volume) to many desitnation
@@ -744,6 +752,17 @@ class ProtoPiler:
                         raise Exception(
                             "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
                         )
+            if isinstance(command_block.blow_out, list):
+                if iter_len != 0 and len(command_block.blow_out) != iter_len:
+                    # handle if user forgot to change list of one value to scalar
+                    if len(command_block.blow_out) == 1:
+                        command_block.blow_out = command_block.blow_out[0]
+                    else:
+                        raise Exception(
+                            "Multiple iterables found, cannot deterine dimension to iterate over"
+                        )
+                iter_len = len(command_block.blow_out)
+
             if isinstance(command_block.drop_tip, list):
                 if iter_len != 0 and len(command_block.drop_tip) != iter_len:
                     # handle if user forgot to change list of one value to scalar
@@ -783,6 +802,10 @@ class ProtoPiler:
                 dispense_clearance = repeat(command_block.dispense_clearance, iter_len)
             else:
                 dispense_clearance = command_block.dispense_clearance
+            if not isinstance(command_block.blow_out, list):
+                blow_out = repeat(command_block.blow_out, iter_len)
+            else:
+                blow_out = command_block.blow_out
             if not isinstance(command_block.drop_tip, list):
                 drop_tip = repeat(command_block.drop_tip, iter_len)
             else:
@@ -796,6 +819,7 @@ class ProtoPiler:
                 mix_vol,
                 asp_height,
                 disp_height,
+                blowout,
                 d_tip,
             ) in zip(
                 volumes,
@@ -805,9 +829,10 @@ class ProtoPiler:
                 mixing_volume,
                 aspirate_clearance,
                 dispense_clearance,
+                blow_out,
                 drop_tip,
             ):
-                yield vol, src, dst, mix_cycles, mix_vol, asp_height, disp_height, d_tip
+                yield vol, src, dst, mix_cycles, mix_vol, asp_height, disp_height, blowout, d_tip
 
 
 def main(args):  # noqa: D103
