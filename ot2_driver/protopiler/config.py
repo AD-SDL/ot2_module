@@ -106,6 +106,8 @@ class Command(BaseSettings):
     """Num mixes"""
     mix_volume: Optional[Union[int, List[int]]]
     """Volume of each mix"""
+    blow_out: Optional[Union[bool, List[bool]]] = True
+    """blow out from tip into current location"""
     drop_tip: Union[bool, List[bool]] = True
     """Drop the tip once a transfer is done"""
 
