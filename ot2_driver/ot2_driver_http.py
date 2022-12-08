@@ -57,11 +57,17 @@ class OT2_Driver:
         # Test connection
         self.base_url = f"http://{self.config.ip}:{self.config.port}"
         self.headers = {"Opentrons-Version": "2"}
-        test_conn_url = f"{self.base_url}/calibration/status"
+        test_conn_url = f"{self.base_url}/robot/lights"
 
         resp = requests.get(test_conn_url, headers=self.headers)
         if resp.status_code != 200:
             raise RuntimeError(f"Could not connect to opentrons with config {config}")
+
+        if "on" in resp.json() and not resp.json()["on"]:
+            requests.post(test_conn_url, headers=self.headers, json={"on": True})
+        else:
+            requests.post(test_conn_url, headers=self.headers, json={"on": False})
+            requests.post(test_conn_url, headers=self.headers, json={"on": True})
 
     def compile_protocol(
         self, config_path, resource_file=None, payload: Optional[Dict[str, Any]] = None
