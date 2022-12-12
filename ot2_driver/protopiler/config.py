@@ -86,12 +86,12 @@ class Pipette(BaseSettings):
     """Mount location, either left or right"""
 
 
-# Command container
-class Command(BaseSettings):
-    """A container for a command structure"""
-
+class CommandBase(BaseSettings):
     name: Optional[str]
     """Name of the command, optional"""
+
+
+class Transfer(CommandBase):
     source: Union[List[str], str]
     """Source of the command, this should refer to a wellplate and well(s)"""
     aspirate_clearance: Optional[Union[List[float], float]]
@@ -110,6 +110,36 @@ class Command(BaseSettings):
     """blow out from tip into current location"""
     drop_tip: Union[bool, List[bool]] = True
     """Drop the tip once a transfer is done"""
+
+class Temperature_Set(CommandBase):
+    change_temp: int
+    """Temperature to set temperature module to"""
+
+
+# # Command container
+# class Command(BaseSettings):
+#     """A container for a command structure"""
+
+#     name: Optional[str]
+#     """Name of the command, optional"""
+#     source: Union[List[str], str]
+#     """Source of the command, this should refer to a wellplate and well(s)"""
+#     aspirate_clearance: Optional[Union[List[float], float]]
+#     """height of pipette when performing aspirate"""
+#     destination: Union[List[str], str]
+#     """Destination for the command, should refer to a wellplate and well(s)"""
+#     dispense_clearance: Optional[Union[float, List[float]]]
+#     """height of pipette when performing dispense"""
+#     volume: Union[float, List[float], str]
+#     """Volume to transfer, can be a single int (microliters) or a list of int"""
+#     mix_cycles: Optional[Union[int, List[int]]]
+#     """Num mixes"""
+#     mix_volume: Optional[Union[int, List[int]]]
+#     """Volume of each mix"""
+#     blow_out: Optional[Union[bool, List[bool]]] = True
+#     """blow out from tip into current location"""
+#     drop_tip: Union[bool, List[bool]] = True
+#     """Drop the tip once a transfer is done"""
 
 
 # metadata container
@@ -133,7 +163,7 @@ class ProtocolConfig(BaseSettings):
     """The additional resources (currently xls, xlsx files) to be used when compiling a protocol"""
     equipment: List[Union[Labware, Pipette]]
     """A list of the equipment you want to use on the OT2"""
-    commands: List[Command]
+    commands: List[Union[Transfer, Temperature_Set, CommandBase]]# or List[Union[Temperature_Set, CommandBase]]
     """Commands to execute during run"""
     metadata: Metadata
     """Information about the run"""
