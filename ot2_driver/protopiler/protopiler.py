@@ -8,7 +8,7 @@ from typing import List, Optional, Tuple, Union, Dict
 
 import pandas as pd
 
-from ot2_driver.protopiler.config import CommandBase, Transfer, Temperature_Set, PathLike, ProtocolConfig, Resource
+from ot2_driver.protopiler.config import CommandBase, Transfer, Temperature_Set, Clear_Pipette, Move_Pipette, PathLike, ProtocolConfig, Resource
 from ot2_driver.protopiler.resource_manager import ResourceManager
 
 """ Things to do:
@@ -425,6 +425,7 @@ class ProtoPiler:
         ).read()
         blow_out_template = open((self.template_dir / "blow_out.template")).read()
         temp_change_template = open((self.template_dir / "set_temperature.template")).read()
+        move_template = open((self.template_dir / "move_pipette.template")).read()
 
         tip_loaded = {"left": False, "right": False}
         for i, command_block in enumerate(self.commands):
@@ -585,6 +586,50 @@ class ProtoPiler:
                     "#temp#", str(command_block.change_temp)
                 )
                 commands.append(temp_change_command)
+
+            if isinstance(command_block, Clear_Pipette):
+                if type(command_block.clear) is not bool:
+                    raise Exception(
+                        "clear command must be True or False"
+                    )
+                
+                move_command = move_template.replace(
+                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                )
+                move_command = move_command.replace(
+                    "#location#", str(12)
+                )
+                commands.append(move_command)
+
+                clear_command = blow_out_template.replace(
+                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                )
+                commands.append(clear_command)
+
+                clear_command = drop_tip_template.replace(
+                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                )
+                commands.append(clear_command)
+                tip_loaded[pipette_mount] = False
+            
+            if isinstance(command_block, Move_Pipette):
+                if type(command_block.move_to) is not int:
+                    raise Exception(
+                        "Given deck position must be an int"
+                    )
+                if command_block.move_to > 12 or command_block.move_to < 1:
+                    raise Exception(
+                        "number must be a valid deck position 1-12"
+                    )
+                
+                move_command = move_template.replace(
+                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                )
+                move_command = move_command.replace(
+                    "#location#", str(command_block.move_to)
+                )
+                commands.append(move_command)
+                
 
 
 
