@@ -127,7 +127,7 @@ class ProtoPiler:
                 ):
                     # read from file
                     new_locations = []
-                    print(peek_well)
+                    print("HERE", peek_well)
                     for orig_command, loc in zip(
                         repeat(command.source), self.resources[resource_key][peek_well]
                     ):
@@ -162,21 +162,21 @@ class ProtoPiler:
                         new_locations.append(f"{orig_deck_location}:{loc}")
 
                     command.destination = new_locations
-        # TODO: adding a 0 to volumes
-        # have to check if volumes comes from the files # TODO: different volumes for templates and primers
-        if (
-            not isinstance(command.volume, int)
-            and not isinstance(command.volume, list)
-            and (
-                hasattr(command.volume, "__contains__")
-                and "payload" not in command.volume
-            )
-        ):
-            new_volumes = []
-            for vol in self.resources[resource_key][command.volume]:
-                new_volumes.append(int(vol))
+                # TODO: adding a 0 to volumes
+                # have to check if volumes comes from the files # TODO: different volumes for templates and primers
+                if (
+                    not isinstance(command.volume, int)
+                    and not isinstance(command.volume, list)
+                    and (
+                        hasattr(command.volume, "__contains__")
+                        and "payload" not in command.volume
+                    )
+                ):
+                    new_volumes = []
+                    for vol in self.resources[resource_key][command.volume]:
+                        new_volumes.append(int(vol))
 
-                command.volume = new_volumes
+                        command.volume = new_volumes
 
     def _unpack_alias(self, command_elem: Union[str, List[str]]) -> List[str]:
         new_locations = []
