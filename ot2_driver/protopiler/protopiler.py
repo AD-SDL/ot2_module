@@ -127,7 +127,6 @@ class ProtoPiler:
                 ):
                     # read from file
                     new_locations = []
-                    print("HERE", peek_well)
                     for orig_command, loc in zip(
                         repeat(command.source), self.resources[resource_key][peek_well]
                     ):
