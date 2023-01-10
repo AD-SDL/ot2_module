@@ -86,12 +86,12 @@ class Pipette(BaseSettings):
     """Mount location, either left or right"""
 
 
-# Command container
-class Command(BaseSettings):
-    """A container for a command structure"""
-
+class CommandBase(BaseSettings):
     name: Optional[str]
     """Name of the command, optional"""
+
+
+class Transfer(CommandBase):
     source: Union[List[str], str]
     """Source of the command, this should refer to a wellplate and well(s)"""
     aspirate_clearance: Optional[Union[List[float], float]]
@@ -111,6 +111,17 @@ class Command(BaseSettings):
     drop_tip: Union[bool, List[bool]] = True
     """Drop the tip once a transfer is done"""
 
+class Temperature_Set(CommandBase):
+    change_temp: int
+    """Temperature to set temperature module to"""
+
+class Clear_Pipette(CommandBase):
+    clear: bool
+    """Blowout and remove any tip on pipette over trash"""
+
+class Move_Pipette(CommandBase):
+    move_to: int
+    """Moves pipette to given deck position"""
 
 # metadata container
 class Metadata(BaseSettings):
@@ -133,7 +144,7 @@ class ProtocolConfig(BaseSettings):
     """The additional resources (currently xls, xlsx files) to be used when compiling a protocol"""
     equipment: List[Union[Labware, Pipette]]
     """A list of the equipment you want to use on the OT2"""
-    commands: List[Command]
+    commands: List[Union[Transfer, Temperature_Set, Clear_Pipette, Move_Pipette, CommandBase]]
     """Commands to execute during run"""
     metadata: Metadata
     """Information about the run"""

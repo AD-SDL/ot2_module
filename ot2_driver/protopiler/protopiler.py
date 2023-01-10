@@ -8,7 +8,7 @@ from typing import List, Optional, Tuple, Union, Dict
 
 import pandas as pd
 
-from ot2_driver.protopiler.config import Command, PathLike, ProtocolConfig, Resource
+from ot2_driver.protopiler.config import CommandBase, Transfer, Temperature_Set, Clear_Pipette, Move_Pipette, PathLike, ProtocolConfig, Resource
 from ot2_driver.protopiler.resource_manager import ResourceManager
 
 """ Things to do:
@@ -70,7 +70,6 @@ class ProtoPiler:
         """
         self.config_path = config_path
         self.resource_file = resource_file
-
         self.config = ProtocolConfig.from_yaml(config_path)
 
         self.load_resources(self.config.resources)
@@ -108,75 +107,75 @@ class ProtoPiler:
         if self.resources:
             resource_key = list(self.resources.keys())[0]
         for command in self.commands:
-            if ":[" in command.source:
-                command.source = self._unpack_alias(command_elem=command.source)
+            if isinstance(command, Transfer):
+                if ":[" in command.source:
+                    command.source = self._unpack_alias(command_elem=command.source)
 
-            # Add logic for taking well names from files
-            # peek into the source, check the well destination part
-            peek_elem = command.source
-            if isinstance(command.source, list):  # No mixing and matching
-                peek_elem = command.source[0]
+                # Add logic for taking well names from files
+                # peek into the source, check the well destination part
+                peek_elem = command.source
+                if isinstance(command.source, list):  # No mixing and matching
+                    peek_elem = command.source[0]
 
-            peek_well: str = peek_elem.split(":")[-1]
-            # check if it follows naming convention`[A-Z,a-z]?[0-9]{1,3}`
-            # TODO better way to check the naming conventions for the wells
-            if (
-                not peek_well.isdigit()
-                and not peek_well[1:].isdigit()
-                and "payload" not in peek_well
-            ):
-                # read from file
-                new_locations = []
-                print(peek_well)
-                for orig_command, loc in zip(
-                    repeat(command.source), self.resources[resource_key][peek_well]
+                peek_well: str = peek_elem.split(":")[-1]
+                # check if it follows naming convention`[A-Z,a-z]?[0-9]{1,3}`
+                # TODO better way to check the naming conventions for the wells
+                if (
+                    not peek_well.isdigit()
+                    and not peek_well[1:].isdigit()
+                    and "payload" not in peek_well
                 ):
-                    orig_deck_location = orig_command.split(":")[0]
-                    new_locations.append(f"{orig_deck_location}:{loc}")
+                    # read from file
+                    new_locations = []
+                    for orig_command, loc in zip(
+                        repeat(command.source), self.resources[resource_key][peek_well]
+                    ):
+                        orig_deck_location = orig_command.split(":")[0]
+                        new_locations.append(f"{orig_deck_location}:{loc}")
 
-                command.source = new_locations
-            if ":[" in command.destination:
-                command.destination = self._unpack_alias(command.destination)
+                    command.source = new_locations
+                if ":[" in command.destination:
+                    command.destination = self._unpack_alias(command.destination)
 
-            # Add logic for reading well names from file
-            # peek into the source, check the well destination part
-            peek_elem = command.destination
-            if isinstance(command.destination, list):  # No mixing and matching
-                peek_elem = command.destination[0]
+                # Add logic for reading well names from file
+                # peek into the source, check the well destination part
+                peek_elem = command.destination
+                if isinstance(command.destination, list):  # No mixing and matching
+                    peek_elem = command.destination[0]
 
-            peek_well: str = peek_elem.split(":")[-1]
-            if isinstance(command.destination, list):  # No mixing and matching
-                peek_elem = command.destination[0]
-            if (
-                not peek_well.isdigit()
-                and not peek_well[1:].isdigit()
-                and "payload" not in peek_well
-            ):
-
-                # read from file
-                new_locations = []
-                for orig_command, loc in zip(
-                    repeat(command.destination), self.resources[resource_key][peek_well]
+                peek_well: str = peek_elem.split(":")[-1]
+                if isinstance(command.destination, list):  # No mixing and matching
+                    peek_elem = command.destination[0]
+                if (
+                    not peek_well.isdigit()
+                    and not peek_well[1:].isdigit()
+                    and "payload" not in peek_well
                 ):
-                    orig_deck_location = orig_command.split(":")[0]
-                    new_locations.append(f"{orig_deck_location}:{loc}")
 
-                command.destination = new_locations
-        # TODO: adding a 0 to volumes
-        # have to check if volumes comes from the files # TODO: different volumes for templates and primers
-        if (
-            not isinstance(command.volume, int)
-            and not isinstance(command.volume, list)
-            and (
-                hasattr(command.volume, "__contains__")
-                and "payload" not in command.volume
-            )
-        ):
-            new_volumes = []
-            for vol in self.resources[resource_key][command.volume]:
-                new_volumes.append(int(vol))
+                    # read from file
+                    new_locations = []
+                    for orig_command, loc in zip(
+                        repeat(command.destination), self.resources[resource_key][peek_well]
+                    ):
+                        orig_deck_location = orig_command.split(":")[0]
+                        new_locations.append(f"{orig_deck_location}:{loc}")
 
-                command.volume = new_volumes
+                    command.destination = new_locations
+                # TODO: adding a 0 to volumes
+                # have to check if volumes comes from the files # TODO: different volumes for templates and primers
+                if (
+                    not isinstance(command.volume, int)
+                    and not isinstance(command.volume, list)
+                    and (
+                        hasattr(command.volume, "__contains__")
+                        and "payload" not in command.volume
+                    )
+                ):
+                    new_volumes = []
+                    for vol in self.resources[resource_key][command.volume]:
+                        new_volumes.append(int(vol))
+
+                        command.volume = new_volumes
 
     def _unpack_alias(self, command_elem: Union[str, List[str]]) -> List[str]:
         new_locations = []
@@ -425,6 +424,8 @@ class ProtoPiler:
             (self.template_dir / "aspirate_clearance.template")
         ).read()
         blow_out_template = open((self.template_dir / "blow_out.template")).read()
+        temp_change_template = open((self.template_dir / "set_temperature.template")).read()
+        move_template = open((self.template_dir / "move_pipette.template")).read()
 
         tip_loaded = {"left": False, "right": False}
         for i, command_block in enumerate(self.commands):
@@ -446,135 +447,191 @@ class ProtoPiler:
                         step_arg_key = arg_keys[idx]
                         # this feels slimy...
                         setattr(command_block, step_arg_key, value)
-
-            for (
-                volume,
-                src,
-                dst,
-                mix_cycles,
-                mix_vol,
-                asp_height,
-                disp_height,
-                blow_out,
-                drop_tip,
-            ) in self._process_instruction(command_block):
-                # determine which pipette to use
-                pipette_mount = self.resource_manager.determine_pipette(volume)
-                if pipette_mount is None:
-                    raise Exception(
-                        f"No pipette available for {block_name} with volume: {volume}"
-                    )
-
-                # check for tip
-                if not tip_loaded[pipette_mount]:
-                    load_command = pick_tip_template.replace(
-                        "#pipette#", f'pipettes["{pipette_mount}"]'
-                    )
-                    # TODO: think of some better software design for accessing members of resource manager
-                    pipette_name = self.resource_manager.mount_to_pipette[pipette_mount]
-
-                    # TODO: define flag to grab from specific well or just use the ones defined by the OT2
-                    if True:
-                        (
-                            rack_location,
-                            well_location,
-                        ) = self.resource_manager.get_next_tip(pipette_name)
-
-                        location_string = (
-                            f'deck["{rack_location}"].wells()[{well_location}]'
+            if isinstance(command_block, Transfer):
+                for (
+                    volume,
+                    src,
+                    dst,
+                    mix_cycles,
+                    mix_vol,
+                    asp_height,
+                    disp_height,
+                    blow_out,
+                    drop_tip,
+                ) in self._process_instruction(command_block):
+                    # determine which pipette to use
+                    pipette_mount = self.resource_manager.determine_pipette(volume)
+                    if pipette_mount is None:
+                        raise Exception(
+                            f"No pipette available for {block_name} with volume: {volume}"
                         )
-                        load_command = load_command.replace(
-                            "#location#", location_string
-                        )
-                    else:
-                        load_command = load_command.replace("#location#", "")
-                        self.resource_manager.update_tip_usage(pipette_name)
 
-                    commands.append(load_command)
-                    tip_loaded[pipette_mount] = True
-
-                # aspirate and dispense
-                # set aspirate clearance
-                aspirate_clearance_command = aspirate_clearance_template.replace(
-                    "#pipette#", f'pipettes["{pipette_mount}"]'
-                )
-                aspirate_clearance_command = aspirate_clearance_command.replace(
-                    "#height#", str(asp_height)
-                )
-                commands.append(aspirate_clearance_command)
-
-                src_wellplate_location = self._parse_wellplate_location(src)
-                # should handle things not formed like loc:well
-                src_well = src.split(":")[-1]
-
-                aspirate_command = aspirate_template.replace(
-                    "#pipette#", f'pipettes["{pipette_mount}"]'
-                )
-                aspirate_command = aspirate_command.replace("#volume#", str(volume))
-                aspirate_command = aspirate_command.replace(
-                    "#src#", f'deck["{src_wellplate_location}"]["{src_well}"]'
-                )
-                commands.append(aspirate_command)
-                self.resource_manager.update_well_usage(
-                    src_wellplate_location, src_well
-                )
-
-                # set dispense clearance
-                dispense_clearance_commmand = dispense_clearance_template.replace(
-                    "#pipette#", f'pipettes["{pipette_mount}"]'
-                )
-                dispense_clearance_commmand = dispense_clearance_commmand.replace(
-                    "#height#", str(disp_height)
-                )
-                commands.append(dispense_clearance_commmand)
-
-                dst_wellplate_location = self._parse_wellplate_location(dst)
-                dst_well = dst.split(":")[
-                    -1
-                ]  # should handle things not formed like loc:well
-                dispense_command = dispense_template.replace(
-                    "#pipette#", f'pipettes["{pipette_mount}"]'
-                )
-                dispense_command = dispense_command.replace("#volume#", str(volume))
-                dispense_command = dispense_command.replace(
-                    "#dst#", f'deck["{dst_wellplate_location}"]["{dst_well}"]'
-                )
-                commands.append(dispense_command)
-                # update resource usage
-                self.resource_manager.update_well_usage(
-                    dst_wellplate_location, dst_well
-                )
-
-                if mix_cycles is not None:
-                    if mix_cycles >= 1:
-                        # hardcoded to destination well for now
-                        mix_command = mix_template.replace(
+                    # check for tip
+                    if not tip_loaded[pipette_mount]:
+                        load_command = pick_tip_template.replace(
                             "#pipette#", f'pipettes["{pipette_mount}"]'
                         )
-                        mix_command = mix_command.replace("#volume#", str(mix_vol))
-                        mix_command = mix_command.replace(
-                            "#loc#",
-                            f'deck["{dst_wellplate_location}"]["{dst_well}"]',  # same as destination
+                        # TODO: think of some better software design for accessing members of resource manager
+                        pipette_name = self.resource_manager.mount_to_pipette[pipette_mount]
+
+                        # TODO: define flag to grab from specific well or just use the ones defined by the OT2
+                        if True:
+                            (
+                                rack_location,
+                                well_location,
+                            ) = self.resource_manager.get_next_tip(pipette_name)
+
+                            location_string = (
+                                f'deck["{rack_location}"].wells()[{well_location}]'
+                            )
+                            load_command = load_command.replace(
+                                "#location#", location_string
+                            )
+                        else:
+                            load_command = load_command.replace("#location#", "")
+                            self.resource_manager.update_tip_usage(pipette_name)
+
+                        commands.append(load_command)
+                        tip_loaded[pipette_mount] = True
+
+                    # aspirate and dispense
+                    # set aspirate clearance
+                    aspirate_clearance_command = aspirate_clearance_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                    aspirate_clearance_command = aspirate_clearance_command.replace(
+                        "#height#", str(asp_height)
+                    )
+                    commands.append(aspirate_clearance_command)
+
+                    src_wellplate_location = self._parse_wellplate_location(src)
+                    # should handle things not formed like loc:well
+                    src_well = src.split(":")[-1]
+
+                    aspirate_command = aspirate_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                    aspirate_command = aspirate_command.replace("#volume#", str(volume))
+                    aspirate_command = aspirate_command.replace(
+                        "#src#", f'deck["{src_wellplate_location}"]["{src_well}"]'
+                    )
+                    commands.append(aspirate_command)
+                    self.resource_manager.update_well_usage(
+                        src_wellplate_location, src_well
+                    )
+
+                    # set dispense clearance
+                    dispense_clearance_commmand = dispense_clearance_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                    dispense_clearance_commmand = dispense_clearance_commmand.replace(
+                        "#height#", str(disp_height)
+                    )
+                    commands.append(dispense_clearance_commmand)
+
+                    dst_wellplate_location = self._parse_wellplate_location(dst)
+                    dst_well = dst.split(":")[
+                        -1
+                    ]  # should handle things not formed like loc:well
+                    dispense_command = dispense_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                    dispense_command = dispense_command.replace("#volume#", str(volume))
+                    dispense_command = dispense_command.replace(
+                        "#dst#", f'deck["{dst_wellplate_location}"]["{dst_well}"]'
+                    )
+                    commands.append(dispense_command)
+                    # update resource usage
+                    self.resource_manager.update_well_usage(
+                        dst_wellplate_location, dst_well
+                    )
+
+                    if mix_cycles is not None:
+                        if mix_cycles >= 1:
+                            # hardcoded to destination well for now
+                            mix_command = mix_template.replace(
+                                "#pipette#", f'pipettes["{pipette_mount}"]'
+                            )
+                            mix_command = mix_command.replace("#volume#", str(mix_vol))
+                            mix_command = mix_command.replace(
+                                "#loc#",
+                                f'deck["{dst_wellplate_location}"]["{dst_well}"]',  # same as destination
+                            )
+                            mix_command = mix_command.replace("#reps#", str(mix_cycles))
+
+                            commands.append(mix_command)
+
+                        # no change in resources
+                    if blow_out:
+                        blowout_command = blow_out_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
                         )
-                        mix_command = mix_command.replace("#reps#", str(mix_cycles))
+                        commands.append(blowout_command)
 
-                        commands.append(mix_command)
+                    if drop_tip:
+                        drop_command = drop_tip_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        commands.append(drop_command)
+                        tip_loaded[pipette_mount] = False
 
-                    # no change in resources
-                if blow_out:
-                    blowout_command = blow_out_template.replace(
-                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    commands.append("")
+            if isinstance(command_block, Temperature_Set):
+                if type(command_block.change_temp) is not int:
+                    raise Exception(
+                            "temperature for module must be an integer"
+                        )
+                
+                temp_change_command = temp_change_template.replace(
+                    "#temp#", str(command_block.change_temp)
+                )
+                commands.append(temp_change_command)
+
+            if isinstance(command_block, Clear_Pipette):
+                if type(command_block.clear) is not bool:
+                    raise Exception(
+                        "clear command must be True or False"
                     )
-                    commands.append(blowout_command)
+                
+                move_command = move_template.replace(
+                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                )
+                move_command = move_command.replace(
+                    "#location#", str(12)
+                )
+                commands.append(move_command)
 
-                if drop_tip:
-                    drop_command = drop_tip_template.replace(
-                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                clear_command = blow_out_template.replace(
+                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                )
+                commands.append(clear_command)
+
+                clear_command = drop_tip_template.replace(
+                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                )
+                commands.append(clear_command)
+                tip_loaded[pipette_mount] = False
+            
+            if isinstance(command_block, Move_Pipette):
+                if type(command_block.move_to) is not int:
+                    raise Exception(
+                        "Given deck position must be an int"
                     )
-                    commands.append(drop_command)
-                    tip_loaded[pipette_mount] = False
+                if command_block.move_to > 12 or command_block.move_to < 1:
+                    raise Exception(
+                        "number must be a valid deck position 1-12"
+                    )
+                
+                move_command = move_template.replace(
+                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                )
+                move_command = move_command.replace(
+                    "#location#", str(command_block.move_to)
+                )
+                commands.append(move_command)
+                
 
-                commands.append("")
+
 
         for mount, status in tip_loaded.items():
             if status:
@@ -634,7 +691,7 @@ class ProtoPiler:
 
         return location
 
-    def _process_instruction(self, command_block: Command) -> List[str]:
+    def _process_instruction(self, command_block: CommandBase) -> List[str]:
         """Processes a command block to translate into the protocol information.
 
         Supports unrolling over any dimension, syntactic sugar at best, but might come in handy someday
