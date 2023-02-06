@@ -17,7 +17,6 @@ class RobotStatus(Enum):
     IDLE = "idle"
     RUNNING = "running"
     FINISHING = "finishing"
-    SUCCEEDED = "succeeded"
     FAILED = "failed"
     PAUSED = "paused"
 
@@ -257,8 +256,11 @@ class OT2_Driver:
             Either IDLE or RUNNING
         """
         for run in self.get_runs():
-            if run["status"] in [elem.value for elem in RunStatus]:
-                return RobotStatus(run["status"]).value
+            run_status = run["status"]
+            if run_status == "succeeded":  # Can't handle succeeded in client
+                continue
+            if run_status in [elem.value for elem in RunStatus]:
+                return RobotStatus(run_status).value
 
         return RobotStatus.IDLE.value
 
