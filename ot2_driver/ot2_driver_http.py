@@ -258,9 +258,9 @@ class OT2_Driver:
         """
         for run in self.get_runs():
             if run["status"] in [elem.value for elem in RunStatus]:
-                return RobotStatus[run["status"]]
+                return RobotStatus(run["status"]).value
 
-        return RobotStatus.IDLE
+        return RobotStatus.IDLE.value
 
     def change_lights_status(self, status: bool = False):
         change_lights_url = f"{self.base_url}/robot/lights"
