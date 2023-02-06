@@ -16,6 +16,10 @@ from ot2_driver.protopiler.protopiler import ProtoPiler
 class RobotStatus(Enum):
     IDLE = "idle"
     RUNNING = "running"
+    FINISHING = "finishing"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    PAUSED = "paused"
 
 
 class RunStatus(Enum):
@@ -253,8 +257,8 @@ class OT2_Driver:
             Either IDLE or RUNNING
         """
         for run in self.get_runs():
-            if run["status"] == RobotStatus.RUNNING.value:
-                return RobotStatus.RUNNING
+            if run["status"] in [elem.value for elem in RunStatus]:
+                return RobotStatus[run["status"]]
 
         return RobotStatus.IDLE
 
