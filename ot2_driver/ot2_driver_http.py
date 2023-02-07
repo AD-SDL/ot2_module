@@ -28,6 +28,7 @@ class RunStatus(Enum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     PAUSED = "paused"
+    STOPPING = "stop-requested"
 
 
 class OT2_Driver:
@@ -240,6 +241,7 @@ class OT2_Driver:
                         "runID": run["id"],
                         "protocolID": run["protocolId"],
                         "status": run["status"],
+                        "current": run["current"],
                     }
                 )
 
@@ -257,12 +259,22 @@ class OT2_Driver:
         """
         for run in self.get_runs():
             run_status = run["status"]
-            if run_status == "succeeded":  # Can't handle succeeded in client
+            if (
+                run_status == "succeeded" or run_status == "stop-requested"
+            ):  # Can't handle succeeded in client
                 continue
             if run_status in [elem.value for elem in RunStatus]:
                 return RobotStatus(run_status).value
 
         return RobotStatus.IDLE.value
+
+    def reset_robot_data(self):
+        """Reset the robot data remove failed runs and protocols"""
+        delete_url = f"{self.base_url}/runs/"
+
+        for run in self.get_runs():
+            if run["status"] == "failed":
+                requests.delete(url=delete_url + run["runID"], headers=self.headers)
 
     def change_lights_status(self, status: bool = False):
         change_lights_url = f"{self.base_url}/robot/lights"
