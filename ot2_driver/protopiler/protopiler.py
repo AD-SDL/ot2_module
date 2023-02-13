@@ -1135,10 +1135,7 @@ class ProtoPiler:
                     raise Exception(
                         "Multiple iterables found, cannot deterine dimension to iterate over"
                     )
-            if "[" not in command_block.multi_source[1]:# TODO: need smarter fix for resource importing eventually
-                # separate into tip groupings
-                tip_count = 0
-                pass #TODO HERE
+            # TODO: need smarter fix for resource importing eventually
             iter_len = len(command_block.multi_source)
             
         if isinstance(command_block.multi_destination, list):
