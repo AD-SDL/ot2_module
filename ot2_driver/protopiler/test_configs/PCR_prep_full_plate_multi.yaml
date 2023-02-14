@@ -30,7 +30,7 @@ equipment:
   - name: opentrons_96_tiprack_20ul
     location: "10"
     offset: [0.2, 0.4, 0]
-  - name: p20_single_gen2
+  - name: p20_multi_gen2
     mount: left
   - name: opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap
     location: "6"
@@ -40,10 +40,10 @@ equipment:
   - name: opentrons_96_tiprack_20ul
     location: "11"
     offset: [0.2, 0.4, 0]
-  - name: opentrons_96_tiprack_1000ul
+  - name: opentrons_96_tiprack_300ul
     location: "9"
     offset: [0.5, 0.9, -0.3]
-  - name: p1000_single_gen2
+  - name: p300_single_gen2
     mount: right
 
 commands:
@@ -54,25 +54,25 @@ commands:
     aspirate_clearance: 50
     destination: 5:C2
     dispense_clearance: 2
-    volume: [676, 676, 676] # total: 2,028 uL
+    volume: [253.5, 253.5, 253.5, 253.5, 253.5, 253.5, 253.5, 253.5] # total: 2,028 uL
     mix_cycles: 0
     mix_volume: 0
-    drop_tip: [False, False, True]
+    drop_tip: [False, False, False, False, False, False, False, True]
   - name: 5x Reaction Buffer
     source: 6:A3
     aspirate_clearance: 0.1
     destination: 5:C2
     dispense_clearance: 2
-    volume: 720  # total: 720 uL
+    volume: [240, 240, 240]  # total: 720 uL
     mix_cycles: 3
-    mix_volume: 500
-    drop_tip: True
+    mix_volume: 250
+    drop_tip: [False, False, True]
   - name: DNA Polymerase
     source: 6:A1
     aspirate_clearance: 0.1
     destination: 5:C2
     dispense_clearance: 1
-    volume: [12, 12] # total: 24 uL
+    volume: 24 # total: 24 uL
     mix_cycles: 3
     mix_volume: 20
     drop_tip: [False, True]
@@ -83,58 +83,53 @@ commands:
     dispense_clearance: 2
     volume: 108 # total: 108 uL
     mix_cycles: 3
-    mix_volume: 600
+    mix_volume: 250
     drop_tip: True
   - name: GC Enhancer
     source: 6:B3
     aspirate_clearance: 0.1
     destination: 5:C2
     dispense_clearance: 2
-    volume: 720 # total: 720 uL
+    volume: [240, 240, 240] # total: 720 uL
     mix_cycles: 7
-    mix_volume: 700
-    drop_tip: True
+    mix_volume: 250
+    drop_tip: [False, False, True]
   - name: master mix distribute
     source: 5:C2
     aspirate_clearance: 1
     destination: dest:Destination
     dispense_clearance: 1
-    volume: 15
+    volume: 30
     drop_tip: False
-  - name: master mix distribute 2
-    source: 5:C2
-    aspirate_clearance: 1
-    destination: dest:Destination
-    dispense_clearance: 1
-    volume: 15
-    drop_tip: False
+  # - name: drop master mix tip
+  #   clear: True
   - name: forward primer
-    source: forward:Forward Primer
-    aspirate_clearance: 0.1
-    destination: dest:Destination
-    dispense_clearance: 2
-    volume: Primer Volume
-    mix_cycles: 3
-    mix_volume: 15
-    drop_tip: True
+    multi_source: forward:Forward Primer
+    multi_aspirate_clearance: 0.1
+    multi_destination: dest:Destination
+    multi_dispense_clearance: 2
+    multi_volume: Primer Volume
+    multi_mix_cycles: 3
+    multi_mix_volume: 15
+    multi_drop_tip: True
   - name: backward primer
-    source: backward:Backward Primer
-    aspirate_clearance: 0.1
-    destination: dest:Destination
-    dispense_clearance: 2
-    volume: Primer Volume
-    mix_cycles: 3
-    mix_volume: 15
-    drop_tip: True
+    multi_source: backward:Backward Primer
+    multi_aspirate_clearance: 0.1
+    multi_destination: dest:Destination
+    multi_dispense_clearance: 2
+    multi_volume: Primer Volume
+    multi_mix_cycles: 3
+    multi_mix_volume: 15
+    multi_drop_tip: True
   - name: template
-    source: template:DNA
-    aspirate_clearance: 0.1
-    destination: dest:Destination
-    dispense_clearance: 2
-    volume: Template Volume
-    mix_cycles: 3
-    mix_volume: 15
-    drop_tip: True
+    multi_source: template:DNA
+    multi_aspirate_clearance: 0.1
+    multi_destination: dest:Destination
+    multi_dispense_clearance: 2
+    multi_volume: Template Volume
+    multi_mix_cycles: 3
+    multi_mix_volume: 15
+    multi_drop_tip: True
 
 metadata:
   protocolName: PCR Prep Full Plate

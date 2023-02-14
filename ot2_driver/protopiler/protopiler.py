@@ -1,5 +1,6 @@
 """Protopiler is designed to compile a config yaml into a working protocol"""
 import argparse
+from concurrent.futures import process
 import copy
 from datetime import datetime
 from itertools import repeat
@@ -8,7 +9,7 @@ from typing import List, Optional, Tuple, Union, Dict
 
 import pandas as pd
 
-from ot2_driver.protopiler.config import CommandBase, Transfer, Temperature_Set, Clear_Pipette, Move_Pipette, PathLike, ProtocolConfig, Resource
+from ot2_driver.protopiler.config import CommandBase, Transfer, Multi_Transfer, Temperature_Set, Clear_Pipette, Move_Pipette, PathLike, ProtocolConfig, Resource
 from ot2_driver.protopiler.resource_manager import ResourceManager
 
 """ Things to do:
@@ -161,8 +162,7 @@ class ProtoPiler:
                         new_locations.append(f"{orig_deck_location}:{loc}")
 
                     command.destination = new_locations
-                # TODO: adding a 0 to volumes
-                # have to check if volumes comes from the files # TODO: different volumes for templates and primers
+                # have to check if volumes comes from the files
                 if (
                     not isinstance(command.volume, int)
                     and not isinstance(command.volume, list)
@@ -177,15 +177,81 @@ class ProtoPiler:
 
                         command.volume = new_volumes
 
+            if isinstance(command, Multi_Transfer):
+                if ":[" in command.multi_source:
+                    command.multi_source = self._unpack_multi_alias(command_elem=command.multi_source)
+
+                # Add logic for taking well names from files
+                # peek into the source, check the well destination part
+                peek_elem = command.multi_source
+                if isinstance(command.multi_source, list):  # No mixing and matching
+                    peek_elem = command.multi_source[0]
+                peek_well = peek_elem.split(":")[-1]
+                # check if it follows naming convention`[A-Z,a-z]?[0-9]{1,3}`
+                # TODO better way to check the naming conventions for the wells
+                peek_well = peek_well.split(", ")
+                if (
+                    len(peek_well) == 1
+                    and "payload" not in peek_well
+                ):
+                    # read from file
+                    new_locations = []
+                    for orig_command, loc in zip(
+                        repeat(command.multi_source), self.resources[resource_key][peek_well[0]]
+                    ):
+                        orig_deck_location = orig_command.split(":")[0]
+                        new_locations.append(f"{orig_deck_location}:{loc}")
+
+                    command.multi_source = new_locations
+                if ":[" in command.multi_destination:
+                    command.multi_destination = self._unpack_multi_alias(command.multi_destination)
+
+                # Add logic for reading well names from file
+                # peek into the source, check the well destination part
+                peek_elem = command.multi_destination
+                if isinstance(command.multi_destination, list):  # No mixing and matching
+                    peek_elem = command.multi_destination[0]
+
+                peek_well = peek_elem.split(":")[-1]
+                peek_well = peek_well.split(", ")
+                if (
+                    len(peek_well) == 1
+                    and "payload" not in peek_well
+                ):
+
+                    # read from file
+                    new_locations = []
+                    for orig_command, loc in zip(
+                        repeat(command.multi_destination), self.resources[resource_key][peek_well[0]]
+                    ):
+                        orig_deck_location = orig_command.split(":")[0]
+                        new_locations.append(f"{orig_deck_location}:{loc}")
+
+                    command.multi_destination = new_locations
+                # have to check if volumes comes from the files
+                if (
+                    not isinstance(command.multi_volume, int)
+                    and not isinstance(command.multi_volume, list)
+                    and (
+                        hasattr(command.multi_volume, "__contains__")
+                        and "payload" not in command.multi_volume
+                    )
+                ):
+                    new_volumes = []
+                    for vol in self.resources[resource_key][command.multi_volume]:
+                        new_volumes.append(int(vol))
+
+                        command.multi_volume = new_volumes
+
     def _unpack_alias(self, command_elem: Union[str, List[str]]) -> List[str]:
         new_locations = []
         alias = command_elem.split(":")[0]
         process_source = copy.deepcopy(command_elem)
         process_source = ":".join(
             process_source.split(":")[1:]
-        )  # split and rejoin after first colon
+        )  
+        # split and rejoin after first colon
         process_source = process_source.strip("][").split(", ")
-
         for location in process_source:
             if len(location) == 0:  # Handles list that end like this: ...A3, A4, ]
                 continue
@@ -197,6 +263,29 @@ class ProtoPiler:
                 new_locations.append(location)
 
         return new_locations
+    
+    def _unpack_multi_alias(self, command_elem: Union[str, List[List[str]]]) -> List[List[str]]:
+        new_locations = []
+        alias = command_elem.split(":")[0]
+        process_source = copy.deepcopy(command_elem)
+        process_source = ":".join(
+            process_source.split(":")[1:]
+        )  
+        process_source = process_source.strip("][").split("], [")
+
+        for i in range(len(process_source)):
+            process_source[i] = process_source[i].split(", ")
+        for location in process_source:
+            if len(location) == 0:
+                continue
+            new_location = None
+            if ":" not in location:
+                new_location = f"{alias}:{location}"
+                new_locations.append(new_location)
+            else:
+                new_locations.append(new_location)
+        return new_locations
+
 
     def load_resources(self, resources: List[Resource]):
         """Load the other resources (files) specified in the config
@@ -426,7 +515,6 @@ class ProtoPiler:
         blow_out_template = open((self.template_dir / "blow_out.template")).read()
         temp_change_template = open((self.template_dir / "set_temperature.template")).read()
         move_template = open((self.template_dir / "move_pipette.template")).read()
-
         tip_loaded = {"left": False, "right": False}
         for i, command_block in enumerate(self.commands):
 
@@ -460,13 +548,12 @@ class ProtoPiler:
                     drop_tip,
                 ) in self._process_instruction(command_block):
                     # determine which pipette to use
-                    pipette_mount = self.resource_manager.determine_pipette(volume)
+                    pipette_mount = self.resource_manager.determine_pipette(volume, False)
                     if pipette_mount is None:
                         raise Exception(
                             f"No pipette available for {block_name} with volume: {volume}"
                         )
-
-                    # check for tip
+                   # check for tip
                     if not tip_loaded[pipette_mount]:
                         load_command = pick_tip_template.replace(
                             "#pipette#", f'pipettes["{pipette_mount}"]'
@@ -479,8 +566,7 @@ class ProtoPiler:
                             (
                                 rack_location,
                                 well_location,
-                            ) = self.resource_manager.get_next_tip(pipette_name)
-
+                            ) = self.resource_manager.get_next_tip(pipette_name, 1)
                             location_string = (
                                 f'deck["{rack_location}"].wells()[{well_location}]'
                             )
@@ -503,7 +589,6 @@ class ProtoPiler:
                         "#height#", str(asp_height)
                     )
                     commands.append(aspirate_clearance_command)
-
                     src_wellplate_location = self._parse_wellplate_location(src)
                     # should handle things not formed like loc:well
                     src_well = src.split(":")[-1]
@@ -544,6 +629,145 @@ class ProtoPiler:
                     # update resource usage
                     self.resource_manager.update_well_usage(
                         dst_wellplate_location, dst_well
+                    )
+
+                    if mix_cycles is not None:
+                        if mix_cycles >= 1:
+                            # hardcoded to destination well for now
+                            mix_command = mix_template.replace(
+                                "#pipette#", f'pipettes["{pipette_mount}"]'
+                            )
+                            mix_command = mix_command.replace("#volume#", str(mix_vol))
+                            mix_command = mix_command.replace(
+                                "#loc#",
+                                f'deck["{dst_wellplate_location}"]["{dst_well}"]',  # same as destination
+                            )
+                            mix_command = mix_command.replace("#reps#", str(mix_cycles))
+
+                            commands.append(mix_command)
+
+                        # no change in resources
+                    if blow_out:
+                        blowout_command = blow_out_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        commands.append(blowout_command)
+
+                    if drop_tip:
+                        drop_command = drop_tip_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        commands.append(drop_command)
+                        tip_loaded[pipette_mount] = False
+
+                    commands.append("")
+            if isinstance(command_block, Multi_Transfer):
+                for (
+                    volume,
+                    src,
+                    dst,
+                    mix_cycles,
+                    mix_vol,
+                    asp_height,
+                    disp_height,
+                    blow_out,
+                    drop_tip,
+                ) in self._process_multi_instruction(command_block):
+                    # determine which pipette to use
+                    pipette_mount = self.resource_manager.determine_pipette(volume, True)
+                    if pipette_mount is None:
+                        raise Exception(
+                            f"No pipette available for {block_name} with volume: {volume}"
+                        )
+                    # check to make sure that appropriate pipette is a multi-channel
+                    #TODO: need to change, what if we have single and multi channel of same volume?
+                    if "multi" not in self.resource_manager.mount_to_pipette[pipette_mount]:
+                        raise Exception(
+                            f"Selected pipette is not multi-channel"
+                        )
+                    # check for tip
+                    if not tip_loaded[pipette_mount]:
+                        load_command = pick_tip_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        pipette_name = self.resource_manager.mount_to_pipette[pipette_mount]
+                        new_src = copy.copy(src)
+                        new_src = new_src.replace("'", "")
+                        new_src = new_src.split(":")[-1]
+                        new_src = new_src.strip('][').split(', ')
+            
+                        # TODO: define flag to grab from specific well or just use the ones defined by the OT2
+                        if True:
+                            (
+                                rack_location,
+                                well_location,
+                            ) = self.resource_manager.get_next_tip(pipette_name, len(new_src))
+
+                            location_string = (
+                                f'deck["{rack_location}"].wells()[{well_location}]'
+                            )
+                            load_command = load_command.replace(
+                                "#location#", location_string
+                            )
+                        else:
+                            load_command = load_command.replace("#location#", "")
+                            self.resource_manager.update_tip_usage(pipette_name)
+
+                        commands.append(load_command)
+                        tip_loaded[pipette_mount] = True
+
+                    # aspirate and dispense
+                    # set aspirate clearance
+                    aspirate_clearance_command = aspirate_clearance_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                    aspirate_clearance_command = aspirate_clearance_command.replace(
+                        "#height#", str(asp_height)
+                    )
+                    commands.append(aspirate_clearance_command)
+                    src_wellplate_location = self._parse_wellplate_location(src)
+                    # should handle things not formed like loc:well
+                    src_well = new_src[0]
+
+                    aspirate_command = aspirate_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                    aspirate_command = aspirate_command.replace("#volume#", str(volume))
+                    aspirate_command = aspirate_command.replace(
+                        "#src#", f'deck["{src_wellplate_location}"]["{src_well}"]'
+                    )
+                    commands.append(aspirate_command)
+  
+                    self.resource_manager.update_well_usage(
+                        src_wellplate_location, new_src
+                    )
+
+                    # set dispense clearance
+                    dispense_clearance_commmand = dispense_clearance_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                    dispense_clearance_commmand = dispense_clearance_commmand.replace(
+                        "#height#", str(disp_height)
+                    )
+                    commands.append(dispense_clearance_commmand)
+
+                    dst_wellplate_location = self._parse_wellplate_location(dst)
+                    new_dst = copy.copy(dst)
+                    new_dst = new_dst.replace("'", "")
+                    new_dst = new_dst.split(":")[-1]
+                    new_dst = new_dst.strip('][').split(', ')
+                    dst_well = new_dst[0]  # should handle things not formed like loc:well
+                    dispense_command = dispense_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                    dispense_command = dispense_command.replace("#volume#", str(volume))
+                    dispense_command = dispense_command.replace(
+                        "#dst#", f'deck["{dst_wellplate_location}"]["{dst_well}"]'
+                    )
+                    commands.append(dispense_command)
+                    # update resource usage
+                    self.resource_manager.update_well_usage(
+                        dst_wellplate_location, new_dst
                     )
 
                     if mix_cycles is not None:
@@ -621,7 +845,8 @@ class ProtoPiler:
                     raise Exception(
                         "number must be a valid deck position 1-12"
                     )
-                
+                #TODO: need to establish pipette mount to move
+                #pipette_mount = self.resource_manager.pipette_to_mount[]
                 move_command = move_template.replace(
                     "#pipette#", f'pipettes["{pipette_mount}"]'
                 )
@@ -669,7 +894,6 @@ class ProtoPiler:
                 raise Exception(
                     f"Command: {command_location} is not formatted correctly..."
                 )
-
             # TODO: think of some better software design for accessing members of resource manager
             location = self.resource_manager.alias_to_location[plate]
         else:  # older format of passing location
@@ -890,6 +1114,171 @@ class ProtoPiler:
                 drop_tip,
             ):
                 yield vol, src, dst, mix_cycles, mix_vol, asp_height, disp_height, blowout, d_tip
+
+    def _process_multi_instruction(self, command_block: CommandBase) -> List[str]:
+        """ mimics _proccess_instruction but for multi channel transfers"""
+
+        iter_len = 0
+        if isinstance(command_block.multi_volume, list):
+            # handle if user forgot to change list of one value to scalar
+            if len(command_block.multi_volume) == 1:
+                command_block.multi_volume = command_block.multi_volume[0]
+            else:
+                iter_len = len(command_block.multi_volume)
+        if isinstance(command_block.multi_source, list):
+            #organize into list[list[str]] format
+            if iter_len != 0 and len(command_block.multi_source) != iter_len:
+                # handle if user forgot to change list of one value to scalar
+                if len(command_block.multi_source) == 1:
+                    command_block.multi_source = command_block.multi_source[0]
+                else:
+                    raise Exception(
+                        "Multiple iterables found, cannot deterine dimension to iterate over"
+                    )
+            # TODO: need smarter fix for resource importing eventually
+            iter_len = len(command_block.multi_source)
+            
+        if isinstance(command_block.multi_destination, list):
+            if iter_len != 0 and len(command_block.multi_destination) != iter_len:
+                # handle if user forgot to change list of one value to scalar
+                if len(command_block.multi_destination) == 1:
+                    command_block.multi_destination = command_block.multi_destination[0]
+                else:
+                    raise Exception(
+                        "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
+                    )
+            iter_len = len(command_block.multi_destination)
+
+        if isinstance(command_block.multi_mix_cycles, list):
+            if iter_len != 0 and len(command_block.multi_mix_cycles) != iter_len:
+                # handle if user forgot to change list of one value to scalar
+                if len(command_block.multi_mix_cycles) == 1:
+                    command_block.multi_mix_cycles = command_block.multi_mix_cycles[0]
+                else:
+                    raise Exception(
+                        "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
+                    )
+            iter_len = len(command_block.multi_mix_cycles)
+
+        if isinstance(command_block.multi_mix_volume, list):
+            if iter_len != 0 and len(command_block.multi_mix_volume) != iter_len:
+                # handle if user forgot to change list of one value to scalar
+                if len(command_block.multi_mix_volume) == 1:
+                    command_block.multi_mix_volume = command_block.multi_mix_volume[0]
+                else:
+                    raise Exception(
+                        "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
+                    )
+            iter_len = len(command_block.multi_mix_volume)
+
+        if isinstance(command_block.multi_aspirate_clearance, list):
+            if iter_len != 0 and len(command_block.multi_aspirate_clearance) != iter_len:
+                # handle if user forgot to change list of one value to scalar
+                if len(command_block.multi_aspirate_clearance) == 1:
+                    command_block.multi_aspirate_clearance = (
+                        command_block.multi_aspirate_clearance[0]
+                    )
+                else:
+                    raise Exception(
+                        "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
+                    )
+
+        if isinstance(command_block.multi_dispense_clearance, list):
+            if iter_len != 0 and len(command_block.multi_dispense_clearance) != iter_len:
+                # handle if user forgot to change list of one value to scalar
+                if len(command_block.multi_dispense_clearance) == 1:
+                    command_block.multi_dispense_clearance = (
+                        command_block.multi_dispense_clearance[0]
+                    )
+                else:
+                    raise Exception(
+                        "Multiple iterables of differnet lengths found, cannot deterine dimension to iterate over"
+                    )
+        if isinstance(command_block.multi_blow_out, list):
+            if iter_len != 0 and len(command_block.multi_blow_out) != iter_len:
+                # handle if user forgot to change list of one value to scalar
+                if len(command_block.multi_blow_out) == 1:
+                    command_block.multi_blow_out = command_block.multi_blow_out[0]
+                else:
+                    raise Exception(
+                        "Multiple iterables found, cannot deterine dimension to iterate over"
+                    )
+            iter_len = len(command_block.multi_blow_out)
+
+        if isinstance(command_block.multi_drop_tip, list):
+            if iter_len != 0 and len(command_block.multi_drop_tip) != iter_len:
+                # handle if user forgot to change list of one value to scalar
+                if len(command_block.multi_drop_tip) == 1:
+                    command_block.multi_drop_tip = command_block.multi_drop_tip[0]
+                else:
+                    raise Exception(
+                        "Multiple iterables found, cannot deterine dimension to iterate over"
+                    )
+            iter_len = len(command_block.multi_drop_tip)
+
+        if not isinstance(command_block.multi_volume, list):
+            volumes = repeat(command_block.multi_volume, iter_len)
+        else:
+            volumes = command_block.multi_volume
+        if not isinstance(command_block.multi_source, list):
+            sources = repeat(command_block.multi_source, iter_len)
+        else:
+            sources = command_block.multi_source
+        if not isinstance(command_block.multi_destination, list):
+            destinations = repeat(command_block.multi_destination, iter_len)
+        else:
+            destinations = command_block.multi_destination
+        if not isinstance(command_block.multi_mix_cycles, list):
+            mixing_cycles = repeat(command_block.multi_mix_cycles, iter_len)
+        else:
+            mixing_cycles = command_block.multi_mix_cycles
+        if not isinstance(command_block.multi_mix_volume, list):
+            mixing_volume = repeat(command_block.multi_mix_volume, iter_len)
+        else:
+            mixing_volume = command_block.multi_mix_volume
+        if not isinstance(command_block.multi_aspirate_clearance, list):
+            aspirate_clearance = repeat(command_block.multi_aspirate_clearance, iter_len)
+        else:
+            aspirate_clearance = command_block.multi_aspirate_clearance
+        if not isinstance(command_block.multi_dispense_clearance, list):
+            dispense_clearance = repeat(command_block.multi_dispense_clearance, iter_len)
+        else:
+            dispense_clearance = command_block.multi_dispense_clearance
+        if not isinstance(command_block.multi_blow_out, list):
+            blow_out = repeat(command_block.multi_blow_out, iter_len)
+        else:
+            blow_out = command_block.multi_blow_out
+        if not isinstance(command_block.multi_drop_tip, list):
+            drop_tip = repeat(command_block.multi_drop_tip, iter_len)
+        else:
+            drop_tip = command_block.multi_drop_tip
+
+
+        for (
+            vol,
+            src,
+            dst,
+            mix_cycles,
+            mix_vol,
+            asp_height,
+            disp_height,
+            blowout,
+            d_tip,
+        ) in zip(
+            volumes,
+            sources,
+            destinations,
+            mixing_cycles,
+            mixing_volume,
+            aspirate_clearance,
+            dispense_clearance,
+            blow_out,
+            drop_tip,
+        ):
+            yield vol, src, dst, mix_cycles, mix_vol, asp_height, disp_height, blowout, d_tip
+
+
+
 
 
 def main(args):  # noqa: D103

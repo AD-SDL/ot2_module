@@ -111,6 +111,27 @@ class Transfer(CommandBase):
     drop_tip: Union[bool, List[bool]] = True
     """Drop the tip once a transfer is done"""
 
+class Multi_Transfer(CommandBase):
+    multi_source: Union[str, List[List[str]]]
+    """List of sources to be aspirated, each list within matrix presumed to be in single column"""
+    multi_aspirate_clearance: Optional[Union[List[float], float]]
+    """height of pipette when performing aspirate"""
+    multi_destination: Union[str, List[List[str]]]
+    """List of sources to be aspirated, each list within matrix presumed to be in single column"""
+    multi_dispense_clearance: Optional[Union[List[float], float]]
+    """height of pipette when performing aspirate"""
+    multi_volume: Union[float, List[float], str]
+    """volume to transfer (microliters)"""
+    multi_mix_cycles: Optional[Union[int, List[int]]]
+    """Num mixes"""
+    multi_mix_volume: Optional[Union[int, List[int]]]
+    """Volume of each mix"""
+    multi_blow_out: Optional[Union[bool, List[bool]]] = True
+    """blow out from tip into current location"""
+    multi_drop_tip: Union[bool, List[bool]] = True
+    """Drop the tip once a transfer is done"""
+
+
 class Temperature_Set(CommandBase):
     change_temp: int
     """Temperature to set temperature module to"""
@@ -144,7 +165,7 @@ class ProtocolConfig(BaseSettings):
     """The additional resources (currently xls, xlsx files) to be used when compiling a protocol"""
     equipment: List[Union[Labware, Pipette]]
     """A list of the equipment you want to use on the OT2"""
-    commands: List[Union[Transfer, Temperature_Set, Clear_Pipette, Move_Pipette, CommandBase]]
+    commands: List[Union[Transfer, Multi_Transfer, Temperature_Set, Clear_Pipette, Move_Pipette, CommandBase]]
     """Commands to execute during run"""
     metadata: Metadata
     """Information about the run"""
