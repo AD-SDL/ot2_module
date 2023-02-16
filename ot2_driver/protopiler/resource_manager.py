@@ -191,10 +191,10 @@ class ResourceManager:
                 }
 
             # adding the wellplate set tracker
-            if "wellplate" or "tuberack" in name and "wells_used" not in resources[location]:
+            if "wells_used" not in resources[location]:
                 resources[location]["wells_used"] = set()
             # if exists, convert it to set from list (set not serializable)
-            if "wellplate" or "tuberack" in name and "wells_used" in resources[location]:
+            if "wells_used" in resources[location]:
                 resources[location]["wells_used"] = set(
                     resources[location]["wells_used"]
                 )
