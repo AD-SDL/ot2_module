@@ -305,7 +305,7 @@ class ResourceManager:
             # self.resources[loc]["used"] += tip_num
             # if self.resources[loc]["used"] == capacity:
             #     self.resources[loc]["depleted"] = True
-            next_tip = next_tip[0]
+                next_tip = next_tip[0]
 
             return loc, next_tip
 
