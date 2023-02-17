@@ -76,7 +76,7 @@ class OT2_Driver:
             self.change_lights_status(status=True)
 
     def compile_protocol(
-        self, config_path, resource_file=None, payload: Optional[Dict[str, Any]] = None
+        self, config_path, resource_file=None, resource_path=None, payload: Optional[Dict[str, Any]] = None
     ) -> Tuple[str, str]:
         """Compile the protocols via protopiler
 
@@ -96,14 +96,14 @@ class OT2_Driver:
         """
         if ".py" not in str(config_path):
             self.protopiler.load_config(
-                config_path=config_path, resource_file=resource_file
+                config_path=config_path, resource_file=resource_file, resource_path=resource_path
             )
 
             (
                 protocol_out_path,
                 protocol_resource_file,
             ) = self.protopiler.yaml_to_protocol(
-                config_path, resource_file=resource_file, payload=payload
+                config_path, resource_file=resource_file, resource_file_out=resource_path, payload=payload
             )
 
             return protocol_out_path, protocol_resource_file
