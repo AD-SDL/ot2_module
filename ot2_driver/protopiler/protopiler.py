@@ -56,7 +56,7 @@ class ProtoPiler:
             self.load_config(config_path=config_path, resource_file=resource_file)
 
     def load_config(
-        self, config_path: PathLike, resource_file: Optional[PathLike] = None
+        self, config_path: PathLike, resource_file: Optional[PathLike] = None, resource_path: Optional[PathLike] = None
     ) -> None:
         """Loading the config and generating necesary information for compiling a config
 
@@ -71,6 +71,7 @@ class ProtoPiler:
         """
         self.config_path = config_path
         self.resource_file = resource_file
+        self.resource_path = resource_path
         self.config = ProtocolConfig.from_yaml(config_path)
 
         self.load_resources(self.config.resources)
