@@ -575,7 +575,7 @@ class ResourceManager:
                 else:
                     out_path = self.resource_file
             else:
-                out_path = out_file
+                out_path = out_file+f"{datetime.now().strftime('%Y%m%d-%H%M%S')}_resources.json"
 
         with open(out_path, "w") as f:
             json.dump(out_resources, f, indent=2)
