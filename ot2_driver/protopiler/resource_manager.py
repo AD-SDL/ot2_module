@@ -63,7 +63,6 @@ class ResourceManager:
             path to the resource file, will be loaded if exists, by default None
         """
         self.resource_file = resource_file
-
         # setup the necesary data relationships
         self._generate_location_name_relationships(equipment_config=equipment_config)
 
@@ -189,7 +188,6 @@ class ResourceManager:
                     "used": 0,
                     "depleted": False,
                 }
-
             # adding the wellplate set tracker
             if "wellplate" or "tuberack" in name and "wells_used" not in resources[location]:
                 resources[location]["wells_used"] = set()
