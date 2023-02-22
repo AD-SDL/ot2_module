@@ -72,6 +72,7 @@ class ProtoPiler:
         self.config_path = config_path
         self.resource_file = resource_file
         self.resource_path = resource_path
+        self.protocol_out_path = protocol_out_path
         self.config = ProtocolConfig.from_yaml(config_path)
 
         self.load_resources(self.config.resources)
@@ -372,10 +373,15 @@ class ProtoPiler:
         if resource_file and not self.resource_file:
             self.load_config(self.config_path, resource_file)
 
-        if protocol_out is None:
+        if self.protocol_out_path is None:
             protocol_out = Path(
                 f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
             )
+        else:
+            protocol_out = Path(
+                self.protocol_out_path + f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
+            )
+
 
         protocol = []
 
