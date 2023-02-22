@@ -103,7 +103,7 @@ class OT2_Driver:
                 protocol_out_path,
                 protocol_resource_file,
             ) = self.protopiler.yaml_to_protocol(
-                config_path, resource_file=resource_file, resource_file_out=resource_path, protocol_out_path=protocol_out_path, payload=payload
+                config_path, resource_file=resource_file, resource_file_out=resource_path, payload=payload
             )
 
             return protocol_out_path, protocol_resource_file
