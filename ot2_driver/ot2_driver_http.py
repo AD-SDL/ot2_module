@@ -98,7 +98,7 @@ class OT2_Driver:
             self.protopiler.load_config(
                 config_path=config_path, resource_file=resource_file, resource_path=resource_path
             )
-
+            print("resource_file = {}".format(str(resource_file)))
             (
                 protocol_out_path,
                 protocol_resource_file,
