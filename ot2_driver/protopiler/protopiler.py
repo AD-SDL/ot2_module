@@ -823,19 +823,6 @@ class ProtoPiler:
                     raise Exception(
                         "clear command must be True or False"
                     )
-                
-                move_command = move_template.replace(
-                    "#pipette#", f'pipettes["{pipette_mount}"]'
-                )
-                move_command = move_command.replace(
-                    "#location#", str(12)
-                )
-                commands.append(move_command)
-
-                clear_command = blow_out_template.replace(
-                    "#pipette#", f'pipettes["{pipette_mount}"]'
-                )
-                commands.append(clear_command)
 
                 clear_command = drop_tip_template.replace(
                     "#pipette#", f'pipettes["{pipette_mount}"]'
