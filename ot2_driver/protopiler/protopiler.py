@@ -512,6 +512,7 @@ class ProtoPiler:
         dispense_template = open((self.template_dir / "dispense.template")).read()
         pick_tip_template = open((self.template_dir / "pick_tip.template")).read()
         drop_tip_template = open((self.template_dir / "drop_tip.template")).read()
+        return_tip_template = open((self.template_dir / "return_tip.template")).read()
         mix_template = open((self.template_dir / "mix.template")).read()
         dispense_clearance_template = open(
             (self.template_dir / "dispense_clearance.template")
@@ -553,6 +554,7 @@ class ProtoPiler:
                     disp_height,
                     blow_out,
                     drop_tip,
+                    return_tip,
                 ) in self._process_instruction(command_block):
                     # determine which pipette to use
                     pipette_mount = self.resource_manager.determine_pipette(volume, False)
@@ -665,6 +667,13 @@ class ProtoPiler:
                             "#pipette#", f'pipettes["{pipette_mount}"]'
                         )
                         commands.append(drop_command)
+                        tip_loaded[pipette_mount] = False
+                    
+                    if return_tip:
+                        return_command = return_tip_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        commands.append(return_command)
                         tip_loaded[pipette_mount] = False
 
                     commands.append("")
@@ -940,9 +949,10 @@ class ProtoPiler:
             and type(command_block.dispense_clearance) is float
             and type(command_block.blow_out) is bool
             and type(command_block.drop_tip) is bool
+            and type(command_block.return_tip) is bool
         ):
 
-            yield command_block.volume, command_block.source, command_block.destination, command_block.mix_cycles, command_block.mix_volume, command_block.aspirate_clearance, command_block.dispense_clearance, command_block.blow_out, command_block.drop_tip
+            yield command_block.volume, command_block.source, command_block.destination, command_block.mix_cycles, command_block.mix_volume, command_block.aspirate_clearance, command_block.dispense_clearance, command_block.blow_out, command_block.drop_tip, command_block.return_tip
         else:
 
             # could be one source (either list of volumes or one volume) to many desitnation
@@ -1048,6 +1058,17 @@ class ProtoPiler:
                             "Multiple iterables found, cannot deterine dimension to iterate over"
                         )
                 iter_len = len(command_block.drop_tip)
+            
+            if isinstance(command_block.return_tip, list):
+                if iter_len != 0 and len(command_block.return_tip) != iter_len:
+                    # handle if user forgot to change list of one value to scalar
+                    if len(command_block.return_tip) == 1:
+                        command_block.return_tip = command_block.return_tip[0]
+                    else:
+                        raise Exception(
+                            "Multiple iterables found, cannot deterine dimension to iterate over"
+                        )
+                iter_len = len(command_block.return_tip)
 
             if not isinstance(command_block.volume, list):
                 volumes = repeat(command_block.volume, iter_len)
@@ -1085,6 +1106,10 @@ class ProtoPiler:
                 drop_tip = repeat(command_block.drop_tip, iter_len)
             else:
                 drop_tip = command_block.drop_tip
+            if not isinstance(command_block.return_tip, list):
+                return_tip = repeat(command_block.return_tip, iter_len)
+            else:
+                return_tip = command_block.return_tip
 
             for (
                 vol,
@@ -1096,6 +1121,7 @@ class ProtoPiler:
                 disp_height,
                 blowout,
                 d_tip,
+                r_tip
             ) in zip(
                 volumes,
                 sources,
@@ -1106,8 +1132,9 @@ class ProtoPiler:
                 dispense_clearance,
                 blow_out,
                 drop_tip,
+                return_tip,
             ):
-                yield vol, src, dst, mix_cycles, mix_vol, asp_height, disp_height, blowout, d_tip
+                yield vol, src, dst, mix_cycles, mix_vol, asp_height, disp_height, blowout, d_tip, r_tip
 
     def _process_multi_instruction(self, command_block: CommandBase) -> List[str]:
         """ mimics _proccess_instruction but for multi channel transfers"""

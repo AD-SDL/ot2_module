@@ -110,6 +110,8 @@ class Transfer(CommandBase):
     """blow out from tip into current location"""
     drop_tip: Union[bool, List[bool]] = True
     """Drop the tip once a transfer is done"""
+    return_tip:Union[bool, List[bool]] = False
+    """puts tip back into tip box"""
 
 class Multi_Transfer(CommandBase):
     multi_source: Union[str, List[List[str]]]
