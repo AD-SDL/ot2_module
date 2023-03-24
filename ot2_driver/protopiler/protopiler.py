@@ -9,7 +9,7 @@ from typing import List, Optional, Tuple, Union, Dict
 
 import pandas as pd
 
-from ot2_driver.protopiler.config import CommandBase, Transfer, Multi_Transfer, Temperature_Set, Clear_Pipette, Move_Pipette, PathLike, ProtocolConfig, Resource
+from ot2_driver.protopiler.config import CommandBase, Transfer, Multi_Transfer, Temperature_Set, Replace_Tip, Clear_Pipette, Move_Pipette, PathLike, ProtocolConfig, Resource
 from ot2_driver.protopiler.resource_manager import ResourceManager
 
 """ Things to do:
@@ -826,6 +826,17 @@ class ProtoPiler:
                     "#temp#", str(command_block.change_temp)
                 )
                 commands.append(temp_change_command)
+
+            if isinstance(command_block, Replace_Tip):
+                if type(command_block.replace_tip) is not bool:
+                    raise Exception(
+                            "replace_tip must be bool"
+                        )
+                replace_tip_command = return_tip_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                commands.append(replace_tip_command)
+                tip_loaded[pipette_mount] = False
 
             if isinstance(command_block, Clear_Pipette):
                 if type(command_block.clear) is not bool:
