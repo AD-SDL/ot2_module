@@ -138,6 +138,10 @@ class Temperature_Set(CommandBase):
     change_temp: int
     """Temperature to set temperature module to"""
 
+class Replace_Tip(CommandBase):
+    replace_tip: bool
+    """Place tip back into tip rack"""
+
 class Clear_Pipette(CommandBase):
     clear: bool
     """Blowout and remove any tip on pipette over trash"""
@@ -167,7 +171,7 @@ class ProtocolConfig(BaseSettings):
     """The additional resources (currently xls, xlsx files) to be used when compiling a protocol"""
     equipment: List[Union[Labware, Pipette]]
     """A list of the equipment you want to use on the OT2"""
-    commands: List[Union[Transfer, Multi_Transfer, Temperature_Set, Clear_Pipette, Move_Pipette, CommandBase]]
+    commands: List[Union[Transfer, Multi_Transfer, Temperature_Set, Replace_Tip, Clear_Pipette, Move_Pipette, CommandBase]]
     """Commands to execute during run"""
     metadata: Metadata
     """Information about the run"""
