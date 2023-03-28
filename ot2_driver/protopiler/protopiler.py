@@ -556,127 +556,130 @@ class ProtoPiler:
                     drop_tip,
                     return_tip,
                 ) in self._process_instruction(command_block):
-                    # determine which pipette to use
-                    pipette_mount = self.resource_manager.determine_pipette(volume, False)
-                    if pipette_mount is None:
-                        raise Exception(
-                            f"No pipette available for {block_name} with volume: {volume}"
-                        )
-                   # check for tip
-                    if not tip_loaded[pipette_mount]:
-                        load_command = pick_tip_template.replace(
-                            "#pipette#", f'pipettes["{pipette_mount}"]'
-                        )
-                        # TODO: think of some better software design for accessing members of resource manager
-                        pipette_name = self.resource_manager.mount_to_pipette[pipette_mount]
-
-                        # TODO: define flag to grab from specific well or just use the ones defined by the OT2
-                        if True:
-                            (
-                                rack_location,
-                                well_location,
-                            ) = self.resource_manager.get_next_tip(pipette_name, 1)
-                            location_string = (
-                                f'deck["{rack_location}"].wells()[{well_location}]'
+                    if volume <= 0:
+                        pass
+                    else:
+                        # determine which pipette to use
+                        pipette_mount = self.resource_manager.determine_pipette(volume, False)
+                        if pipette_mount is None:
+                            raise Exception(
+                                f"No pipette available for {block_name} with volume: {volume}"
                             )
-                            load_command = load_command.replace(
-                                "#location#", location_string
-                            )
-                        else:
-                            load_command = load_command.replace("#location#", "")
-                            self.resource_manager.update_tip_usage(pipette_name)
-
-                        commands.append(load_command)
-                        tip_loaded[pipette_mount] = True
-
-                    # aspirate and dispense
-                    # set aspirate clearance
-                    aspirate_clearance_command = aspirate_clearance_template.replace(
-                        "#pipette#", f'pipettes["{pipette_mount}"]'
-                    )
-                    aspirate_clearance_command = aspirate_clearance_command.replace(
-                        "#height#", str(asp_height)
-                    )
-                    commands.append(aspirate_clearance_command)
-                    src_wellplate_location = self._parse_wellplate_location(src)
-                    # should handle things not formed like loc:well
-                    src_well = src.split(":")[-1]
-
-                    aspirate_command = aspirate_template.replace(
-                        "#pipette#", f'pipettes["{pipette_mount}"]'
-                    )
-                    aspirate_command = aspirate_command.replace("#volume#", str(volume))
-                    aspirate_command = aspirate_command.replace(
-                        "#src#", f'deck["{src_wellplate_location}"]["{src_well}"]'
-                    )
-                    commands.append(aspirate_command)
-                    self.resource_manager.update_well_usage(
-                        src_wellplate_location, src_well
-                    )
-
-                    # set dispense clearance
-                    dispense_clearance_commmand = dispense_clearance_template.replace(
-                        "#pipette#", f'pipettes["{pipette_mount}"]'
-                    )
-                    dispense_clearance_commmand = dispense_clearance_commmand.replace(
-                        "#height#", str(disp_height)
-                    )
-                    commands.append(dispense_clearance_commmand)
-
-                    dst_wellplate_location = self._parse_wellplate_location(dst)
-                    dst_well = dst.split(":")[
-                        -1
-                    ]  # should handle things not formed like loc:well
-                    dispense_command = dispense_template.replace(
-                        "#pipette#", f'pipettes["{pipette_mount}"]'
-                    )
-                    dispense_command = dispense_command.replace("#volume#", str(volume))
-                    dispense_command = dispense_command.replace(
-                        "#dst#", f'deck["{dst_wellplate_location}"]["{dst_well}"]'
-                    )
-                    commands.append(dispense_command)
-                    # update resource usage
-                    self.resource_manager.update_well_usage(
-                        dst_wellplate_location, dst_well
-                    )
-
-                    if mix_cycles is not None:
-                        if mix_cycles >= 1:
-                            # hardcoded to destination well for now
-                            mix_command = mix_template.replace(
+                    # check for tip
+                        if not tip_loaded[pipette_mount]:
+                            load_command = pick_tip_template.replace(
                                 "#pipette#", f'pipettes["{pipette_mount}"]'
                             )
-                            mix_command = mix_command.replace("#volume#", str(mix_vol))
-                            mix_command = mix_command.replace(
-                                "#loc#",
-                                f'deck["{dst_wellplate_location}"]["{dst_well}"]',  # same as destination
+                            # TODO: think of some better software design for accessing members of resource manager
+                            pipette_name = self.resource_manager.mount_to_pipette[pipette_mount]
+
+                            # TODO: define flag to grab from specific well or just use the ones defined by the OT2
+                            if True:
+                                (
+                                    rack_location,
+                                    well_location,
+                                ) = self.resource_manager.get_next_tip(pipette_name, 1)
+                                location_string = (
+                                    f'deck["{rack_location}"].wells()[{well_location}]'
+                                )
+                                load_command = load_command.replace(
+                                    "#location#", location_string
+                                )
+                            else:
+                                load_command = load_command.replace("#location#", "")
+                                self.resource_manager.update_tip_usage(pipette_name)
+
+                            commands.append(load_command)
+                            tip_loaded[pipette_mount] = True
+
+                        # aspirate and dispense
+                        # set aspirate clearance
+                        aspirate_clearance_command = aspirate_clearance_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        aspirate_clearance_command = aspirate_clearance_command.replace(
+                            "#height#", str(asp_height)
+                        )
+                        commands.append(aspirate_clearance_command)
+                        src_wellplate_location = self._parse_wellplate_location(src)
+                        # should handle things not formed like loc:well
+                        src_well = src.split(":")[-1]
+
+                        aspirate_command = aspirate_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        aspirate_command = aspirate_command.replace("#volume#", str(volume))
+                        aspirate_command = aspirate_command.replace(
+                            "#src#", f'deck["{src_wellplate_location}"]["{src_well}"]'
+                        )
+                        commands.append(aspirate_command)
+                        self.resource_manager.update_well_usage(
+                            src_wellplate_location, src_well
+                        )
+
+                        # set dispense clearance
+                        dispense_clearance_commmand = dispense_clearance_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        dispense_clearance_commmand = dispense_clearance_commmand.replace(
+                            "#height#", str(disp_height)
+                        )
+                        commands.append(dispense_clearance_commmand)
+
+                        dst_wellplate_location = self._parse_wellplate_location(dst)
+                        dst_well = dst.split(":")[
+                            -1
+                        ]  # should handle things not formed like loc:well
+                        dispense_command = dispense_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        dispense_command = dispense_command.replace("#volume#", str(volume))
+                        dispense_command = dispense_command.replace(
+                            "#dst#", f'deck["{dst_wellplate_location}"]["{dst_well}"]'
+                        )
+                        commands.append(dispense_command)
+                        # update resource usage
+                        self.resource_manager.update_well_usage(
+                            dst_wellplate_location, dst_well
+                        )
+
+                        if mix_cycles is not None:
+                            if mix_cycles >= 1:
+                                # hardcoded to destination well for now
+                                mix_command = mix_template.replace(
+                                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                                )
+                                mix_command = mix_command.replace("#volume#", str(mix_vol))
+                                mix_command = mix_command.replace(
+                                    "#loc#",
+                                    f'deck["{dst_wellplate_location}"]["{dst_well}"]',  # same as destination
+                                )
+                                mix_command = mix_command.replace("#reps#", str(mix_cycles))
+
+                                commands.append(mix_command)
+
+                            # no change in resources
+                        if blow_out:
+                            blowout_command = blow_out_template.replace(
+                                "#pipette#", f'pipettes["{pipette_mount}"]'
                             )
-                            mix_command = mix_command.replace("#reps#", str(mix_cycles))
+                            commands.append(blowout_command)
 
-                            commands.append(mix_command)
+                        if drop_tip:
+                            drop_command = drop_tip_template.replace(
+                                "#pipette#", f'pipettes["{pipette_mount}"]'
+                            )
+                            commands.append(drop_command)
+                            tip_loaded[pipette_mount] = False
+                        
+                        if return_tip:
+                            return_command = return_tip_template.replace(
+                                "#pipette#", f'pipettes["{pipette_mount}"]'
+                            )
+                            commands.append(return_command)
+                            tip_loaded[pipette_mount] = False
 
-                        # no change in resources
-                    if blow_out:
-                        blowout_command = blow_out_template.replace(
-                            "#pipette#", f'pipettes["{pipette_mount}"]'
-                        )
-                        commands.append(blowout_command)
-
-                    if drop_tip:
-                        drop_command = drop_tip_template.replace(
-                            "#pipette#", f'pipettes["{pipette_mount}"]'
-                        )
-                        commands.append(drop_command)
-                        tip_loaded[pipette_mount] = False
-                    
-                    if return_tip:
-                        return_command = return_tip_template.replace(
-                            "#pipette#", f'pipettes["{pipette_mount}"]'
-                        )
-                        commands.append(return_command)
-                        tip_loaded[pipette_mount] = False
-
-                    commands.append("")
+                        commands.append("")
             if isinstance(command_block, Multi_Transfer):
                 for (
                     volume,
@@ -689,133 +692,137 @@ class ProtoPiler:
                     blow_out,
                     drop_tip,
                 ) in self._process_multi_instruction(command_block):
-                    # determine which pipette to use
-                    pipette_mount = self.resource_manager.determine_pipette(volume, True)
-                    if pipette_mount is None:
-                        raise Exception(
-                            f"No pipette available for {block_name} with volume: {volume}"
-                        )
-                    # check to make sure that appropriate pipette is a multi-channel
-                    #TODO: need to change, what if we have single and multi channel of same volume?
-                    if "multi" not in self.resource_manager.mount_to_pipette[pipette_mount]:
-                        raise Exception(
-                            f"Selected pipette is not multi-channel"
-                        )
-                    # check for tip
-                    if not tip_loaded[pipette_mount]:
-                        load_command = pick_tip_template.replace(
-                            "#pipette#", f'pipettes["{pipette_mount}"]'
-                        )
-                        pipette_name = self.resource_manager.mount_to_pipette[pipette_mount]
-                        new_src = copy.copy(src)
-                        new_src = new_src.replace("'", "")
-                        new_src = new_src.split(":")[-1]
-                        new_src = new_src.strip('][').split(', ')
-            
-                        # TODO: define flag to grab from specific well or just use the ones defined by the OT2
-                        if True:
-                            (
-                                rack_location,
-                                well_location,
-                            ) = self.resource_manager.get_next_tip(pipette_name, len(new_src))
+                    if volume <= 0:
+                        pass
+                    else:
 
-                            location_string = (
-                                f'deck["{rack_location}"].wells()[{well_location}]'
+                        # determine which pipette to use
+                        pipette_mount = self.resource_manager.determine_pipette(volume, True)
+                        if pipette_mount is None:
+                            raise Exception(
+                                f"No pipette available for {block_name} with volume: {volume}"
                             )
-                            load_command = load_command.replace(
-                                "#location#", location_string
+                        # check to make sure that appropriate pipette is a multi-channel
+                        #TODO: need to change, what if we have single and multi channel of same volume?
+                        if "multi" not in self.resource_manager.mount_to_pipette[pipette_mount]:
+                            raise Exception(
+                                f"Selected pipette is not multi-channel"
                             )
-                        else:
-                            load_command = load_command.replace("#location#", "")
-                            self.resource_manager.update_tip_usage(pipette_name)
-
-                        commands.append(load_command)
-                        tip_loaded[pipette_mount] = True
-
-                    # aspirate and dispense
-                    # set aspirate clearance
-                    aspirate_clearance_command = aspirate_clearance_template.replace(
-                        "#pipette#", f'pipettes["{pipette_mount}"]'
-                    )
-                    aspirate_clearance_command = aspirate_clearance_command.replace(
-                        "#height#", str(asp_height)
-                    )
-                    commands.append(aspirate_clearance_command)
-                    src_wellplate_location = self._parse_wellplate_location(src)
-                    # should handle things not formed like loc:well
-                    src_well = new_src[0]
-
-                    aspirate_command = aspirate_template.replace(
-                        "#pipette#", f'pipettes["{pipette_mount}"]'
-                    )
-                    aspirate_command = aspirate_command.replace("#volume#", str(volume))
-                    aspirate_command = aspirate_command.replace(
-                        "#src#", f'deck["{src_wellplate_location}"]["{src_well}"]'
-                    )
-                    commands.append(aspirate_command)
-  
-                    self.resource_manager.update_well_usage(
-                        src_wellplate_location, new_src
-                    )
-
-                    # set dispense clearance
-                    dispense_clearance_commmand = dispense_clearance_template.replace(
-                        "#pipette#", f'pipettes["{pipette_mount}"]'
-                    )
-                    dispense_clearance_commmand = dispense_clearance_commmand.replace(
-                        "#height#", str(disp_height)
-                    )
-                    commands.append(dispense_clearance_commmand)
-
-                    dst_wellplate_location = self._parse_wellplate_location(dst)
-                    new_dst = copy.copy(dst)
-                    new_dst = new_dst.replace("'", "")
-                    new_dst = new_dst.split(":")[-1]
-                    new_dst = new_dst.strip('][').split(', ')
-                    dst_well = new_dst[0]  # should handle things not formed like loc:well
-                    dispense_command = dispense_template.replace(
-                        "#pipette#", f'pipettes["{pipette_mount}"]'
-                    )
-                    dispense_command = dispense_command.replace("#volume#", str(volume))
-                    dispense_command = dispense_command.replace(
-                        "#dst#", f'deck["{dst_wellplate_location}"]["{dst_well}"]'
-                    )
-                    commands.append(dispense_command)
-                    # update resource usage
-                    self.resource_manager.update_well_usage(
-                        dst_wellplate_location, new_dst
-                    )
-
-                    if mix_cycles is not None:
-                        if mix_cycles >= 1:
-                            # hardcoded to destination well for now
-                            mix_command = mix_template.replace(
+                        # check for tip
+                        if not tip_loaded[pipette_mount]:
+                            load_command = pick_tip_template.replace(
                                 "#pipette#", f'pipettes["{pipette_mount}"]'
                             )
-                            mix_command = mix_command.replace("#volume#", str(mix_vol))
-                            mix_command = mix_command.replace(
-                                "#loc#",
-                                f'deck["{dst_wellplate_location}"]["{dst_well}"]',  # same as destination
+                            pipette_name = self.resource_manager.mount_to_pipette[pipette_mount]
+                            new_src = copy.copy(src)
+                            new_src = new_src.replace("'", "")
+                            new_src = new_src.split(":")[-1]
+                            new_src = new_src.strip('][').split(', ')
+                
+                            # TODO: define flag to grab from specific well or just use the ones defined by the OT2
+                            if True:
+                                (
+                                    rack_location,
+                                    well_location,
+                                ) = self.resource_manager.get_next_tip(pipette_name, len(new_src))
+
+                                location_string = (
+                                    f'deck["{rack_location}"].wells()[{well_location}]'
+                                )
+                                load_command = load_command.replace(
+                                    "#location#", location_string
+                                )
+                            else:
+                                load_command = load_command.replace("#location#", "")
+                                self.resource_manager.update_tip_usage(pipette_name)
+
+                            commands.append(load_command)
+                            tip_loaded[pipette_mount] = True
+
+                        # aspirate and dispense
+                        # set aspirate clearance
+                        aspirate_clearance_command = aspirate_clearance_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        aspirate_clearance_command = aspirate_clearance_command.replace(
+                            "#height#", str(asp_height)
+                        )
+                        commands.append(aspirate_clearance_command)
+                        src_wellplate_location = self._parse_wellplate_location(src)
+                        # should handle things not formed like loc:well
+                        src_well = new_src[0]
+
+                        aspirate_command = aspirate_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        aspirate_command = aspirate_command.replace("#volume#", str(volume))
+                        aspirate_command = aspirate_command.replace(
+                            "#src#", f'deck["{src_wellplate_location}"]["{src_well}"]'
+                        )
+                        commands.append(aspirate_command)
+    
+                        self.resource_manager.update_well_usage(
+                            src_wellplate_location, new_src
+                        )
+
+                        # set dispense clearance
+                        dispense_clearance_commmand = dispense_clearance_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        dispense_clearance_commmand = dispense_clearance_commmand.replace(
+                            "#height#", str(disp_height)
+                        )
+                        commands.append(dispense_clearance_commmand)
+
+                        dst_wellplate_location = self._parse_wellplate_location(dst)
+                        new_dst = copy.copy(dst)
+                        new_dst = new_dst.replace("'", "")
+                        new_dst = new_dst.split(":")[-1]
+                        new_dst = new_dst.strip('][').split(', ')
+                        dst_well = new_dst[0]  # should handle things not formed like loc:well
+                        dispense_command = dispense_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        dispense_command = dispense_command.replace("#volume#", str(volume))
+                        dispense_command = dispense_command.replace(
+                            "#dst#", f'deck["{dst_wellplate_location}"]["{dst_well}"]'
+                        )
+                        commands.append(dispense_command)
+                        # update resource usage
+                        self.resource_manager.update_well_usage(
+                            dst_wellplate_location, new_dst
+                        )
+
+                        if mix_cycles is not None:
+                            if mix_cycles >= 1:
+                                # hardcoded to destination well for now
+                                mix_command = mix_template.replace(
+                                    "#pipette#", f'pipettes["{pipette_mount}"]'
+                                )
+                                mix_command = mix_command.replace("#volume#", str(mix_vol))
+                                mix_command = mix_command.replace(
+                                    "#loc#",
+                                    f'deck["{dst_wellplate_location}"]["{dst_well}"]',  # same as destination
+                                )
+                                mix_command = mix_command.replace("#reps#", str(mix_cycles))
+
+                                commands.append(mix_command)
+
+                            # no change in resources
+                        if blow_out:
+                            blowout_command = blow_out_template.replace(
+                                "#pipette#", f'pipettes["{pipette_mount}"]'
                             )
-                            mix_command = mix_command.replace("#reps#", str(mix_cycles))
+                            commands.append(blowout_command)
 
-                            commands.append(mix_command)
+                        if drop_tip:
+                            drop_command = drop_tip_template.replace(
+                                "#pipette#", f'pipettes["{pipette_mount}"]'
+                            )
+                            commands.append(drop_command)
+                            tip_loaded[pipette_mount] = False
 
-                        # no change in resources
-                    if blow_out:
-                        blowout_command = blow_out_template.replace(
-                            "#pipette#", f'pipettes["{pipette_mount}"]'
-                        )
-                        commands.append(blowout_command)
-
-                    if drop_tip:
-                        drop_command = drop_tip_template.replace(
-                            "#pipette#", f'pipettes["{pipette_mount}"]'
-                        )
-                        commands.append(drop_command)
-                        tip_loaded[pipette_mount] = False
-
-                    commands.append("")
+                        commands.append("")
             if isinstance(command_block, Temperature_Set):
                 if type(command_block.change_temp) is not int:
                     raise Exception(
