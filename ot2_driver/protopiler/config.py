@@ -133,6 +133,9 @@ class Multi_Transfer(CommandBase):
     multi_drop_tip: Union[bool, List[bool]] = True
     """Drop the tip once a transfer is done"""
 
+class Deactivate(CommandBase):
+    deactivate: bool
+    """Deactivates current module"""
 
 class Temperature_Set(CommandBase):
     change_temp: int
@@ -171,7 +174,7 @@ class ProtocolConfig(BaseSettings):
     """The additional resources (currently xls, xlsx files) to be used when compiling a protocol"""
     equipment: List[Union[Labware, Pipette]]
     """A list of the equipment you want to use on the OT2"""
-    commands: List[Union[Transfer, Multi_Transfer, Temperature_Set, Replace_Tip, Clear_Pipette, Move_Pipette, CommandBase]]
+    commands: List[Union[Transfer, Multi_Transfer, Deactivate, Temperature_Set, Replace_Tip, Clear_Pipette, Move_Pipette, CommandBase]]
     """Commands to execute during run"""
     metadata: Metadata
     """Information about the run"""
