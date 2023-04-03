@@ -19,6 +19,7 @@ class RobotStatus(Enum):
     FINISHING = "finishing"
     FAILED = "failed"
     PAUSED = "paused"
+    OFFLINE = "offline"
 
 
 class RunStatus(Enum):
@@ -257,7 +258,11 @@ class OT2_Driver:
         Status
             Either IDLE or RUNNING
         """
-        for run in self.get_runs():
+        runs = self.get_runs() 
+        if runs is None: 
+            return RobotStatus.OFFLINE.value
+        
+        for run in runs:
             run_status = run["status"]
             if (
                 run_status == "succeeded" or run_status == "stop-requested"
