@@ -138,7 +138,7 @@ class Mix(CommandBase):
     """how many mix cycles"""
     mix_volume: Union[float, List[float]]
     """volume to be mixed"""
-    location: Union[str, List[str]]
+    location: Union[List[str], str]
     """mixing destination"""
 
 class Deactivate(CommandBase):
