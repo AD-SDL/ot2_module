@@ -547,6 +547,7 @@ class ProtoPiler:
                 command_block.name if command_block.name is not None else f"command {i}"
             )
             commands.append(f"\n    # {block_name}")
+            print("COMMAND BLOCK", command_block)
             # TODO: Inject the payload here
             # Inject the payload
             if isinstance(payload, dict):
@@ -852,6 +853,7 @@ class ProtoPiler:
                 commands.append(temp_change_command)
 
             if isinstance(command_block, Mix):
+                print("RECOGNIZES MIX")
                 if (
                     type(command_block.location) is str
                     and type(command_block.reps) is int
@@ -927,6 +929,9 @@ class ProtoPiler:
                         mix_volumes,
                         mix_reps
                     ):
+                        print("LOCATION", loc)
+                        print("VOLUMES", mix_vol)
+                        print("REPS", rep)
                         mix_command = mix_template.replace(
                         "#reps#", str(rep)
                         )
