@@ -9,7 +9,7 @@ from typing import List, Optional, Tuple, Union, Dict
 
 import pandas as pd
 
-from ot2_driver.protopiler.config import CommandBase, Transfer, Multi_Transfer, Deactivate, Temperature_Set, Replace_Tip, Clear_Pipette, Move_Pipette, PathLike, ProtocolConfig, Resource
+from ot2_driver.protopiler.config import CommandBase, Transfer, Multi_Transfer, Mix, Deactivate, Temperature_Set, Replace_Tip, Clear_Pipette, Move_Pipette, PathLike, ProtocolConfig, Resource
 from ot2_driver.protopiler.resource_manager import ResourceManager
 
 """ Things to do:
@@ -178,6 +178,22 @@ class ProtoPiler:
                         new_volumes.append(int(vol))
 
                         command.volume = new_volumes
+            if isinstance(command, Mix):
+                if ":[" in command.location:
+                    command.location = self._unpack_alias(command.location)
+
+                # Add logic for reading well names from file
+                # peek into the source, check the well destination part
+                peek_elem = command.location
+                if isinstance(command.location, list):  # No mixing and matching
+                    peek_elem = command.location[0]
+
+                peek_well: str = peek_elem.split(":")[-1]
+                if isinstance(command.location, list):  # No mixing and matching
+                    peek_elem = command.location[0]
+                
+                # no need for external file
+
 
             if isinstance(command, Multi_Transfer):
                 if ":[" in command.multi_source:
@@ -834,7 +850,102 @@ class ProtoPiler:
                     "#temp#", str(command_block.change_temp)
                 )
                 commands.append(temp_change_command)
-            
+
+            if isinstance(command_block, Mix):
+                if (
+                    type(command_block.location) is str
+                    and type(command_block.reps) is int
+                    and type(command_block.mix_volume) is float
+                ):
+                    mix_command = mix_template.replace(
+                        "#reps#", str(command_block.reps)
+                    )
+                    mix_command = mix_command.replace(
+                        "#volume#", str(command_block.mix_volume)
+                    )
+                    wellplate_location = self._parse_wellplate_location(command_block.location)
+                    well = command_block.location.split(":")[
+                        -1
+                    ]
+                    mix_command = mix_command.replace(
+                        "#loc#", f'deck["{wellplate_location}"]["{well}"]'
+                    )
+                    mix_command = mix_command.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                    commands.append(mix_command)
+                
+                else:
+                    iter_len = 0
+                    if isinstance(command_block.location, list):
+                        if len(command_block.location) == 1:
+                            command_block.location = command_block.location[0]
+                        else:
+                            iter_len = len(command_block.location)
+                    
+                    if isinstance(command_block.mix_volume, list):
+                        if iter_len != 0 and len(command_block.mix_volume) != iter_len:
+                            if len(command_block.mix_volume) == 1:
+                                command_block.mix_volume = command_block.mix_volume[0]
+                            else:
+                                raise Exception(
+                                    "Multiple iterables found, cannot deterine dimension to iterate over"
+                                )
+                        iter_len = len(command_block.mix_volume)
+                    
+                    if isinstance(command_block.reps, list):
+                        if iter_len != 0 and len(command_block.reps) != iter_len:
+                            if len(command_block.reps) == 1:
+                                command_block.reps = command_block.reps[0]
+                            else:
+                                raise Exception(
+                                    "Multiple iterables found, cannot deterine dimension to iterate over"
+                                )
+                        iter_len = len(command_block.reps)
+                    
+                    if not isinstance(command_block.location, list):
+                        locations = repeat(command_block.location, iter_len)
+                    else:
+                        locations = command_block.location
+
+                    if not isinstance(command_block.mix_volume, list):
+                        mix_volumes = repeat(command_block.mix_volume, iter_len)
+                    else:
+                        mix_volumes = command_block.mix_volume
+
+                    if not isinstance(command_block.reps, list):
+                        mix_reps = repeat(command_block.reps, iter_len)
+                    else:
+                        mix_reps = command_block.reps
+
+                    for(
+                        loc,
+                        mix_vols,
+                        rep
+                    ) in zip(
+                        locations,
+                        mix_volumes,
+                        mix_reps
+                    ):
+                        mix_command = mix_template.replace(
+                        "#reps#", str(rep)
+                        )
+                        mix_command = mix_command.replace(
+                            "#volume#", str(mix_vols)
+                        )
+                        wellplate_location = self._parse_wellplate_location(loc)
+                        well = loc.split(":")[
+                            -1
+                        ]
+                        mix_command = mix_command.replace(
+                            "#loc#", f'deck["{wellplate_location}"]["{well}"]'
+                        )
+                        mix_command = mix_command.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        commands.append(mix_command)
+                        
+
             if isinstance(command_block, Deactivate):
                 if type(command_block.deactivate) is not bool:
                     raise Exception(
