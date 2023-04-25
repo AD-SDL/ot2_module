@@ -192,7 +192,22 @@ class ProtoPiler:
                 if isinstance(command.location, list):  # No mixing and matching
                     peek_elem = command.location[0]
                 
-                # no need for external file
+                #external file
+                if (
+                    not peek_well.isdigit()
+                    and not peek_well[1:].isdigit()
+                    and "payload" not in peek_well
+                ):
+
+                    # read from file
+                    new_locations = []
+                    for orig_command, loc in zip(
+                        repeat(command.location), self.resources[resource_key][peek_well]
+                    ):
+                        orig_deck_location = orig_command.split(":")[0]
+                        new_locations.append(f"{orig_deck_location}:{loc}")
+
+                    command.location = new_locations
 
 
             if isinstance(command, Multi_Transfer):
@@ -547,7 +562,6 @@ class ProtoPiler:
                 command_block.name if command_block.name is not None else f"command {i}"
             )
             commands.append(f"\n    # {block_name}")
-            print("COMMAND BLOCK", command_block)
             # TODO: Inject the payload here
             # Inject the payload
             if isinstance(payload, dict):
@@ -853,7 +867,6 @@ class ProtoPiler:
                 commands.append(temp_change_command)
 
             if isinstance(command_block, Mix):
-                print("RECOGNIZES MIX")
                 if (
                     type(command_block.location) is str
                     and type(command_block.reps) is int
@@ -929,9 +942,6 @@ class ProtoPiler:
                         mix_volumes,
                         mix_reps
                     ):
-                        print("LOCATION", loc)
-                        print("VOLUMES", mix_vol)
-                        print("REPS", rep)
                         mix_command = mix_template.replace(
                         "#reps#", str(rep)
                         )
