@@ -103,8 +103,11 @@ if returncode:
 ot2.execute(protocol_file)
 
 ```
-
+### Updating the Code on node computer
+1.  `cd ~/wei_ws/src/ot2_driver`
+2.  `git pull`
+3.  `pip install -e .`
 ### Running Dev Tools 
  
 1. Install `pip install -r requirements/dev.txt`
-1. Run `make` in project root
+2. Run `make` in project root
