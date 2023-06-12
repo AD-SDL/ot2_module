@@ -598,6 +598,7 @@ class ProtoPiler:
                                 f"No pipette available for {block_name} with volume: {volume}"
                             )
                     # check for tip
+                        print(pipette_mount)
                         if not tip_loaded[pipette_mount]:
                             load_command = pick_tip_template.replace(
                                 "#pipette#", f'pipettes["{pipette_mount}"]'
