@@ -94,17 +94,17 @@ class CommandBase(BaseSettings):
 class Transfer(CommandBase):
     source: Union[List[str], str]
     """Source of the command, this should refer to a wellplate and well(s)"""
-    aspirate_clearance: Optional[Union[List[float], float]]
+    aspirate_clearance: Optional[Union[List[float], float]] = 1
     """height of pipette when performing aspirate"""
     destination: Union[List[str], str]
     """Destination for the command, should refer to a wellplate and well(s)"""
-    dispense_clearance: Optional[Union[float, List[float]]]
+    dispense_clearance: Optional[Union[float, List[float]]] = 1
     """height of pipette when performing dispense"""
     volume: Union[float, List[float], str]
     """Volume to transfer, can be a single int (microliters) or a list of int"""
-    mix_cycles: Optional[Union[int, List[int]]]
+    mix_cycles: Optional[Union[int, List[int]]] = 0
     """Num mixes"""
-    mix_volume: Optional[Union[int, List[int]]]
+    mix_volume: Optional[Union[int, List[int]]] = 0
     """Volume of each mix"""
     blow_out: Optional[Union[bool, List[bool]]] = True
     """blow out from tip into current location"""
@@ -116,17 +116,17 @@ class Transfer(CommandBase):
 class Multi_Transfer(CommandBase):
     multi_source: Union[str, List[List[str]]]
     """List of sources to be aspirated, each list within matrix presumed to be in single column"""
-    multi_aspirate_clearance: Optional[Union[List[float], float]]
+    multi_aspirate_clearance: Optional[Union[List[float], float]] = 1
     """height of pipette when performing aspirate"""
     multi_destination: Union[str, List[List[str]]]
     """List of sources to be aspirated, each list within matrix presumed to be in single column"""
-    multi_dispense_clearance: Optional[Union[List[float], float]]
+    multi_dispense_clearance: Optional[Union[List[float], float]] = 1
     """height of pipette when performing aspirate"""
     multi_volume: Union[float, List[float], str]
     """volume to transfer (microliters)"""
-    multi_mix_cycles: Optional[Union[int, List[int]]]
+    multi_mix_cycles: Optional[Union[int, List[int]]] = 0
     """Num mixes"""
-    multi_mix_volume: Optional[Union[int, List[int]]]
+    multi_mix_volume: Optional[Union[int, List[int]]] = 0
     """Volume of each mix"""
     multi_blow_out: Optional[Union[bool, List[bool]]] = True
     """blow out from tip into current location"""
