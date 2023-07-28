@@ -771,6 +771,12 @@ class ProtoPiler:
 
                             commands.append(load_command)
                             tip_loaded[pipette_mount] = True
+                        
+                        else:
+                            new_src = copy.copy(src)
+                            new_src = new_src.replace("'", "")
+                            new_src = new_src.split(":")[-1]
+                            new_src = new_src.strip('][').split(', ')
 
                         # aspirate and dispense
                         # set aspirate clearance
