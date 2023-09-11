@@ -205,7 +205,7 @@ def execute(protocol_path, payload=None, resource_config=None):
 
 def poll_OT2_until_run_completion():
     """Queries the OT2 run state until reported as 'succeeded'"""
-    global run_id
+    global run_id, state
     print("Polling OT2 run until completion")
     while state != "IDLE":
 
