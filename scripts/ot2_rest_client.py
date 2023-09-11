@@ -263,7 +263,7 @@ app = FastAPI(
 
 @app.get("/state")
 def get_state():
-    global sealer
+    global state
     return JSONResponse(content={"State": state})
 
 
