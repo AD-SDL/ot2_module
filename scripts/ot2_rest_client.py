@@ -245,12 +245,13 @@ async def lifespan(app: FastAPI):
             -------
             None"""
         parser = ArgumentParser()
-        parser.add_argument("--node_name", type=str, help="Name of the Node")
-        parser.add_argument("--ip", type=str, help="ip value")
+        parser.add_argument("--alias", type=str, help="Name of the Node")
+        parser.add_argument("--host", type=str, help="Host for rest")
+        parser.add_argument("--ot2_ip", type=str, help="ip value")
         parser.add_argument("--port", type=int, help="port value")
         args = parser.parse_args()
-        node_name = args.node_name
-        ip = args.ip
+        node_name = args.alias
+        ip = args.ot2_ip
         state = "UNKNOWN"   
         resources_folder_path = '/home/rpl/.ot2_temp/' + node_name + "/" + "resources/"  
         protocols_folder_path = '/home/rpl/.ot2_temp/' + node_name + "/" + "protocols/"  
