@@ -12,8 +12,7 @@ from copy import deepcopy
 import time
 
 
-from wei_services.srv import WeiActions, WeiDescription
-from std_msgs.msg import String
+
 
 from ot2_driver.ot2_driver_http import OT2_Config, OT2_Driver
 import opentrons.simulate
