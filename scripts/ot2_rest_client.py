@@ -387,6 +387,6 @@ if __name__ == "__main__":
     parser.add_argument("--ot2_ip", type=str, help="ip value")
     parser.add_argument("--port", type=int, help="port value")
     args = parser.parse_args()
-    node_name = args.node_name
+    node_name = args.alias
     ip = args.ot2_ip
     uvicorn.run("ot2_rest_client:app", host=args.host, port=args.port, reload=False, ws_max_size=100000000000000000000000000000000000000)
