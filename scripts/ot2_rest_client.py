@@ -256,11 +256,15 @@ def do_action(action_handle: str, action_vars):
     global ot2, state
     response = {"action_response": "", "action_msg": "", "action_log": ""}
     if state == "ERROR":
-        msg = "Can not accept the job! OT2 CONNECTION ERROR"
-        # get_logger.error(msg)
-        response["action_response"] = -1
-        response["action_msg"] = msg
-        return response
+        # Try to reconnect
+        check_resources_folder()
+        check_protocols_folder()
+        connect_robot()
+        if state == "ERROR":
+            msg = "Can not accept the job! OT2 CONNECTION ERROR"
+            response["action_response"] = -1
+            response["action_msg"] = msg
+            return response
 
     while state != "IDLE":
         #   get_logger().warn("Waiting for OT2 to switch IDLE state...")
