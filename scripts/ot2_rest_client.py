@@ -62,6 +62,7 @@ def connect_robot():
     try:
         print(ip)
         ot2 = OT2_Driver(OT2_Config(ip=ip))
+        state = "IDLE"
 
     except ConnectTimeoutError as connection_err:
         state = "ERROR"
@@ -219,7 +220,6 @@ async def lifespan(app: FastAPI):
     check_resources_folder()
     check_protocols_folder()
     connect_robot()
-    state = "IDLE"
     yield
     pass
 
