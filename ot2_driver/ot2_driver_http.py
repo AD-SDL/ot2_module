@@ -3,13 +3,13 @@ import subprocess
 import time
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 import yaml
 from urllib3 import Retry
 
-from ot2_driver.config import PathLike, parse_ot2_args, OT2_Config
+from ot2_driver.config import OT2_Config, PathLike, parse_ot2_args
 from ot2_driver.protopiler.protopiler import ProtoPiler
 
 
@@ -77,7 +77,12 @@ class OT2_Driver:
             self.change_lights_status(status=True)
 
     def compile_protocol(
-        self, config_path, resource_file=None, resource_path=None, payload: Optional[Dict[str, Any]] = None, protocol_out_path=None
+        self,
+        config_path,
+        resource_file=None,
+        resource_path=None,
+        payload: Optional[Dict[str, Any]] = None,
+        protocol_out_path=None,
     ) -> Tuple[str, str]:
         """Compile the protocols via protopiler
 
@@ -97,14 +102,20 @@ class OT2_Driver:
         """
         if ".py" not in str(config_path):
             self.protopiler.load_config(
-                config_path=config_path, resource_file=resource_file, resource_path=resource_path, protocol_out_path=protocol_out_path
+                config_path=config_path,
+                resource_file=resource_file,
+                resource_path=resource_path,
+                protocol_out_path=protocol_out_path,
             )
             print("resource_file = {}".format(str(resource_file)))
             (
                 protocol_out_path,
                 protocol_resource_file,
             ) = self.protopiler.yaml_to_protocol(
-                config_path, resource_file=resource_file, resource_file_out=resource_path, payload=payload
+                config_path,
+                resource_file=resource_file,
+                resource_file_out=resource_path,
+                payload=payload,
             )
 
             return protocol_out_path, protocol_resource_file
@@ -258,10 +269,10 @@ class OT2_Driver:
         Status
             Either IDLE or RUNNING
         """
-        runs = self.get_runs() 
-        if runs is None: 
+        runs = self.get_runs()
+        if runs is None:
             return RobotStatus.OFFLINE.value
-        
+
         for run in runs:
             run_status = run["status"]
             if (

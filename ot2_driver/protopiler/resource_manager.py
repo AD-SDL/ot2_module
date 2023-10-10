@@ -28,7 +28,7 @@ class ResourceManager:
 
     def __init__(
         self,
-        equiment_config: Optional[List[Union[Labware, Pipette]]] = None,
+        equipment_config: Optional[List[Union[Labware, Pipette]]] = None,
         resource_file: Optional[PathLike] = None,
     ) -> None:
         """This class manages the resources used as specified by a config
@@ -42,9 +42,9 @@ class ResourceManager:
         """
         self.init = False
 
-        if equiment_config:
+        if equipment_config:
             self.load_equipment(
-                equipment_config=equiment_config, resource_file=resource_file
+                equipment_config=equipment_config, resource_file=resource_file
             )
             self.init = True
 
@@ -63,7 +63,7 @@ class ResourceManager:
             path to the resource file, will be loaded if exists, by default None
         """
         self.resource_file = resource_file
-        # setup the necesary data relationships
+        # setup the necessary data relationships
         self._generate_location_name_relationships(equipment_config=equipment_config)
 
         # setup the resource tracker, if exists leave as is, else, create it
@@ -288,39 +288,40 @@ class ResourceManager:
 
             # leveraging the 0 indexing of the rack and the 1 indexing of the count
             # has to be a str because of the protocol writing
-            if tip_num ==1: #TODO:, maybe change to if using single channel
+            if tip_num == 1:  # TODO:, maybe change to if using single channel
                 # next_tip = str(self.resources[loc]["used"]) # TODO: need to change, pick up from bottom row
                 for i in range(96):
-                    curr_tip = i
                     if str(i) not in self.resources[loc]["wells_used"]:
                         next_tip = str(i)
                         break
                 self.update_tip_count(loc, next_tip, tip_num)
             # multi transfer, need to determine uppermost tip pick up point
             # iterate through "wells_used", find "tip_num" number of tips all still in same column
-            elif tip_num >1:
+            elif tip_num > 1:
                 next_tip = self.find_multi_pickup_spot(loc, tip_num)
                 self.update_tip_count(loc, next_tip, tip_num)
-            # update usage
-            # self.resources[loc]["used"] += tip_num
-            # if self.resources[loc]["used"] == capacity:
-            #     self.resources[loc]["depleted"] = True
+                # update usage
+                # self.resources[loc]["used"] += tip_num
+                # if self.resources[loc]["used"] == capacity:
+                #     self.resources[loc]["depleted"] = True
                 next_tip = next_tip[0]
 
             return loc, next_tip
 
         raise Exception(f"Not enough tips found for '{pipette_name}'...")
-    
-    def find_multi_pickup_spot(self, loc: str, tip_num: int) -> str: #TODO iterate through locations not just fixed at one
-        """ Finds best location to pick up tip for multi transfer
-        
+
+    def find_multi_pickup_spot(
+        self, loc: str, tip_num: int
+    ) -> str:  # TODO iterate through locations not just fixed at one
+        """Finds best location to pick up tip for multi transfer
+
         Parameters
         ----------
         loc: str
             deck location of chosen tip rack
         tip_num: int
             number of tips to be mounted on pipette
-        
+
         Returns
         -------
         well: int
@@ -328,53 +329,52 @@ class ResourceManager:
         """
         # iterate through sets of tip_num throughout tip rack, checking if values are located in wells_used
         tips = []
-        good = False # signifies valid tip group
-        for i in range(97-tip_num): # TODO: need more intelligent, faster, way to do this
+        good = False  # signifies valid tip group
+        for i in range(
+            97 - tip_num
+        ):  # TODO: need more intelligent, faster, way to do this
             tips = []
             for j in range(tip_num):
-                tips.append(i+j)
+                tips.append(i + j)
             # check if any tips selected are in wells_used
             for p in range(len(tips)):
                 if str(tips[p]) in self.resources[loc]["wells_used"]:
                     tips = []
                     break
-            for q in range(len(tips)-1):
+            for q in range(len(tips) - 1):
                 # check if tip grouping exceeds column
-                if tips[q]%8 == 7: # bottom of column
+                if tips[q] % 8 == 7:  # bottom of column
                     tips = []
                     break
                 else:
-                    #check if rest of wells below tips are empty
-                    if tips[-1]%8 == 7: # already reaches bottom of tip rack, valid group
+                    # check if rest of wells below tips are empty
+                    if (
+                        tips[-1] % 8 == 7
+                    ):  # already reaches bottom of tip rack, valid group
                         good = True
-                        
+
                     else:
-                        bottom = tips[-1] # bottom of tip group
+                        bottom = tips[-1]  # bottom of tip group
                         done = False
                         t = 1
-                        while done == False:
-                            curr_val = bottom+t
-                            if str(curr_val) in self.resources[loc]["wells_used"]: # check if tip in next position
-                                t = t+1
-                                if curr_val%8 == 7: # is bottom of column
+                        while not done:
+                            curr_val = bottom + t
+                            if (
+                                str(curr_val) in self.resources[loc]["wells_used"]
+                            ):  # check if tip in next position
+                                t = t + 1
+                                if curr_val % 8 == 7:  # is bottom of column
                                     done = True
                                     good = True
-                            else: # tips below group, move on
+                            else:  # tips below group, move on
                                 done = True
                     continue
                 break
-            if good == True:
+            if good:
                 break
         if tips == []:
             raise Exception("No available group of tips for multi dispensing")
         return tips
-
-
-            
-            
-
-            
-
 
     def update_tip_count(self, loc, well, tip_num) -> None:
         """Tell the resource manager a new tip has been used
@@ -406,7 +406,6 @@ class ResourceManager:
                 self.resources[loc]["used"] += 1
         if self.resources[loc]["used"] == capacity:
             self.resources[loc]["depleted"] = True
-
 
     def update_tip_usage(self, pipette_name: str) -> None:
         """Tell the resource manager a new tip has been used
@@ -451,7 +450,7 @@ class ResourceManager:
             the location of the well on the wellplate, by default None
         """
         if well:
-            if type(well) == list:
+            if isinstance(well, list):
                 for i in range(len(well)):
                     self.resources[location]["wells_used"].add(well[i])
 
@@ -505,7 +504,7 @@ class ResourceManager:
         return valid_tipracks
 
     def determine_pipette(self, target_volume: int, is_multi: bool) -> str:
-        """Determines which pippette to use for a given volume
+        """Determines which pipette to use for a given volume
 
         Parameters
         ----------
@@ -521,13 +520,10 @@ class ResourceManager:
         min_available = float("inf")
         pip_volume_pattern = re.compile(r"\d{2,}")
         for mount, name in self.mount_to_pipette.items():
-
-
-
             pip_volume = int(pip_volume_pattern.search(name).group())
 
             # TODO: make sure the pipettes can handle the max they are labeled as
-            if is_multi == True:
+            if is_multi:
                 if "multi" in name:
                     if pip_volume >= target_volume:
                         if pip_volume < min_available:
@@ -540,9 +536,6 @@ class ResourceManager:
                         if pip_volume < min_available:
                             min_available = pip_volume
                             pipette = mount
-
-            
-
 
         return pipette
 
@@ -575,7 +568,10 @@ class ResourceManager:
                 else:
                     out_path = self.resource_file
             else:
-                out_path = out_file+f"{datetime.now().strftime('%Y%m%d-%H%M%S')}_resources.json"
+                out_path = (
+                    out_file
+                    + f"{datetime.now().strftime('%Y%m%d-%H%M%S')}_resources.json"
+                )
 
         with open(out_path, "w") as f:
             json.dump(out_resources, f, indent=2)
@@ -586,7 +582,7 @@ class ResourceManager:
 def main(args):  # noqa: D103
     config = ProtocolConfig.from_yaml(args.config)
     rm = ResourceManager(
-        equiment_config=config.equipment, resource_file=args.resource_file
+        equipment_config=config.equipment, resource_file=args.resource_file
     )
 
     print(rm.resources)

@@ -18,7 +18,7 @@ class Deconstructor:
     """Pull apart a python protocol into a config"""
 
     def __init__(self, opentrons_simulate_bin: str = "opentrons_simulate") -> None:
-        """Initialize protocol decsonstructor
+        """Initialize protocol deconstructor
 
         Parameters
         ----------
@@ -58,57 +58,31 @@ class Deconstructor:
             Path to the saved config.yml file, will be created if not given
         """
         sim_command_commands = f"{self.opentrons_simulate_bin} {protocol_path}"
-        simultation_res = subprocess.run(
+        simulation_res = subprocess.run(
             sim_command_commands.split(), capture_output=True, text=True
         )
 
-        if simultation_res.returncode:
-            print(f"Simulation failed with error: {simultation_res.stdout}")
+        if simulation_res.returncode:
+            print(f"Simulation failed with error: {simulation_res.stdout}")
 
-        raw_commands = simultation_res.stdout.strip()
+        raw_commands = simulation_res.stdout.strip()
         liminal_commands = []
         for raw_command in raw_commands.split("\n"):
             liminal_commands.append(self._parse_raw_command(raw_command))
 
-        potential_command = None
-        for command in liminal_commands:
-            potential_command = self._parse_liminal_command(command, potential_command)
-            if potential_command is not None:
-                if (
-                    potential_command.destination != "NA"
-                    and potential_command.source != "NA"
-                    and potential_command.volume != "NA"
-                ):
-                    self.commands.append(potential_command)
-                    potential_command = None
-
-        # get the labware
-        resource_names = {}
-        for command in liminal_commands:
-            try:
-                key = command["info"]["labware_name"]
-                val = command["info"]["labware_location"]
-                if key in resource_names:
-                    resource_names[key].add(val)
-                else:
-                    resource_names[key] = set(val)
-            except KeyError:
-                pass
-
-        for name, locations in resource_names.items():
-            for loc in locations:
-                self.resources.append(Labware(name=name, location=loc))
+        self._get_commands(liminal_commands)
+        self._get_labware(liminal_commands)
 
         # find the pipette tips
         sim_command_labware = f"{self.opentrons_simulate_bin} {protocol_path} -l info"
-        simulatation_labware_res = subprocess.run(
+        simulation_labware_res = subprocess.run(
             sim_command_labware.split(), capture_output=True, text=True
         )
 
-        if simulatation_labware_res.returncode:
+        if simulation_labware_res.returncode:
             raise Exception("Cannot run simulation with long info")
 
-        for new_pipette in self._find_pipettes(simulatation_labware_res.stdout):
+        for new_pipette in self._find_pipettes(simulation_labware_res.stdout):
             occupied = False
             for resource in self.resources:
                 if (
@@ -129,6 +103,42 @@ class Deconstructor:
             equipment=self.resources, commands=self.commands, metadata=metadata
         )
         protocol_config.dump_yaml(args.config_out)
+
+    def _get_commands(self, liminal_commands):
+        """
+        Get the commands from the liminal commands
+        """
+        potential_command = None
+        for command in liminal_commands:
+            potential_command = self._parse_liminal_command(command, potential_command)
+            if potential_command is not None:
+                if (
+                    potential_command.destination != "NA"
+                    and potential_command.source != "NA"
+                    and potential_command.volume != "NA"
+                ):
+                    self.commands.append(potential_command)
+                    potential_command = None
+
+    def _get_labware(self, liminal_commands):
+        """
+        Gets the labware from the commands and adds it to resources
+        """
+        resource_names = {}
+        for command in liminal_commands:
+            try:
+                key = command["info"]["labware_name"]
+                val = command["info"]["labware_location"]
+                if key in resource_names:
+                    resource_names[key].add(val)
+                else:
+                    resource_names[key] = set(val)
+            except KeyError:
+                pass
+
+        for name, locations in resource_names.items():
+            for loc in locations:
+                self.resources.append(Labware(name=name, location=loc))
 
     def _parse_raw_command(self, command: str) -> Dict:
         # TODO remove brittle solution from parsing if possible
@@ -203,7 +213,6 @@ class Deconstructor:
     def _parse_liminal_command(
         self, liminal_command: dict, partial_command: Command = None
     ) -> Optional[Command]:
-
         if "pickup_tip" == liminal_command["command"]:
             return partial_command
 
@@ -253,9 +262,9 @@ class Deconstructor:
 
 
 def main(args):  # noqa: D103
-    decon = Deconstructor()
+    deconstructor = Deconstructor()
 
-    decon.deconstruct(protocol_path=args.protocol, config_path=args.config_out)
+    deconstructor.deconstruct(protocol_path=args.protocol, config_path=args.config_out)
 
 
 if __name__ == "__main__":

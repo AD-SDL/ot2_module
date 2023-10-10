@@ -1,5 +1,6 @@
-import requests
 from argparse import ArgumentParser
+
+import requests
 
 
 def main(args):
@@ -22,7 +23,9 @@ def main(args):
 
         if run["status"] != "running" and run["current"] != "true":
             delete_resp = requests.delete(
-                url=base_url.format(ip_address=args.ip_address, extension=f"runs/{run_id}"),
+                url=base_url.format(
+                    ip_address=args.ip_address, extension=f"runs/{run_id}"
+                ),
                 headers=headers,
             )
         else:
@@ -30,7 +33,9 @@ def main(args):
             continue
 
         if delete_resp.status_code != 200:
-            print(f"Could not delete run with ID {run_id}, response: {delete_resp.json()}")
+            print(
+                f"Could not delete run with ID {run_id}, response: {delete_resp.json()}"
+            )
         else:
             print(f"Run {run_id} deleted...")
 
@@ -38,8 +43,12 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(description="Delete all runs stored on an ot2 with a given ip address")
-    parser.add_argument("-ip", "--ip_address", help="Robot IP to delete all runs from", type=str)
+    parser = ArgumentParser(
+        description="Delete all runs stored on an ot2 with a given ip address"
+    )
+    parser.add_argument(
+        "-ip", "--ip_address", help="Robot IP to delete all runs from", type=str
+    )
 
     args = parser.parse_args()
     main(args)

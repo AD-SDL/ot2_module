@@ -1,10 +1,10 @@
 """Stores dataclasses/args/config for the ot2 drivers"""
-import yaml
 import json
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from typing import Union, Optional, Type, TypeVar
+from typing import Optional, Type, TypeVar, Union
 
+import yaml
 from pydantic import BaseModel as _BaseModel
 
 _T = TypeVar("_T")
@@ -13,7 +13,7 @@ PathLike = Union[str, Path]
 
 
 class BaseModel(_BaseModel):
-    """Allows any sub-class to inherit methods allowing for programatic description of protocols
+    """Allows any sub-class to inherit methods allowing for programmatic description of protocols
     Can load a yaml into a class and write a class into a yaml file.
     """
 
@@ -48,7 +48,7 @@ class BaseModel(_BaseModel):
         return super().json(**kwargs)
 
     def write_yaml(self, cfg_path: PathLike) -> None:
-        """Allows programatic creation of ot2util objects and saving them into yaml.
+        """Allows programmatic creation of ot2util objects and saving them into yaml.
         Parameters
         ----------
         cfg_path : PathLike
