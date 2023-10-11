@@ -9,7 +9,6 @@ metadata = {
 
 
 def run(protocol: protocol_api.ProtocolContext):
-
     deck = {}
     pipettes = {}
 

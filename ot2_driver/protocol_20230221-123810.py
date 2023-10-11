@@ -1,15 +1,14 @@
 from opentrons import protocol_api
 
-
 metadata = {
     "protocolName": "Color Mixing all",
     "author": "Kyle khippe@anl.gov",
     "description": "Mixing red colors",
-    "apiLevel": "2.12"
+    "apiLevel": "2.12",
 }
 
-def run(protocol: protocol_api.ProtocolContext):
 
+def run(protocol: protocol_api.ProtocolContext):
     deck = {}
     pipettes = {}
 
@@ -20,8 +19,12 @@ def run(protocol: protocol_api.ProtocolContext):
     deck["7"] = protocol.load_labware("opentrons_6_tuberack_nest_50ml_conical", "7")
     deck["10"] = protocol.load_labware("opentrons_96_tiprack_300ul", "10")
     deck["11"] = protocol.load_labware("opentrons_96_tiprack_20ul", "11")
-    pipettes["left"] = protocol.load_instrument("p300_single_gen2", "left", tip_racks=[deck["10"]])
-    pipettes["right"] = protocol.load_instrument("p20_single_gen2", "right", tip_racks=[deck["11"]])
+    pipettes["left"] = protocol.load_instrument(
+        "p300_single_gen2", "left", tip_racks=[deck["10"]]
+    )
+    pipettes["right"] = protocol.load_instrument(
+        "p20_single_gen2", "right", tip_racks=[deck["11"]]
+    )
 
     ####################
     # execute commands #
@@ -60,7 +63,6 @@ def run(protocol: protocol_api.ProtocolContext):
     pipettes["left"].blow_out()
     pipettes["left"].drop_tip()
 
-
     # Mix color 2
     pipettes["left"].pick_up_tip(deck["10"].wells()[3])
     pipettes["left"].well_bottom_clearance.aspirate = 1.0
@@ -93,7 +95,6 @@ def run(protocol: protocol_api.ProtocolContext):
     pipettes["right"].dispense(14.393859964983204, deck["2"]["A8"])
     pipettes["right"].blow_out()
     pipettes["right"].drop_tip()
-
 
     # Mix color 3
     pipettes["right"].pick_up_tip(deck["11"].wells()[2])

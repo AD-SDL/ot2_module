@@ -110,8 +110,9 @@ class Transfer(CommandBase):
     """blow out from tip into current location"""
     drop_tip: Union[bool, List[bool]] = True
     """Drop the tip once a transfer is done"""
-    return_tip:Union[bool, List[bool]] = False
+    return_tip: Union[bool, List[bool]] = False
     """puts tip back into tip box"""
+
 
 class Multi_Transfer(CommandBase):
     multi_source: Union[str, List[List[str]]]
@@ -133,6 +134,7 @@ class Multi_Transfer(CommandBase):
     multi_drop_tip: Union[bool, List[bool]] = True
     """Drop the tip once a transfer is done"""
 
+
 class Mix(CommandBase):
     reps: Union[int, List[int]]
     """how many mix cycles"""
@@ -141,25 +143,31 @@ class Mix(CommandBase):
     location: Union[List[str], str]
     """mixing destination"""
 
+
 class Deactivate(CommandBase):
     deactivate: bool
     """Deactivates current module"""
+
 
 class Temperature_Set(CommandBase):
     change_temp: int
     """Temperature to set temperature module to"""
 
+
 class Replace_Tip(CommandBase):
     replace_tip: bool
     """Place tip back into tip rack"""
+
 
 class Clear_Pipette(CommandBase):
     clear: bool
     """Blowout and remove any tip on pipette over trash"""
 
+
 class Move_Pipette(CommandBase):
     move_to: int
     """Moves pipette to given deck position"""
+
 
 # metadata container
 class Metadata(BaseSettings):
@@ -182,7 +190,19 @@ class ProtocolConfig(BaseSettings):
     """The additional resources (currently xls, xlsx files) to be used when compiling a protocol"""
     equipment: List[Union[Labware, Pipette]]
     """A list of the equipment you want to use on the OT2"""
-    commands: List[Union[Transfer, Multi_Transfer, Mix, Deactivate, Temperature_Set, Replace_Tip, Clear_Pipette, Move_Pipette, CommandBase]]
+    commands: List[
+        Union[
+            Transfer,
+            Multi_Transfer,
+            Mix,
+            Deactivate,
+            Temperature_Set,
+            Replace_Tip,
+            Clear_Pipette,
+            Move_Pipette,
+            CommandBase,
+        ]
+    ]
     """Commands to execute during run"""
     metadata: Metadata
     """Information about the run"""

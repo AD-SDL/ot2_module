@@ -1,16 +1,18 @@
-### Installation 
-1. `git clone https://github.com/KPHippe/ot2_driver.git`
-2. Switch to my dev branch `git checkout dev-kyle`
-3. I would recommend a conda/venv environment. The following assusumes conda. 
-    1. `conda create -n ot2-driver python=3.9`
-    1. `conda activate ot2-driver`
-    1. `pip install -r requirements.txt` 
-    1. `pip install -e .`
-    
+### Installation
+
+```
+git clone https://github.com/AD-SDL/ot2_module.git
+cd ot2_module
+pip install -r requirements.txt
+pip install -e .
+```
+
 *This installs ot2_driver as a package*
 
+Note: This module was developed using Python 3.9
+
 ### Getting the OT2 setup for ssh
-*This is not required (or used) for the HTTP driver* 
+*This is not required (or used) for the HTTP driver*
 When setting up an ssh key to connect to the opentrons, it is helpful to make a new one without a passphrase. For more information on setting up an ssh connection see:
 
 *Note, you have to have the Opentrons App installed*
@@ -18,11 +20,11 @@ When setting up an ssh key to connect to the opentrons, it is helpful to make a 
 - https://support.opentrons.com/en/articles/3203681-setting-up-ssh-access-to-your-ot-2
 - https://support.opentrons.com/en/articles/3287453-connecting-to-your-ot-2-with-ssh
 
-For prototyping in the RPL, connect via the wire and wait for the robot to become visible on the application. Click `settings` then `network settings` and if you intend on running via the wire, use the `wired-ip` in the robot configuration file. If you intend to use the wireless IP, you must connect to the `snowcrash` network, but this does not have internet access. 
+For prototyping in the RPL, connect via the wire and wait for the robot to become visible on the application. Click `settings` then `network settings` and if you intend on running via the wire, use the `wired-ip` in the robot configuration file. If you intend to use the wireless IP, you must connect to the `snowcrash` network, but this does not have internet access.
 
-### Robot config 
+### Robot config
 
-Below is an example of what I refer to as the `robot_config` 
+Below is an example of what I refer to as the `robot_config`
 ```
 # OT2 in lab
 - ip: IP.ADDRESS
@@ -32,7 +34,7 @@ Below is an example of what I refer to as the `robot_config`
 
 ```
 
-### Running the driver 
+### Running the driver
 
 If you would like to use the script as I have made it, I have provided command line descriptions and example commands below
 
@@ -57,14 +59,14 @@ optional arguments:
 
 ```
 
-To run the `protopiler/example_configs/basic_config.yaml` with verbose settings and default outs, run the following 
+To run the `protopiler/example_configs/basic_config.yaml` with verbose settings and default outs, run the following
 ```
 python ot2_driver_ssh.py -rc [insert/robot/config/path] -pc protopiler/example_configs/basic_config.yaml -v
 ```
-To run the `protopiler/example_configs/basic_config.yaml` with verbose settings and specify the output files, run the following 
+To run the `protopiler/example_configs/basic_config.yaml` with verbose settings and specify the output files, run the following
 
 ```
-python ot2_driver_ssh.py -rc [insert/robot/config/path] -pc protopiler/example_configs/basic_config.yaml -po ./test_protocol.py -ro ./test_resources.json -v 
+python ot2_driver_ssh.py -rc [insert/robot/config/path] -pc protopiler/example_configs/basic_config.yaml -po ./test_protocol.py -ro ./test_resources.json -v
 ```
 
 To run your own protocol.py file, replace data in the `-pc` option with the path to your protocol.py file
@@ -72,12 +74,12 @@ To run your own protocol.py file, replace data in the `-pc` option with the path
 python ot2_driver_ssh.py -rc [insert/robot/config/path] -pc ./test_protocol.py
 ```
 
-*The process is the same for the HTTP driver* 
+*The process is the same for the HTTP driver*
 
 If you would like to write your own code using the ot2 driver you can start with something like this
 ```python
 # would have to specify path to ot2_driver_ssh.py if not in directory
-from ot2_driver_ssh import OT2_Driver 
+from ot2_driver_ssh import OT2_Driver
 
 # Load one ot2
 for ot2_raw_cfg in yaml.safe_load(open(`robot_config_path`)):
@@ -92,22 +94,22 @@ if "py" not in str(`protocol_config`):
         protocol_out=`protocol_out`,
         resource_out=`resource_out`,
     )
-    
 
-# Transfer the protocol to the ot2 
+
+# Transfer the protocol to the ot2
 transfer_returncode = ot2.transfer(protocol_file)
 if returncode:
     print("Exception raised when transferring...")
 
-# Execute the protocol 
+# Execute the protocol
 ot2.execute(protocol_file)
 
 ```
 ### Updating the Code on node computer
-1.  `cd ~/wei_ws/src/ot2_driver`
+1.  `cd ~/wei_ws/src/ot2_module`
 2.  `git pull`
 3.  `pip install -e .`
-### Running Dev Tools 
- 
+### Running Dev Tools
+
 1. Install `pip install -r requirements/dev.txt`
 2. Run `make` in project root

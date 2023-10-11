@@ -1,7 +1,9 @@
 # TODO: this is not ready to actually be considered a test yet...
 from argparse import ArgumentParser
 from pathlib import Path
-from ot2_driver.ot2_driver_http import OT2_Driver, OT2_Config
+
+from ot2_driver.ot2_driver_http import OT2_Config, OT2_Driver
+
 
 # cant name it test because it does not actually test anything right now...
 def streaming_t(ot2: OT2_Driver):
