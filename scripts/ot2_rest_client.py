@@ -141,10 +141,7 @@ def execute(protocol_path, payload=None, resource_config=None):
 
     global run_id, node_name, protocols_folder_path, resources_folder_path
     try:
-        (
-            protocol_file_path,
-            resource_file_path,
-        ) = ot2.compile_protocol(
+        (protocol_file_path, resource_file_path,) = ot2.compile_protocol(
             protocol_path,
             payload=payload,
             resource_file=resource_config,
@@ -262,7 +259,7 @@ def do_action(action_handle: str, action_vars):
         connect_robot()
         if state == "ERROR":
             msg = "Can not accept the job! OT2 CONNECTION ERROR"
-            response["action_response"] = -1
+            response["action_response"] = "failed"
             response["action_msg"] = msg
             return response
 
@@ -315,14 +312,14 @@ def do_action(action_handle: str, action_vars):
 
             if response_flag:
                 state = "IDLE"
-                response["action_response"] = 0
+                response["action_response"] = "succeeded"
                 response["action_msg"] = response_msg
                 # if resource_config_path:
                 #   response.resources = str(resource_config_path)
 
             elif not response_flag:
                 state = "ERROR"
-                response["action_response"] = -1
+                response["action_response"] = "failed"
                 response["action_msg"] = response_msg
                 # if resource_config_path:
                 #   response.resources = str(resource_config_path)
@@ -334,14 +331,14 @@ def do_action(action_handle: str, action_vars):
             response[
                 "action_msg"
             ] = "Required 'config' was not specified in action_vars"
-            response["action_response"] = -1
+            response["action_response"] = "failed"
             print(response["action_msg"])
             state = "ERROR"
 
             return response
     else:
         msg = "UNKNOWN ACTION REQUEST! Available actions: run_protocol"
-        response["action_response"] = -1
+        response["action_response"] = "failed"
         response["action_msg"] = msg
         print("Error: " + msg)
         state = "IDLE"
