@@ -153,15 +153,17 @@ def execute(protocol_path, payload=None, resource_config=None):
         protocol_id, run_id = ot2.transfer(protocol_file_path)
         print("OT2 " + node_name + " protocol transfer successful")
         resp = ot2.execute(run_id)
-        print("OT2 " + node_name + " executed a protocol")
 
         if resp["data"]["status"] == "succeeded":
             # poll_OT2_until_run_completion()
+            print("OT2 " + node_name + " succeeded in executing a protocol")
             response_msg = "OT2 " + node_name + " successfully IDLE running a protocol"
             return True, response_msg
 
         else:
-            response_msg = "OT2 " + node_name + " failed running a protocol"
+            print("OT2 " + node_name + " failed in executing a protocol")
+            print(resp["data"])
+            response_msg = "OT2 " + node_name + " failed running a protocol\n" + str(resp["data"])
             return False, response_msg
     except Exception as err:
         if "no route to host" in str(err.args).lower():

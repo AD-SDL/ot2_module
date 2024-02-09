@@ -145,6 +145,9 @@ class OT2_Driver:
         transfer_resp = requests.post(
             url=transfer_url, files=files, headers=self.headers
         )
+        print(transfer_resp.status_code)
+        print(transfer_resp.text)
+        print(transfer_resp.reason)
         protocol_id = transfer_resp.json()["data"]["id"]
 
         # create the run
