@@ -20,6 +20,16 @@ from urllib3.exceptions import ConnectTimeoutError
 
 from ot2_driver.ot2_driver_http import OT2_Config, OT2_Driver
 
+from wei.core.data_classes import (
+    ModuleAbout,
+    ModuleAction,
+    ModuleActionArg,
+    ModuleStatus,
+    StepResponse,
+    StepStatus,
+)
+from wei.helpers import extract_version
+
 workcell = None
 global state
 serial_port = "/dev/ttyUSB0"
@@ -62,10 +72,10 @@ def connect_robot():
     try:
         print(ip)
         ot2 = OT2_Driver(OT2_Config(ip=ip))
-        state = "IDLE"
+        state = ModuleStatus.IDLE
 
     except ConnectTimeoutError as connection_err:
-        state = "ERROR"
+        state = ModuleStatus.ERROR
         print("Connection error code: " + connection_err)
 
     except HTTPError as http_error:
@@ -78,7 +88,7 @@ def connect_robot():
         print("Connection error code: " + str(conn_err))
 
     except Exception as error_msg:
-        state = "ERROR"
+        state = ModuleStatus.ERROR
         print("-------" + str(error_msg) + " -------")
 
     else:
@@ -182,15 +192,15 @@ def poll_OT2_until_run_completion():
     """Queries the OT2 run state until reported as 'succeeded'"""
     global run_id, state
     print("Polling OT2 run until completion")
-    while state != "IDLE":
+    while state != ModuleStatus.IDLE:
         run_status = ot2.get_run(run_id)
 
         if run_status["data"]["status"] and run_status["data"]["status"] == "succeeded":
-            state = "IDLE"
+            state = ModuleStatus.IDLE
             print("Stopping Poll")
 
         elif run_status["data"]["status"] and run_status["data"]["status"] == "running":
-            state = "BUSY"
+            state = ModuleStatus.BUSY
 
 
 @asynccontextmanager
@@ -234,10 +244,45 @@ def get_state():
     return JSONResponse(content={"State": state})
 
 
-@app.get("/description")
-async def description():
-    global state
-    return JSONResponse(content={"State": state})
+@app.get("/about")
+async def about() -> ModuleAbout:
+    global node_name
+    return ModuleAbout(
+        name="alias",
+        model="Opentrons OT2",
+        description="Opentrons OT2 Liquidhandling robot",
+        interface="wei_rest_node",
+        version=extract_version(Path(__file__).parent.parent / "pyproject.toml"),
+        actions=[
+            ModuleAction(
+                name="run_protocol",
+                description="Runs an Opentrons a protocol (either python or YAML) on the connected OT2.",
+                args=[
+                    ModuleActionArg(
+                        name="config_path",
+                        description="Path to a protocol file to be run (either python or YAML)",
+                        type="[str, Path]",
+                        required=True,
+                    ),
+                    ModuleActionArg(
+                        name="resource_path",
+                        description="Not currently implemented.",
+                        type="[str, Path]",
+                        required=False,
+                        default=None,
+                    ),
+                    ModuleActionArg(
+                        name="use_existing_resources",
+                        description="Whether or not to use the existing resources file (essentially, whether we've restocked or not).",
+                        type="bool",
+                        required=False,
+                        default=False,
+                    ),
+                ],
+            ),
+        ],
+        resource_pools=[],
+    )
 
 
 @app.get("/resources")
@@ -253,23 +298,23 @@ async def resources():
 @app.post("/action")
 def do_action(action_handle: str, action_vars):
     global ot2, state
-    response = {"action_response": "", "action_msg": "", "action_log": ""}
-    if state == "ERROR":
+    response = StepResponse()
+    if state == ModuleStatus.ERROR:
         # Try to reconnect
         check_resources_folder()
         check_protocols_folder()
         connect_robot()
-        if state == "ERROR":
+        if state == ModuleStatus.ERROR:
             msg = "Can not accept the job! OT2 CONNECTION ERROR"
-            response["action_response"] = "failed"
-            response["action_msg"] = msg
+            response.action_response = StepStatus.FAILED
+            response.action_msg = msg
             return response
 
-    while state != "IDLE":
+    while state != ModuleStatus.IDLE:
         #   get_logger().warn("Waiting for OT2 to switch IDLE state...")
         time.sleep(0.5)
 
-    state = "BUSY"
+    state = ModuleStatus.BUSY
     action_command = action_handle
     action_vars = json.loads(action_vars)
     print(f"{action_vars=}")
@@ -313,16 +358,16 @@ def do_action(action_handle: str, action_vars):
             )
 
             if response_flag:
-                state = "IDLE"
-                response["action_response"] = "succeeded"
-                response["action_msg"] = response_msg
+                state = ModuleStatus.IDLE
+                response.action_response = StepStatus.SUCCEEDED
+                response.action_msg = response_msg
                 # if resource_config_path:
                 #   response.resources = str(resource_config_path)
 
             elif not response_flag:
-                state = "ERROR"
-                response["action_response"] = "failed"
-                response["action_msg"] = response_msg
+                state = ModuleStatus.ERROR
+                response.action_response = StepStatus.FAILED
+                response.action_msg = response_msg
                 # if resource_config_path:
                 #   response.resources = str(resource_config_path)
 
@@ -333,17 +378,17 @@ def do_action(action_handle: str, action_vars):
             response[
                 "action_msg"
             ] = "Required 'config' was not specified in action_vars"
-            response["action_response"] = "failed"
-            print(response["action_msg"])
-            state = "ERROR"
+            response.action_response = StepStatus.FAILED
+            print(response.action_msg)
+            state = ModuleStatus.ERROR
 
             return response
     else:
         msg = "UNKNOWN ACTION REQUEST! Available actions: run_protocol"
-        response["action_response"] = "failed"
-        response["action_msg"] = msg
+        response.action_response = StepStatus.FAILED
+        response.action_msg = msg
         print("Error: " + msg)
-        state = "IDLE"
+        state = ModuleStatus.IDLE
 
         return response
 
@@ -352,15 +397,15 @@ if __name__ == "__main__":
     import uvicorn
 
     parser = ArgumentParser()
-    parser.add_argument("--alias", type=str, help="Name of the Node")
-    parser.add_argument("--host", type=str, help="Host for rest")
+    parser.add_argument("--alias", type=str, help="Name of the Node", default="ot2")
+    parser.add_argument("--host", type=str, help="Host for rest", default="0.0.0.0")
     parser.add_argument("--ot2_ip", type=str, help="ip value")
-    parser.add_argument("--port", type=int, help="port value")
+    parser.add_argument("--port", type=int, help="port value", default=2005)
     args = parser.parse_args()
     node_name = args.alias
     ip = args.ot2_ip
     uvicorn.run(
-        "ot2_rest_client:app",
+        "ot2_rest_node:app",
         host=args.host,
         port=args.port,
         reload=False,
