@@ -377,7 +377,7 @@ class ProtoPiler:
         self,
         config_path: Optional[PathLike] = None,
         payload: Optional[Dict] = None,
-        protocol_out: PathLike = Path(
+        protocol_out_path: PathLike = Path(
             f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
         ),
         resource_file: Optional[PathLike] = None,
@@ -411,6 +411,7 @@ class ProtoPiler:
             returns the path to the protocol.py file as well as the resource file (if it does not exist, None)
         """
 
+        self.protocol_out_path = str(protocol_out_path)
         if not self.config:
             self.load_config(config_path)
 
@@ -424,7 +425,7 @@ class ProtoPiler:
         else:
             protocol_out = Path(
                 self.protocol_out_path
-                + f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
+                + f"/protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
             )
 
         protocol = []
@@ -613,7 +614,6 @@ class ProtoPiler:
                                 f"No pipette available for {block_name} with volume: {volume}"
                             )
                         # check for tip
-                        print(pipette_mount)
                         if not tip_loaded[pipette_mount]:
                             load_command = pick_tip_template.replace(
                                 "#pipette#", f'pipettes["{pipette_mount}"]'
@@ -1493,11 +1493,13 @@ def main(args):  # noqa: D103
 
     protopiler.yaml_to_protocol(
         config_path=args.config,
-        protocol_out=args.protocol_out,
+        protocol_out_path=args.protocol_out,
         resource_file=args.resource_in,
         resource_file_out=args.resource_out,
         reset_when_done=True,
     )
+
+
 
 
 if __name__ == "__main__":

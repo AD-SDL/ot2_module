@@ -7,3 +7,4 @@ cryptography==36.0.2
 requests
 pandas
 fastapi==0.103.2
+openpyxl==3.1.2
