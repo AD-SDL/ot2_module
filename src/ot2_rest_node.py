@@ -3,6 +3,7 @@
 import glob
 import json
 import os
+import tempfile
 import time
 import traceback
 from argparse import ArgumentParser
@@ -25,6 +26,7 @@ from wei.core.data_classes import (
     ModuleAction,
     ModuleActionArg,
     ModuleStatus,
+    StepFileResponse,
     StepResponse,
     StepStatus,
 )
@@ -168,13 +170,13 @@ def execute(protocol_path, payload=None, resource_config=None):
             # poll_OT2_until_run_completion()
             print("OT2 " + node_name + " succeeded in executing a protocol")
             response_msg = "OT2 " + node_name + " successfully IDLE running a protocol"
-            return True, response_msg
+            return True, response_msg, run_id
 
         else:
             print("OT2 " + node_name + " failed in executing a protocol")
             print(resp["data"])
             response_msg = "OT2 " + node_name + " failed running a protocol\n" + str(resp["data"])
-            return False, response_msg
+            return False, response_msg, run_id
     except Exception as err:
         if "no route to host" in str(err.args).lower():
             response_msg = "No route to host error. Ensure that this container \
@@ -185,7 +187,7 @@ def execute(protocol_path, payload=None, resource_config=None):
 
         response_msg = f"Error: {traceback.format_exc()}"
         print(response_msg)
-        return False, response_msg
+        return False, response_msg, run_id
 
 
 def poll_OT2_until_run_completion():
@@ -224,8 +226,10 @@ async def lifespan(app: FastAPI):
     node_name = args.alias
     ip = args.ot2_ip
     state = "UNKNOWN"
-    resources_folder_path = "/home/rpl/.ot2_temp/" + node_name + "/" + "resources/"
-    protocols_folder_path = "/home/rpl/.ot2_temp/" + node_name + "/" + "protocols/"
+    temp_dir = Path.home() / ".ot2_temp"
+    temp_dir.mkdir(exist_ok=True)
+    resources_folder_path = str(temp_dir / node_name / "resources/")
+    protocols_folder_path = str(temp_dir / node_name / "protocols/")
     check_resources_folder()
     check_protocols_folder()
     connect_robot()
@@ -248,7 +252,7 @@ def get_state():
 async def about() -> ModuleAbout:
     global node_name
     return ModuleAbout(
-        name="alias",
+        name=node_name,
         model="Opentrons OT2",
         description="Opentrons OT2 Liquidhandling robot",
         interface="wei_rest_node",
@@ -296,7 +300,7 @@ async def resources():
 
 
 @app.post("/action")
-def do_action(action_handle: str, action_vars):
+def do_action(action_handle: str, action_vars: str):
     global ot2, state
     response = StepResponse()
     if state == ModuleStatus.ERROR:
@@ -353,14 +357,24 @@ def do_action(action_handle: str, action_vars):
             print(f"ot2 {payload=}")
             print(f"config_file_path: {config_file_path}")
 
-            response_flag, response_msg = execute(
+            response_flag, response_msg, run_id = execute(
                 config_file_path, payload, resource_config_path
             )
 
             if response_flag:
+                response = StepFileResponse()
                 state = ModuleStatus.IDLE
                 response.action_response = StepStatus.SUCCEEDED
-                response.action_msg = response_msg
+                with tempfile.NamedTemporaryFile(
+                        prefix=f"{run_id}",
+                        suffix=".json",
+                        delete_on_close=False
+                    ) as f:
+                    json.dump(ot2.get_run(run_id), f, indent=2)
+                    response.path = f.name
+                    response.action_log = response_msg
+                    print("Finished Action: " + action_handle)
+                    return response
                 # if resource_config_path:
                 #   response.resources = str(resource_config_path)
 
