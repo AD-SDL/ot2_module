@@ -411,7 +411,6 @@ class ProtoPiler:
             returns the path to the protocol.py file as well as the resource file (if it does not exist, None)
         """
 
-        self.protocol_out_path = str(protocol_out_path)
         if not self.config:
             self.load_config(config_path)
 

@@ -76,7 +76,7 @@ class OT2_Config(BaseModel):
     ip: str
     port: int = 31950
     model: str = "OT2"
-    version: Optional[int]
+    version: Optional[int] = None
 
 
 def parse_ot2_args() -> Namespace:

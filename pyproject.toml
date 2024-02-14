@@ -1,7 +1,7 @@
 [project]
 name = "ot2_module"
-version = "1.0.0"
-description = "Driver for the Opentrons OT2 liquidhandling robot."
+version = "0.1.0"
+description = "Software for automatting an Opentrons OT2"
 authors = [
     {name = "Ryan D. Lewis", email="ryan.lewis@anl.gov"},
     {name = "Rafael Vescovi", email="ravescovi@anl.gov"},
@@ -9,18 +9,16 @@ authors = [
     {name = "Abe Stroka", email="astroka@anl.gov"},
     {name = "Kyle Hippe", email = "khippe@anl.gov"},
     {name = "Tobias Ginsburg", email = "tginsburg@anl.gov"},
+    {name = "Dozgulbas", email = "dozgulbas@anl.gov"},
 ]
 dependencies = [
-    "opentrons",
-    # "pydantic==1.8.2",
+    "ad_sdl.wei",
+    "pydantic",
     "pyyaml",
-    "Fabric",
-    "paramiko==2.8",
-    "cryptography==36.0.2",
+    "fastapi",
     "requests",
     "pandas",
-    # "fastapi==0.103.2",
-    "openpyxl==3.1.2",
+    "uvicorn",
 ]
 requires-python = ">=3.8.1"
 readme = "README.md"
@@ -40,9 +38,8 @@ docs = [
 # Build Info + Tools #
 ######################
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
-
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -181,7 +181,7 @@ class OT2_Driver:
         )
         if (
             execute_run_resp.status_code != 201
-        ):  # this is the good respcode for this endpoint
+        ):  # this is the good response code for this endpoint
             print(f"Could not run play action on {run_id}")
             print(execute_run_resp.json())
 
@@ -212,6 +212,7 @@ class OT2_Driver:
 
         if check_run_resp.status_code != 200:
             print(f"Cannot check run {run_id}")
+        print(check_run_resp.json())
         status = RunStatus(check_run_resp.json()["data"]["status"])
 
         return status
@@ -319,7 +320,7 @@ class OT2_Driver:
         Exception
             If there is no `method` keyword argument, This method does not specify the http request method, user must provide as keyword argument
         """
-        # sanitize preceeding '/'
+        # sanitize preceding '/'
         request_extension = (
             request_extension if "/" != request_extension[0] else request_extension[1:]
         )
