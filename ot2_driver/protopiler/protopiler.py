@@ -433,7 +433,7 @@ class ProtoPiler:
         header = open((self.template_dir / "header.template")).read()
         if self.metadata is not None:
             header = header.replace(
-                "#metadata#", f"metadata = {self.metadata.json(indent=4)}"
+                "#metadata#", f"metadata = {self.metadata.model_dump_json(indent=4)}"
             )
         else:
             header = header.replace("#metadata#", "")

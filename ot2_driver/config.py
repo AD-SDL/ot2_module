@@ -17,42 +17,15 @@ class BaseModel(_BaseModel):
     Can load a yaml into a class and write a class into a yaml file.
     """
 
-    def dict(self, **kwargs):
-        """Return the dictionary without the hidden fields
-        Returns
-        -------
-        dict
-            Dict representation of the object
-        """
-        hidden_fields = set(
-            attribute_name
-            for attribute_name, model_field in self.__fields__.items()
-            if model_field.field_info.extra.get("hidden") is True
-        )
-        kwargs.setdefault("exclude", hidden_fields)
-        return super().dict(**kwargs)
-
-    def json(self, **kwargs) -> str:
-        """Returns the json representation of the object without the hidden fields
-        Returns
-        -------
-        str
-            returns the JSON string of the object
-        """
-        hidden_fields = set(
-            attribute_name
-            for attribute_name, model_field in self.__fields__.items()
-            if model_field.field_info.extra.get("hidden") is True
-        )
-        kwargs.setdefault("exclude", hidden_fields)
-        return super().json(**kwargs)
-
     def write_yaml(self, cfg_path: PathLike) -> None:
         """Allows programmatic creation of ot2util objects and saving them into yaml.
         Parameters
         ----------
         cfg_path : PathLike
             Path to dump the yaml file.
+        Returns
+        -------
+        None
         """
         with open(cfg_path, mode="w") as fp:
             yaml.dump(json.loads(self.json()), fp, indent=4, sort_keys=False)
@@ -67,7 +40,7 @@ class BaseModel(_BaseModel):
         """
         with open(filename) as fp:
             raw_data = yaml.safe_load(fp)
-        return cls(**raw_data)  # type: ignore[call-arg]
+        return cls(**raw_data)
 
 
 class OT2_Config(BaseModel):
