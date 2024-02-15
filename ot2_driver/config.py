@@ -5,14 +5,14 @@ from pathlib import Path
 from typing import Optional, Type, TypeVar, Union
 
 import yaml
-from pydantic import BaseModel as _BaseModel
+from pydantic import BaseModel as _BaseModel, Extra
 
 _T = TypeVar("_T")
 
 PathLike = Union[str, Path]
 
 
-class BaseModel(_BaseModel):
+class BaseModel(_BaseModel, extra=Extra.allow):
     """Allows any sub-class to inherit methods allowing for programmatic description of protocols
     Can load a yaml into a class and write a class into a yaml file.
     """

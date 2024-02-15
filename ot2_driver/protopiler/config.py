@@ -1,4 +1,5 @@
 """Dataclasses and other configuration used in the protopiler"""
+from enum import Enum
 import json
 from pathlib import Path
 from typing import List, Optional, Type, TypeVar, Union
@@ -45,10 +46,13 @@ class Pipette(BaseModel):
     mount: str
     """Mount location, either left or right"""
 
+# class Commands(str, Enum):
+
 
 class CommandBase(BaseModel):
     name: Optional[str] = None
     """Name of the command, optional"""
+    # command: Commands
 
 
 class Transfer(CommandBase):

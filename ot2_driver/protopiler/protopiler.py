@@ -578,6 +578,10 @@ class ProtoPiler:
             commands.append(f"\n    # {block_name}")
             # TODO: Inject the payload here
             # Inject the payload
+            if command_block.name == "Add Color A":
+                print(command_block.model_dump())
+                print(isinstance(Transfer(**command_block.model_dump()), Transfer))
+                print(isinstance(command_block, Transfer))
             if isinstance(payload, dict):
                 (arg_keys, arg_values) = zip(*command_block.__dict__.items())
                 for key, value in payload.items():
@@ -601,6 +605,7 @@ class ProtoPiler:
                     drop_tip,
                     return_tip,
                 ) in self._process_instruction(command_block):
+                    print("TRANSFER")
                     if volume <= 0:
                         pass
                     else:
@@ -608,6 +613,7 @@ class ProtoPiler:
                         pipette_mount = self.resource_manager.determine_pipette(
                             volume, False
                         )
+                        print(pipette_mount)
                         if pipette_mount is None:
                             raise Exception(
                                 f"No pipette available for {block_name} with volume: {volume}"
@@ -741,7 +747,7 @@ class ProtoPiler:
                             tip_loaded[pipette_mount] = False
 
                         commands.append("")
-            if isinstance(command_block, Multi_Transfer):
+            elif isinstance(command_block, Multi_Transfer):
                 for (
                     volume,
                     src,
@@ -753,6 +759,7 @@ class ProtoPiler:
                     blow_out,
                     drop_tip,
                 ) in self._process_multi_instruction(command_block):
+                    print("MULTI_TRANSFER")
                     if volume <= 0:
                         pass
                     else:
@@ -760,6 +767,7 @@ class ProtoPiler:
                         pipette_mount = self.resource_manager.determine_pipette(
                             volume, True
                         )
+                        print(pipette_mount)
                         if pipette_mount is None:
                             raise Exception(
                                 f"No pipette available for {block_name} with volume: {volume}"
@@ -910,7 +918,7 @@ class ProtoPiler:
                             tip_loaded[pipette_mount] = False
 
                         commands.append("")
-            if isinstance(command_block, Temperature_Set):
+            elif isinstance(command_block, Temperature_Set):
                 if type(command_block.change_temp) is not int:
                     raise Exception("temperature for module must be an integer")
 
@@ -919,7 +927,7 @@ class ProtoPiler:
                 )
                 commands.append(temp_change_command)
 
-            if isinstance(command_block, Mix):
+            elif isinstance(command_block, Mix):
                 if (
                     type(command_block.location) is str
                     and type(command_block.reps) is int
@@ -999,13 +1007,13 @@ class ProtoPiler:
                         )
                         commands.append(mix_command)
 
-            if isinstance(command_block, Deactivate):
+            elif isinstance(command_block, Deactivate):
                 if type(command_block.deactivate) is not bool:
                     raise Exception("deactivate command must be bool")
                 deactivate_command = deactivate_template.replace("#turn_off#", "")
                 commands.append(deactivate_command)
 
-            if isinstance(command_block, Replace_Tip):
+            elif isinstance(command_block, Replace_Tip):
                 if type(command_block.replace_tip) is not bool:
                     raise Exception("replace_tip must be bool")
                 replace_tip_command = return_tip_template.replace(
@@ -1014,7 +1022,7 @@ class ProtoPiler:
                 commands.append(replace_tip_command)
                 tip_loaded[pipette_mount] = False
 
-            if isinstance(command_block, Clear_Pipette):
+            elif isinstance(command_block, Clear_Pipette):
                 if type(command_block.clear) is not bool:
                     raise Exception("clear command must be True or False")
 
@@ -1024,7 +1032,7 @@ class ProtoPiler:
                 commands.append(clear_command)
                 tip_loaded[pipette_mount] = False
 
-            if isinstance(command_block, Move_Pipette):
+            elif isinstance(command_block, Move_Pipette):
                 if type(command_block.move_to) is not int:
                     raise Exception("Given deck position must be an int")
                 if command_block.move_to > 12 or command_block.move_to < 1:
@@ -1038,6 +1046,10 @@ class ProtoPiler:
                     "#location#", str(command_block.move_to)
                 )
                 commands.append(move_command)
+            else:
+                raise Exception(
+                    f"Command {command_block} not recognized, check that the command is formatted correctly"
+                )
 
         for mount, status in tip_loaded.items():
             if status:
