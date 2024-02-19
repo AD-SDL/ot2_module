@@ -3,33 +3,24 @@
 
 .. automodule:: ot2_driver.protopiler.resource_manager
 
-   
-   
-   
 
-   
-   
+
+
+
+
+
    .. rubric:: Functions
 
    .. autosummary::
-   
-      main
-   
-   
 
-   
-   
+      main
+
+
+
+
+
    .. rubric:: Classes
 
    .. autosummary::
-   
+
       ResourceManager
-   
-   
-
-   
-   
-   
-
-
-

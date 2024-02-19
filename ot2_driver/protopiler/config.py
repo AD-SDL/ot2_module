@@ -1,10 +1,9 @@
 """Dataclasses and other configuration used in the protopiler"""
-from enum import Enum
-import json
 from pathlib import Path
-from typing import List, Optional, Type, TypeVar, Union
+from typing import List, Literal, Optional, TypeVar, Union
 
-import yaml
+from pydantic import ValidationError, field_validator, model_validator
+
 from ..config import BaseModel
 
 _T = TypeVar("_T")
@@ -46,16 +45,19 @@ class Pipette(BaseModel):
     mount: str
     """Mount location, either left or right"""
 
-# class Commands(str, Enum):
-
 
 class CommandBase(BaseModel):
+    """Base class for all commands"""
+
     name: Optional[str] = None
     """Name of the command, optional"""
-    # command: Commands
 
 
 class Transfer(CommandBase):
+    """The transfer command, used to move liquids from one place to another"""
+
+    command: Literal["transfer"]
+    """The command to execute, should be transfer for this class"""
     source: Union[List[str], str]
     """Source of the command, this should refer to a wellplate and well(s)"""
     aspirate_clearance: Optional[Union[List[float], float]] = 1
@@ -77,8 +79,51 @@ class Transfer(CommandBase):
     return_tip: Union[bool, List[bool]] = False
     """puts tip back into tip box"""
 
+    @field_validator("*")
+    @classmethod
+    def simplify_single_element_lists(cls, v: _T) -> _T:
+        """Ensure that list fields are either single values or multi-element lists"""
+        if isinstance(v, list):
+            if len(v) == 1:
+                return v[0]
+        return v
+
+    @model_validator(mode="after")
+    def check_list_lengths_match(self) -> "Transfer":
+        """Make sure that all list fields are the same length, if they are lists"""
+        iter_len = 0
+        listable_fields = [
+            "volume",
+            "source",
+            "destination",
+            "mix_cycles",
+            "mix_volume",
+            "aspirate_clearance",
+            "dispense_clearance",
+            "blow_out",
+            "drop_tip",
+            "return_tip",
+        ]
+        for field in listable_fields:
+            if isinstance(getattr(self, field), list):
+                if iter_len == 0:
+                    iter_len = len(getattr(self, field))
+                elif len(getattr(self, field)) != iter_len:
+                    raise ValidationError(
+                        "Multiple iterables of different lengths found, cannot determine dimension to iterate over"
+                    )
+        if iter_len > 0:
+            for field in listable_fields:
+                if not isinstance(getattr(self, field), list):
+                    setattr(self, field, [getattr(self, field)] * iter_len)
+        return self
+
 
 class Multi_Transfer(CommandBase):
+    """The multi_transfer command, used to move liquids from one place to another in a matrix format"""
+
+    command: Literal["multi_transfer"]
+    """The command to execute, should be multi_transfer for this class"""
     multi_source: Union[str, List[List[str]]]
     """List of sources to be aspirated, each list within matrix presumed to be in single column"""
     multi_aspirate_clearance: Optional[Union[List[float], float]] = 1
@@ -98,8 +143,49 @@ class Multi_Transfer(CommandBase):
     multi_drop_tip: Union[bool, List[bool]] = True
     """Drop the tip once a transfer is done"""
 
+    @field_validator("*")
+    @classmethod
+    def simplify_single_element_lists(cls, v: _T) -> _T:
+        """Ensure that list fields are either single values or multi-element lists"""
+        if isinstance(v, list):
+            if len(v) == 1:
+                return v[0]
+        return v
+
+    @model_validator(mode="after")
+    def check_list_lengths_match(self) -> "Transfer":
+        """Make sure that all list fields are the same length, if they are lists"""
+        iter_len = 0
+        listable_fields = [
+            "multi_volume",
+            "multi_source",
+            "multi_destination",
+            "multi_mix_cycles",
+            "multi_mix_volume",
+            "multi_aspirate_clearance",
+            "multi_dispense_clearance",
+            "multi_blow_out",
+            "multi_drop_tip",
+        ]
+        for field in listable_fields:
+            if isinstance(getattr(self, field), list):
+                if iter_len == 0:
+                    iter_len = len(getattr(self, field))
+                elif len(getattr(self, field)) != iter_len:
+                    raise ValidationError(
+                        "Multiple iterables of different lengths found, cannot determine dimension to iterate over"
+                    )
+        if iter_len > 0:
+            for field in listable_fields:
+                if not isinstance(getattr(self, field), list):
+                    setattr(self, field, [getattr(self, field)] * iter_len)
+        return self
 
 class Mix(CommandBase):
+    """The mix command, used to mix liquids in a wellplate"""
+
+    command: Literal["mix"]
+    """The command to execute, should be mix for this class"""
     reps: Union[int, List[int]]
     """how many mix cycles"""
     mix_volume: Union[float, List[float]]
@@ -109,26 +195,45 @@ class Mix(CommandBase):
 
 
 class Deactivate(CommandBase):
+    """The deactivate command, used to deactivate a module"""
+
+    command: Literal["deactivate"]
+    """The command to execute, should be deactivate for this class"""
     deactivate: bool
     """Deactivates current module"""
 
 
 class Temperature_Set(CommandBase):
+    """The temperature_set command, used to set the temperature of a temperature module"""
+
+    command: Literal["temperature_set", "set_temperature"]
+    """The command to execute, should be temperature_set or set_temperature for this class"""
     change_temp: int
     """Temperature to set temperature module to"""
 
 
 class Replace_Tip(CommandBase):
+    """The replace_tip command, used to replace a tip(s) into the tip rack"""
+
+    command: Literal["replace_tip"]
+    """The command to execute, should be replace_tip for this class"""
     replace_tip: bool
     """Place tip back into tip rack"""
 
 
+
 class Clear_Pipette(CommandBase):
-    clear: bool
-    """Blowout and remove any tip on pipette over trash"""
+    """The clear_pipette command, used to clear the pipette(s) of any liquid and dispose of the tips in the trash"""
+
+    command: Literal["clear_pipette"]
+    """The command to execute, should be clear_pipette for this class"""
 
 
 class Move_Pipette(CommandBase):
+    """The move_pipette command, used to move the pipette to a specific deck position"""
+
+    command: Literal["move_pipette"]
+    """The command to execute, should be move_pipette for this class"""
     move_to: int
     """Moves pipette to given deck position"""
 
@@ -164,7 +269,6 @@ class ProtocolConfig(BaseModel):
             Replace_Tip,
             Clear_Pipette,
             Move_Pipette,
-            CommandBase,
         ]
     ]
     """Commands to execute during run"""

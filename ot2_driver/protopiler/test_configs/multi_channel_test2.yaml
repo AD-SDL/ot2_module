@@ -15,6 +15,7 @@ equipment:
     mount: right
 commands:
   - name: multi
+    command: multi_transfer
     multi_source: 4:[[A1, A2, A3, A4, A5], [B1, B2, B3, B4, B5], [C1, C2, C3, C4, C5]]
     # multi_source: 4:[[A1, A2, A3]]
     multi_aspirate_clearance: 1
@@ -24,6 +25,7 @@ commands:
     multi_volume: 20
 
   - name: multi2
+    command: multi_transfer
     multi_source: 4:[[A1, A2, A3], [B1, B2, B3], [C1, C2, C3], [C1, C2, C3]]
     multi_aspirate_clearance: 1
     multi_destination: 2:[[A1, A2, A3], [B1, B2, B3], [C1, C2, C3], [C1, C2, C3]]
@@ -31,13 +33,14 @@ commands:
     multi_volume: 20
 
   - name: single
+    command: transfer
     source: 4:[A1]
     aspirate_clearance: 1
     destination: 2:[A1]
     dispense_clearance: 1
     volume: 50
 
-  
+
 
 metadata:
   protocolName: multi channel test

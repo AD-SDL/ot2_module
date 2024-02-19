@@ -12,13 +12,13 @@ authors = [
     {name = "Dozgulbas", email = "dozgulbas@anl.gov"},
 ]
 dependencies = [
-    "ad_sdl.wei",
-    "pydantic",
-    "pyyaml",
-    "fastapi",
-    "requests",
-    "pandas",
-    "uvicorn",
+    "ad_sdl.wei>=0.5.3",
+    "pydantic>=2.4",
+    "pyyaml>=6.0.1",
+    "fastapi>=0.103.2",
+    "requests>=2.31.0",
+    "pandas>=2.2.0",
+    "uvicorn>=0.21.1",
 ]
 requires-python = ">=3.8.1"
 readme = "README.md"
@@ -45,6 +45,9 @@ build-backend = "setuptools.build_meta"
 where = ["."]
 include = ["src*", "ot2_driver*"]
 exclude = ["*tests*", "scripts*"]
+
+[tool.setuptools.package-data]
+ot2_module = ["*.template"]
 
 #####################
 # Development Tools #

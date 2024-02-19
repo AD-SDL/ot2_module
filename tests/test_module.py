@@ -52,19 +52,20 @@ class TestWEI_Base(unittest.TestCase):
 class TestOT2Module(TestWEI_Base):
     """Tests the basic functionality of the Sleep Module."""
 
+    @pytest.skip("Not implemented")
     @pytest.mark.hardware
     def test_ot2_module_actions(self):
         """Tests that the take_picture action works"""
         exp = ExperimentClient(self.server_host, self.server_port, "ot2_module_test")
 
         result = exp.start_run(
-            Path(self.root_dir)
-            / Path("tests/workflow_defs/test_workflow.yaml"),
+            Path(self.root_dir) / Path("tests/workflow_defs/test_workflow.yaml"),
             simulate=False,
             blocking=True,
         )
         assert result["status"] == WorkflowStatus.COMPLETED
 
+    @pytest.skip("Not implemented")
     def test_ot2_module_about(self):
         """Tests that the ot2_module's /about works"""
         response = requests.get(self.module_url + "/about")

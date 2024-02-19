@@ -11,6 +11,7 @@ equipment:
     mount: left
 commands:
   - name: example command
+    command: transfer
     source: [A1, A2, A3]
     destination: B1
     volume: 100

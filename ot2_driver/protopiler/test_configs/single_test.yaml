@@ -11,6 +11,7 @@ equipment:
     mount: left
 commands:
   - name:  Step one
+    command: transfer
     source: 4:[A1, A2, A3, A4, A5, A6, A7, A8]
     aspirate_clearance: 1
     destination: 2:[A1, A2, A3, A4, A5, A6, A7, A8]

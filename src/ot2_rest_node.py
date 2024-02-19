@@ -18,9 +18,6 @@ import yaml
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from urllib3.exceptions import ConnectTimeoutError
-
-from ot2_driver.ot2_driver_http import OT2_Config, OT2_Driver
-
 from wei.core.data_classes import (
     ModuleAbout,
     ModuleAction,
@@ -31,6 +28,8 @@ from wei.core.data_classes import (
     StepStatus,
 )
 from wei.helpers import extract_version
+
+from ot2_driver.ot2_driver_http import OT2_Config, OT2_Driver
 
 workcell = None
 global state
@@ -153,7 +152,10 @@ def execute(protocol_path, payload=None, resource_config=None):
 
     global run_id, node_name, protocols_folder_path, resources_folder_path
     try:
-        (protocol_file_path, resource_file_path,) = ot2.compile_protocol(
+        (
+            protocol_file_path,
+            resource_file_path,
+        ) = ot2.compile_protocol(
             protocol_path,
             payload=payload,
             resource_file=resource_config,
@@ -175,7 +177,9 @@ def execute(protocol_path, payload=None, resource_config=None):
         else:
             print("OT2 " + node_name + " failed in executing a protocol")
             print(resp["data"])
-            response_msg = "OT2 " + node_name + " failed running a protocol\n" + str(resp["data"])
+            response_msg = (
+                "OT2 " + node_name + " failed running a protocol\n" + str(resp["data"])
+            )
             return False, response_msg, run_id
     except Exception as err:
         if "no route to host" in str(err.args).lower():
@@ -260,7 +264,7 @@ async def about() -> ModuleAbout:
         actions=[
             ModuleAction(
                 name="run_protocol",
-                description="Runs an Opentrons a protocol (either python or YAML) on the connected OT2.",
+                description="Runs an Opentrons protocol (either python or YAML) on the connected OT2.",
                 args=[
                     ModuleActionArg(
                         name="config_path",
@@ -366,10 +370,8 @@ def do_action(action_handle: str, action_vars: str):
                 state = ModuleStatus.IDLE
                 response.action_response = StepStatus.SUCCEEDED
                 with tempfile.NamedTemporaryFile(
-                        prefix=f"{run_id}",
-                        suffix=".json",
-                        delete_on_close=False
-                    ) as f:
+                    prefix=f"{run_id}", suffix=".json", delete_on_close=False
+                ) as f:
                     json.dump(ot2.get_run(run_id), f, indent=2)
                     response.path = f.name
                     response.action_log = response_msg

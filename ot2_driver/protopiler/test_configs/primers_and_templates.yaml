@@ -10,7 +10,7 @@ equipment:
   - name: nest_96_wellplate_2ml_deep
     location: "2"
     alias: backward
-  - name: nest_96_wellplate_100ul_pcr_full_skirt 
+  - name: nest_96_wellplate_100ul_pcr_full_skirt
     location: "3"
     alias: template
     module: Temperature Module
@@ -38,12 +38,14 @@ equipment:
 
 commands:
   - name: master mix
+    command: transfer
     source: 5:C2
     aspirate_clearance: 1
     destination: dest:Destination
     dispense_clearance: 1
     volume: 30
   - name: forward primer
+    command: transfer
     source: forward:Forward Primer
     aspirate_clearance: 2
     destination: dest:Destination
@@ -52,6 +54,7 @@ commands:
     mix_cycles: 3
     mix_volume: 10
   - name: backward primer
+    command: transfer
     source: backward:Backward Primer
     aspirate_clearance: 2
     destination: dest:Destination
@@ -60,6 +63,7 @@ commands:
     mix_cycles: 3
     mix_volume: 10
   - name: template
+    command: transfer
     source: template:DNA
     aspirate_clearance: 2
     destination: dest:Destination

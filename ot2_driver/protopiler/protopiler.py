@@ -4,7 +4,7 @@ import copy
 from datetime import datetime
 from itertools import repeat
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Generator, List, Optional, Tuple, Union
 
 import pandas as pd
 
@@ -578,10 +578,6 @@ class ProtoPiler:
             commands.append(f"\n    # {block_name}")
             # TODO: Inject the payload here
             # Inject the payload
-            if command_block.name == "Add Color A":
-                print(command_block.model_dump())
-                print(isinstance(Transfer(**command_block.model_dump()), Transfer))
-                print(isinstance(command_block, Transfer))
             if isinstance(payload, dict):
                 (arg_keys, arg_values) = zip(*command_block.__dict__.items())
                 for key, value in payload.items():
@@ -605,7 +601,6 @@ class ProtoPiler:
                     drop_tip,
                     return_tip,
                 ) in self._process_instruction(command_block):
-                    print("TRANSFER")
                     if volume <= 0:
                         pass
                     else:
@@ -759,7 +754,6 @@ class ProtoPiler:
                     blow_out,
                     drop_tip,
                 ) in self._process_multi_instruction(command_block):
-                    print("MULTI_TRANSFER")
                     if volume <= 0:
                         pass
                     else:
@@ -919,9 +913,6 @@ class ProtoPiler:
 
                         commands.append("")
             elif isinstance(command_block, Temperature_Set):
-                if type(command_block.change_temp) is not int:
-                    raise Exception("temperature for module must be an integer")
-
                 temp_change_command = temp_change_template.replace(
                     "#temp#", str(command_block.change_temp)
                 )
@@ -929,9 +920,9 @@ class ProtoPiler:
 
             elif isinstance(command_block, Mix):
                 if (
-                    type(command_block.location) is str
-                    and type(command_block.reps) is int
-                    and type(command_block.mix_volume) is float
+                    isinstance(command_block.location, str)
+                    and isinstance(command_block.reps, int)
+                    and isinstance(command_block.mix_volume, float)
                 ):
                     mix_command = mix_template.replace(
                         "#reps#", str(command_block.reps)
@@ -1008,13 +999,13 @@ class ProtoPiler:
                         commands.append(mix_command)
 
             elif isinstance(command_block, Deactivate):
-                if type(command_block.deactivate) is not bool:
+                if not isinstance(command_block.deactivate, bool):
                     raise Exception("deactivate command must be bool")
                 deactivate_command = deactivate_template.replace("#turn_off#", "")
                 commands.append(deactivate_command)
 
             elif isinstance(command_block, Replace_Tip):
-                if type(command_block.replace_tip) is not bool:
+                if not isinstance(command_block.replace_tip, bool):
                     raise Exception("replace_tip must be bool")
                 replace_tip_command = return_tip_template.replace(
                     "#pipette#", f'pipettes["{pipette_mount}"]'
@@ -1023,7 +1014,7 @@ class ProtoPiler:
                 tip_loaded[pipette_mount] = False
 
             elif isinstance(command_block, Clear_Pipette):
-                if type(command_block.clear) is not bool:
+                if not isinstance(command_block.clear, bool):
                     raise Exception("clear command must be True or False")
 
                 clear_command = drop_tip_template.replace(
@@ -1033,7 +1024,7 @@ class ProtoPiler:
                 tip_loaded[pipette_mount] = False
 
             elif isinstance(command_block, Move_Pipette):
-                if type(command_block.move_to) is not int:
+                if not isinstance(command_block.move_to, int):
                     raise Exception("Given deck position must be an int")
                 if command_block.move_to > 12 or command_block.move_to < 1:
                     raise Exception("number must be a valid deck position 1-12")
@@ -1083,10 +1074,10 @@ class ProtoPiler:
         if ":" in command_location:
             try:
                 plate, _ = command_location.split(":")
-            except ValueError:
+            except ValueError as e:
                 raise Exception(
                     f"Command: {command_location} is not formatted correctly..."
-                )
+                ) from e
             # TODO: think of some better software design for accessing members of resource manager
             location = self.resource_manager.alias_to_location[plate]
         else:  # older format of passing location
@@ -1096,19 +1087,19 @@ class ProtoPiler:
                         print(
                             f"Location {location} is overwritten with {loc}, multiple wellplates present"
                         )
-                    if type(loc) is list and len(loc) > 1:
+                    if isinstance(loc, list) and len(loc) > 1:
                         print(
                             f"Ambiguous command '{command_location}', multiple plates satisfying params (locations: {loc}) found, choosing location: {loc[0]}..."
                         )
                         location = loc[0]
-                    elif type(loc) is list and len(loc) == 1:
+                    elif isinstance(loc, list) and len(loc) == 1:
                         location = loc[0]
-                    elif type(loc) is str:
+                    elif isinstance(loc, str):
                         location = loc
 
         return location
 
-    def _process_instruction(self, command_block: CommandBase) -> List[str]:
+    def _process_instruction(self, command_block: CommandBase) -> Generator[list, None, None]:
         """Processes a command block to translate into the protocol information.
 
         Supports unrolling over any dimension, syntactic sugar at best, but might come in handy someday
@@ -1129,377 +1120,76 @@ class ProtoPiler:
             If the command is not formatted correctly and there are different dimension iterables present, exception is raised.
             This function either supports one field being an iterable with length >1, or they all must be iterables with the same length.
         """
+        # Ensure that the command block is a properly validated Transfer
+        command_block = Transfer.model_validate(command_block)
         if (
-            type(command_block.volume) is float
-            and type(command_block.source) is str
-            and type(command_block.destination) is str
-            and type(command_block.mix_cycles) is int
-            and type(command_block.mix_volume) is int
-            and type(command_block.aspirate_clearance) is float
-            and type(command_block.dispense_clearance) is float
-            and type(command_block.blow_out) is bool
-            and type(command_block.drop_tip) is bool
-            and type(command_block.return_tip) is bool
+            isinstance(command_block.volume, float)
+            and isinstance(command_block.source, str)
+            and isinstance(command_block.destination, str)
+            and isinstance(command_block.mix_cycles, int)
+            and isinstance(command_block.mix_volume, int)
+            and isinstance(command_block.aspirate_clearance, (float, int))
+            and isinstance(command_block.dispense_clearance, (float, int))
+            and isinstance(command_block.blow_out, bool)
+            and isinstance(command_block.drop_tip, bool)
+            and isinstance(command_block.return_tip, bool)
         ):
-            yield command_block.volume, command_block.source, command_block.destination, command_block.mix_cycles, command_block.mix_volume, command_block.aspirate_clearance, command_block.dispense_clearance, command_block.blow_out, command_block.drop_tip, command_block.return_tip
+            yield (
+                command_block.volume,
+                command_block.source,
+                command_block.destination,
+                command_block.mix_cycles,
+                command_block.mix_volume,
+                command_block.aspirate_clearance,
+                command_block.dispense_clearance,
+                command_block.blow_out,
+                command_block.drop_tip,
+                command_block.return_tip,
+            )
         else:
             # could be one source (either list of volumes or one volume) to many destination
             # could be many sources (either list of volumes or one volume) to one destination
             # could be one source/destination, many volumes
 
-            # TODO: think about optimizatoins. e.g if you are dispensing from one well to multiple
+            # TODO: think about optimizations. e.g if you are dispensing from one well to multiple
             # destinations, we could pick up the sum of the volumes and drop into each well without
             # the whole dispense, drop tip, pick up tip, aspirate in the middle
 
-            # since we are here we know at least one of the things is a list
-            iter_len = 0
-            if isinstance(command_block.volume, list):
-                # handle if user forgot to change list of one value to scalar
-                if len(command_block.volume) == 1:
-                    command_block.volume = command_block.volume[0]
-                else:
-                    iter_len = len(command_block.volume)
-            if isinstance(command_block.source, list):
-                if iter_len != 0 and len(command_block.source) != iter_len:
-                    # handle if user forgot to change list of one value to scalar
-                    if len(command_block.source) == 1:
-                        command_block.source = command_block.source[0]
-                    else:
-                        raise Exception(
-                            "Multiple iterables found, cannot determine dimension to iterate over"
-                        )
-                iter_len = len(command_block.source)
-            if isinstance(command_block.destination, list):
-                if iter_len != 0 and len(command_block.destination) != iter_len:
-                    # handle if user forgot to change list of one value to scalar
-                    if len(command_block.destination) == 1:
-                        command_block.destination = command_block.destination[0]
-                    else:
-                        raise Exception(
-                            "Multiple iterables of different lengths found, cannot determine dimension to iterate over"
-                        )
-                iter_len = len(command_block.destination)
-
-            if isinstance(command_block.mix_cycles, list):
-                if iter_len != 0 and len(command_block.mix_cycles) != iter_len:
-                    # handle if user forgot to change list of one value to scalar
-                    if len(command_block.mix_cycles) == 1:
-                        command_block.mix_cycles = command_block.mix_cycles[0]
-                    else:
-                        raise Exception(
-                            "Multiple iterables of different lengths found, cannot determine dimension to iterate over"
-                        )
-                iter_len = len(command_block.mix_cycles)
-
-            if isinstance(command_block.mix_volume, list):
-                if iter_len != 0 and len(command_block.mix_volume) != iter_len:
-                    # handle if user forgot to change list of one value to scalar
-                    if len(command_block.mix_volume) == 1:
-                        command_block.mix_volume = command_block.mix_volume[0]
-                    else:
-                        raise Exception(
-                            "Multiple iterables of different lengths found, cannot determine dimension to iterate over"
-                        )
-                iter_len = len(command_block.mix_volume)
-
-            if isinstance(command_block.aspirate_clearance, list):
-                if iter_len != 0 and len(command_block.aspirate_clearance) != iter_len:
-                    # handle if user forgot to change list of one value to scalar
-                    if len(command_block.aspirate_clearance) == 1:
-                        command_block.aspirate_clearance = (
-                            command_block.aspirate_clearance[0]
-                        )
-                    else:
-                        raise Exception(
-                            "Multiple iterables of different lengths found, cannot determine dimension to iterate over"
-                        )
-
-            if isinstance(command_block.dispense_clearance, list):
-                if iter_len != 0 and len(command_block.dispense_clearance) != iter_len:
-                    # handle if user forgot to change list of one value to scalar
-                    if len(command_block.dispense_clearance) == 1:
-                        command_block.dispense_clearance = (
-                            command_block.dispense_clearance[0]
-                        )
-                    else:
-                        raise Exception(
-                            "Multiple iterables of different lengths found, cannot determine dimension to iterate over"
-                        )
-            if isinstance(command_block.blow_out, list):
-                if iter_len != 0 and len(command_block.blow_out) != iter_len:
-                    # handle if user forgot to change list of one value to scalar
-                    if len(command_block.blow_out) == 1:
-                        command_block.blow_out = command_block.blow_out[0]
-                    else:
-                        raise Exception(
-                            "Multiple iterables found, cannot determine dimension to iterate over"
-                        )
-                iter_len = len(command_block.blow_out)
-
-            if isinstance(command_block.drop_tip, list):
-                if iter_len != 0 and len(command_block.drop_tip) != iter_len:
-                    # handle if user forgot to change list of one value to scalar
-                    if len(command_block.drop_tip) == 1:
-                        command_block.drop_tip = command_block.drop_tip[0]
-                    else:
-                        raise Exception(
-                            "Multiple iterables found, cannot determine dimension to iterate over"
-                        )
-                iter_len = len(command_block.drop_tip)
-
-            if isinstance(command_block.return_tip, list):
-                if iter_len != 0 and len(command_block.return_tip) != iter_len:
-                    # handle if user forgot to change list of one value to scalar
-                    if len(command_block.return_tip) == 1:
-                        command_block.return_tip = command_block.return_tip[0]
-                    else:
-                        raise Exception(
-                            "Multiple iterables found, cannot determine dimension to iterate over"
-                        )
-                iter_len = len(command_block.return_tip)
-
-            if not isinstance(command_block.volume, list):
-                volumes = repeat(command_block.volume, iter_len)
-            else:
-                volumes = command_block.volume
-            if not isinstance(command_block.source, list):
-                sources = repeat(command_block.source, iter_len)
-            else:
-                sources = command_block.source
-            if not isinstance(command_block.destination, list):
-                destinations = repeat(command_block.destination, iter_len)
-            else:
-                destinations = command_block.destination
-            if not isinstance(command_block.mix_cycles, list):
-                mixing_cycles = repeat(command_block.mix_cycles, iter_len)
-            else:
-                mixing_cycles = command_block.mix_cycles
-            if not isinstance(command_block.mix_volume, list):
-                mixing_volume = repeat(command_block.mix_volume, iter_len)
-            else:
-                mixing_volume = command_block.mix_volume
-            if not isinstance(command_block.aspirate_clearance, list):
-                aspirate_clearance = repeat(command_block.aspirate_clearance, iter_len)
-            else:
-                aspirate_clearance = command_block.aspirate_clearance
-            if not isinstance(command_block.dispense_clearance, list):
-                dispense_clearance = repeat(command_block.dispense_clearance, iter_len)
-            else:
-                dispense_clearance = command_block.dispense_clearance
-            if not isinstance(command_block.blow_out, list):
-                blow_out = repeat(command_block.blow_out, iter_len)
-            else:
-                blow_out = command_block.blow_out
-            if not isinstance(command_block.drop_tip, list):
-                drop_tip = repeat(command_block.drop_tip, iter_len)
-            else:
-                drop_tip = command_block.drop_tip
-            if not isinstance(command_block.return_tip, list):
-                return_tip = repeat(command_block.return_tip, iter_len)
-            else:
-                return_tip = command_block.return_tip
-
-            for (
-                vol,
-                src,
-                dst,
-                mix_cycles,
-                mix_vol,
-                asp_height,
-                disp_height,
-                blowout,
-                d_tip,
-                r_tip,
-            ) in zip(
-                volumes,
-                sources,
-                destinations,
-                mixing_cycles,
-                mixing_volume,
-                aspirate_clearance,
-                dispense_clearance,
-                blow_out,
-                drop_tip,
-                return_tip,
+            for row in zip(
+                command_block.volume,
+                command_block.source,
+                command_block.destination,
+                command_block.mix_cycles,
+                command_block.mix_volume,
+                command_block.aspirate_clearance,
+                command_block.dispense_clearance,
+                command_block.blow_out,
+                command_block.drop_tip,
+                command_block.return_tip,
             ):
-                yield vol, src, dst, mix_cycles, mix_vol, asp_height, disp_height, blowout, d_tip, r_tip
+                yield row
 
-    def _process_multi_instruction(self, command_block: CommandBase) -> List[str]:
+    def _process_multi_instruction(self, command_block: CommandBase) -> Generator[list, None, None]:
         """mimics _process_instruction but for multi channel transfers"""
 
-        iter_len = 0
-        if isinstance(command_block.multi_volume, list):
-            # handle if user forgot to change list of one value to scalar
-            if len(command_block.multi_volume) == 1:
-                command_block.multi_volume = command_block.multi_volume[0]
-            else:
-                iter_len = len(command_block.multi_volume)
-        if isinstance(command_block.multi_source, list):
-            # organize into list[list[str]] format
-            if iter_len != 0 and len(command_block.multi_source) != iter_len:
-                # handle if user forgot to change list of one value to scalar
-                if len(command_block.multi_source) == 1:
-                    command_block.multi_source = command_block.multi_source[0]
-                else:
-                    raise Exception(
-                        "Multiple iterables found, cannot determine dimension to iterate over"
-                    )
-            # TODO: need smarter fix for resource importing eventually
-            iter_len = len(command_block.multi_source)
+        # Ensure that the command block is a properly validated Multi_Transfer
+        command_block = Multi_Transfer.model_validate(command_block)
 
-        if isinstance(command_block.multi_destination, list):
-            if iter_len != 0 and len(command_block.multi_destination) != iter_len:
-                # handle if user forgot to change list of one value to scalar
-                if len(command_block.multi_destination) == 1:
-                    command_block.multi_destination = command_block.multi_destination[0]
-                else:
-                    raise Exception(
-                        "Multiple iterables of different lengths found, cannot determine dimension to iterate over"
-                    )
-            iter_len = len(command_block.multi_destination)
-
-        if isinstance(command_block.multi_mix_cycles, list):
-            if iter_len != 0 and len(command_block.multi_mix_cycles) != iter_len:
-                # handle if user forgot to change list of one value to scalar
-                if len(command_block.multi_mix_cycles) == 1:
-                    command_block.multi_mix_cycles = command_block.multi_mix_cycles[0]
-                else:
-                    raise Exception(
-                        "Multiple iterables of different lengths found, cannot determine dimension to iterate over"
-                    )
-            iter_len = len(command_block.multi_mix_cycles)
-
-        if isinstance(command_block.multi_mix_volume, list):
-            if iter_len != 0 and len(command_block.multi_mix_volume) != iter_len:
-                # handle if user forgot to change list of one value to scalar
-                if len(command_block.multi_mix_volume) == 1:
-                    command_block.multi_mix_volume = command_block.multi_mix_volume[0]
-                else:
-                    raise Exception(
-                        "Multiple iterables of different lengths found, cannot determine dimension to iterate over"
-                    )
-            iter_len = len(command_block.multi_mix_volume)
-
-        if isinstance(command_block.multi_aspirate_clearance, list):
-            if (
-                iter_len != 0
-                and len(command_block.multi_aspirate_clearance) != iter_len
-            ):
-                # handle if user forgot to change list of one value to scalar
-                if len(command_block.multi_aspirate_clearance) == 1:
-                    command_block.multi_aspirate_clearance = (
-                        command_block.multi_aspirate_clearance[0]
-                    )
-                else:
-                    raise Exception(
-                        "Multiple iterables of different lengths found, cannot determine dimension to iterate over"
-                    )
-
-        if isinstance(command_block.multi_dispense_clearance, list):
-            if (
-                iter_len != 0
-                and len(command_block.multi_dispense_clearance) != iter_len
-            ):
-                # handle if user forgot to change list of one value to scalar
-                if len(command_block.multi_dispense_clearance) == 1:
-                    command_block.multi_dispense_clearance = (
-                        command_block.multi_dispense_clearance[0]
-                    )
-                else:
-                    raise Exception(
-                        "Multiple iterables of different lengths found, cannot determine dimension to iterate over"
-                    )
-        if isinstance(command_block.multi_blow_out, list):
-            if iter_len != 0 and len(command_block.multi_blow_out) != iter_len:
-                # handle if user forgot to change list of one value to scalar
-                if len(command_block.multi_blow_out) == 1:
-                    command_block.multi_blow_out = command_block.multi_blow_out[0]
-                else:
-                    raise Exception(
-                        "Multiple iterables found, cannot determine dimension to iterate over"
-                    )
-            iter_len = len(command_block.multi_blow_out)
-
-        if isinstance(command_block.multi_drop_tip, list):
-            if iter_len != 0 and len(command_block.multi_drop_tip) != iter_len:
-                # handle if user forgot to change list of one value to scalar
-                if len(command_block.multi_drop_tip) == 1:
-                    command_block.multi_drop_tip = command_block.multi_drop_tip[0]
-                else:
-                    raise Exception(
-                        "Multiple iterables found, cannot determine dimension to iterate over"
-                    )
-            iter_len = len(command_block.multi_drop_tip)
-
-        if not isinstance(command_block.multi_volume, list):
-            volumes = repeat(command_block.multi_volume, iter_len)
-        else:
-            volumes = command_block.multi_volume
-        if not isinstance(command_block.multi_source, list):
-            sources = repeat(command_block.multi_source, iter_len)
-        else:
-            sources = command_block.multi_source
-        if not isinstance(command_block.multi_destination, list):
-            destinations = repeat(command_block.multi_destination, iter_len)
-        else:
-            destinations = command_block.multi_destination
-        if not isinstance(command_block.multi_mix_cycles, list):
-            mixing_cycles = repeat(command_block.multi_mix_cycles, iter_len)
-        else:
-            mixing_cycles = command_block.multi_mix_cycles
-        if not isinstance(command_block.multi_mix_volume, list):
-            mixing_volume = repeat(command_block.multi_mix_volume, iter_len)
-        else:
-            mixing_volume = command_block.multi_mix_volume
-        if not isinstance(command_block.multi_aspirate_clearance, list):
-            aspirate_clearance = repeat(
-                command_block.multi_aspirate_clearance, iter_len
-            )
-        else:
-            aspirate_clearance = command_block.multi_aspirate_clearance
-        if not isinstance(command_block.multi_dispense_clearance, list):
-            dispense_clearance = repeat(
-                command_block.multi_dispense_clearance, iter_len
-            )
-        else:
-            dispense_clearance = command_block.multi_dispense_clearance
-        if not isinstance(command_block.multi_blow_out, list):
-            blow_out = repeat(command_block.multi_blow_out, iter_len)
-        else:
-            blow_out = command_block.multi_blow_out
-        if not isinstance(command_block.multi_drop_tip, list):
-            drop_tip = repeat(command_block.multi_drop_tip, iter_len)
-        else:
-            drop_tip = command_block.multi_drop_tip
-
-        for (
-            vol,
-            src,
-            dst,
-            mix_cycles,
-            mix_vol,
-            asp_height,
-            disp_height,
-            blowout,
-            d_tip,
-        ) in zip(
-            volumes,
-            sources,
-            destinations,
-            mixing_cycles,
-            mixing_volume,
-            aspirate_clearance,
-            dispense_clearance,
-            blow_out,
-            drop_tip,
+        for row in zip(
+            command_block.multi_volume,
+            command_block.multi_source,
+            command_block.multi_destination,
+            command_block.multi_mix_cycles,
+            command_block.multi_mix_volume,
+            command_block.multi_aspirate_clearance,
+            command_block.multi_dispense_clearance,
+            command_block.multi_blow_out,
+            command_block.multi_drop_tip,
         ):
-            yield vol, src, dst, mix_cycles, mix_vol, asp_height, disp_height, blowout, d_tip
+            yield row
 
 
 def main(args):  # noqa: D103
-    # TODO: Think about how a user would want to interact with this, do they want to interact with something like a
-    # SeqIO from Biopython? Or more like a interpreter kind of thing? That will guide some of this... not sure where
-    # its going right now
     protopiler = ProtoPiler(args.config)
 
     protopiler.yaml_to_protocol(
@@ -1509,8 +1199,6 @@ def main(args):  # noqa: D103
         resource_file_out=args.resource_out,
         reset_when_done=True,
     )
-
-
 
 
 if __name__ == "__main__":

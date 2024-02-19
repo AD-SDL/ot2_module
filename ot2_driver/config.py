@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Optional, Type, TypeVar, Union
 
 import yaml
-from pydantic import BaseModel as _BaseModel, Extra
+from pydantic import BaseModel as _BaseModel
+from pydantic import Extra
 
 _T = TypeVar("_T")
 

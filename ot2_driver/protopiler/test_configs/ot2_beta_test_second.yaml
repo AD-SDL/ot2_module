@@ -12,7 +12,7 @@ equipment:
     location: "2"
     alias: backward
     offset: [0, 1, 1.4]
-  - name: nest_96_wellplate_100ul_pcr_full_skirt 
+  - name: nest_96_wellplate_100ul_pcr_full_skirt
     location: "3"
     alias: dest
     module: Temperature Module
@@ -48,8 +48,10 @@ equipment:
 
 commands:
   - name: temp test
+    command: temperature_set
     change_temp: 4
   - name: test
+    command: transfer
     source: 6:[A1]
     aspirate_clearance: 1
     destination: 6:[A3]
