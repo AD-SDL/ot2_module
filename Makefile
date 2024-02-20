@@ -4,7 +4,7 @@ PROJECT_VERSION := $(shell grep -oP '(?<=version = ")[^"]+' $(PYPROJECT_TOML) | 
 
 .DEFAULT_GOAL := init
 
-.PHONY += init paths checks test clean
+.PHONY += init paths checks test hardware_test clean
 init: # Do the initial configuration of the project
 	@test -e .env || cp example.env .env
 	@sed -i 's/^USER_ID=.*/USER_ID=$(shell id -u)/' .env
