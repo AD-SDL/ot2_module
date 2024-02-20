@@ -3,7 +3,6 @@
 import glob
 import json
 import os
-import tempfile
 import time
 import traceback
 from argparse import ArgumentParser
@@ -191,7 +190,7 @@ def execute(protocol_path, payload=None, resource_config=None):
 
         response_msg = f"Error: {traceback.format_exc()}"
         print(response_msg)
-        return False, response_msg, run_id
+        return False, response_msg, None
 
 
 def poll_OT2_until_run_completion():
@@ -230,7 +229,7 @@ async def lifespan(app: FastAPI):
     node_name = args.alias
     ip = args.ot2_ip
     state = "UNKNOWN"
-    temp_dir = Path.home() / ".ot2_temp"
+    temp_dir = Path.home() / ".wei" / ".ot2_temp"
     temp_dir.mkdir(exist_ok=True)
     resources_folder_path = str(temp_dir / node_name / "resources/")
     protocols_folder_path = str(temp_dir / node_name / "protocols/")
@@ -366,17 +365,18 @@ def do_action(action_handle: str, action_vars: str):
             )
 
             if response_flag:
-                response = StepFileResponse()
                 state = ModuleStatus.IDLE
-                response.action_response = StepStatus.SUCCEEDED
-                with tempfile.NamedTemporaryFile(
-                    prefix=f"{run_id}", suffix=".json", delete_on_close=False
-                ) as f:
-                    json.dump(ot2.get_run(run_id), f, indent=2)
-                    response.path = f.name
-                    response.action_log = response_msg
+                # with tempfile.NamedTemporaryFile(
+                #     prefix=f"{run_id}", suffix=".json", delete=False
+                # ) as f:
+                with open(Path.home() / f".wei/{run_id}.json", "w") as f:
+                    json.dump(ot2.get_run_log(run_id), f, indent=2)
                     print("Finished Action: " + action_handle)
-                    return response
+                    return StepFileResponse(
+                        action_response=StepStatus.SUCCEEDED,
+                        action_log=response_msg,
+                        path=f.name,
+                    )
                 # if resource_config_path:
                 #   response.resources = str(resource_config_path)
 

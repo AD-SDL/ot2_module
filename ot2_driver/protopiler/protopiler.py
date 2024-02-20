@@ -1099,7 +1099,9 @@ class ProtoPiler:
 
         return location
 
-    def _process_instruction(self, command_block: CommandBase) -> Generator[list, None, None]:
+    def _process_instruction(
+        self, command_block: CommandBase
+    ) -> Generator[list, None, None]:
         """Processes a command block to translate into the protocol information.
 
         Supports unrolling over any dimension, syntactic sugar at best, but might come in handy someday
@@ -1169,7 +1171,9 @@ class ProtoPiler:
             ):
                 yield row
 
-    def _process_multi_instruction(self, command_block: CommandBase) -> Generator[list, None, None]:
+    def _process_multi_instruction(
+        self, command_block: CommandBase
+    ) -> Generator[list, None, None]:
         """mimics _process_instruction but for multi channel transfers"""
 
         # Ensure that the command block is a properly validated Multi_Transfer

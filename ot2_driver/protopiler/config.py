@@ -181,6 +181,7 @@ class Multi_Transfer(CommandBase):
                     setattr(self, field, [getattr(self, field)] * iter_len)
         return self
 
+
 class Mix(CommandBase):
     """The mix command, used to mix liquids in a wellplate"""
 
@@ -219,7 +220,6 @@ class Replace_Tip(CommandBase):
     """The command to execute, should be replace_tip for this class"""
     replace_tip: bool
     """Place tip back into tip rack"""
-
 
 
 class Clear_Pipette(CommandBase):

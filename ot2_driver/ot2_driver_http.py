@@ -238,6 +238,36 @@ class OT2_Driver:
 
         return run_resp.json()
 
+    def get_run_log(self, run_id) -> Dict:
+        """Get the OT2 summary of a specific run, with commands
+
+        Parameters
+        ----------
+        run_id : str
+            The run id given by the OT2 api
+
+        Returns
+        -------
+        Dict
+            The response json dictionary
+        """
+        run_url = f"{self.base_url}/runs/{run_id}"
+        run_resp = requests.get(url=run_url, headers=self.headers)
+
+        if run_resp.status_code != 200:
+            print(f"Could not get run {run_id}")
+
+        commands_url = f"{self.base_url}/runs/{run_id}/commands"
+        commands_resp = requests.get(url=commands_url, headers=self.headers)
+
+        if commands_resp.status_code != 200:
+            print(f"Could not get run {run_id} commands")
+
+        result = run_resp.json()
+        result["commands"] = commands_resp.json()
+
+        return result
+
     def get_runs(self) -> Optional[List[Dict[str, str]]]:
         """Get all the runs currently stored on the ot2
 
