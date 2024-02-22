@@ -1,6 +1,6 @@
 [project]
 name = "ot2_module"
-version = "0.1.0"
+version = "0.2.0"
 description = "Software for automatting an Opentrons OT2"
 authors = [
     {name = "Ryan D. Lewis", email="ryan.lewis@anl.gov"},
