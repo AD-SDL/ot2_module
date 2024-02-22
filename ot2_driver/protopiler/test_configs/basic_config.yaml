@@ -11,10 +11,12 @@ equipment:
     mount: right
 commands:
   - name: example command
+    command: transfer
     source: source:A1
     destination: dest:A1
     volume: 100
   - name: other command
+    command: transfer
     source: source:A2
     destination: dest:A2
     volume: 100

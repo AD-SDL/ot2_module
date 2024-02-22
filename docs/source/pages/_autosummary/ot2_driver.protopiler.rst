@@ -3,21 +3,21 @@ ot2\_driver.protopiler
 
 .. automodule:: ot2_driver.protopiler
 
-   
-   
-   
 
-   
-   
-   
 
-   
-   
-   
 
-   
-   
-   
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -30,4 +30,3 @@ ot2\_driver.protopiler
    ot2_driver.protopiler.config
    ot2_driver.protopiler.protopiler
    ot2_driver.protopiler.resource_manager
-

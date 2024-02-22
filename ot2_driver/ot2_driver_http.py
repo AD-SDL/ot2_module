@@ -145,6 +145,9 @@ class OT2_Driver:
         transfer_resp = requests.post(
             url=transfer_url, files=files, headers=self.headers
         )
+        print(transfer_resp.status_code)
+        print(transfer_resp.text)
+        print(transfer_resp.reason)
         protocol_id = transfer_resp.json()["data"]["id"]
 
         # create the run
@@ -178,7 +181,7 @@ class OT2_Driver:
         )
         if (
             execute_run_resp.status_code != 201
-        ):  # this is the good respcode for this endpoint
+        ):  # this is the good response code for this endpoint
             print(f"Could not run play action on {run_id}")
             print(execute_run_resp.json())
 
@@ -209,6 +212,7 @@ class OT2_Driver:
 
         if check_run_resp.status_code != 200:
             print(f"Cannot check run {run_id}")
+        print(check_run_resp.json())
         status = RunStatus(check_run_resp.json()["data"]["status"])
 
         return status
@@ -233,6 +237,36 @@ class OT2_Driver:
             print(f"Could not get run {run_id}")
 
         return run_resp.json()
+
+    def get_run_log(self, run_id) -> Dict:
+        """Get the OT2 summary of a specific run, with commands
+
+        Parameters
+        ----------
+        run_id : str
+            The run id given by the OT2 api
+
+        Returns
+        -------
+        Dict
+            The response json dictionary
+        """
+        run_url = f"{self.base_url}/runs/{run_id}"
+        run_resp = requests.get(url=run_url, headers=self.headers)
+
+        if run_resp.status_code != 200:
+            print(f"Could not get run {run_id}")
+
+        commands_url = f"{self.base_url}/runs/{run_id}/commands"
+        commands_resp = requests.get(url=commands_url, headers=self.headers)
+
+        if commands_resp.status_code != 200:
+            print(f"Could not get run {run_id} commands")
+
+        result = run_resp.json()
+        result["commands"] = commands_resp.json()
+
+        return result
 
     def get_runs(self) -> Optional[List[Dict[str, str]]]:
         """Get all the runs currently stored on the ot2
@@ -316,7 +350,7 @@ class OT2_Driver:
         Exception
             If there is no `method` keyword argument, This method does not specify the http request method, user must provide as keyword argument
         """
-        # sanitize preceeding '/'
+        # sanitize preceding '/'
         request_extension = (
             request_extension if "/" != request_extension[0] else request_extension[1:]
         )

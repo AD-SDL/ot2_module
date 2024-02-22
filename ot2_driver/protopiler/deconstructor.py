@@ -102,7 +102,7 @@ class Deconstructor:
         protocol_config = ProtocolConfig(
             equipment=self.resources, commands=self.commands, metadata=metadata
         )
-        protocol_config.dump_yaml(args.config_out)
+        protocol_config.write_yaml(args.config_out)
 
     def _get_commands(self, liminal_commands):
         """

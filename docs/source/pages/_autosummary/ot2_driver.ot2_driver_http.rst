@@ -3,33 +3,24 @@
 
 .. automodule:: ot2_driver.ot2_driver_http
 
-   
-   
-   
 
-   
-   
+
+
+
+
+
    .. rubric:: Functions
 
    .. autosummary::
-   
-      main
-   
-   
 
-   
-   
+      main
+
+
+
+
+
    .. rubric:: Classes
 
    .. autosummary::
-   
+
       OT2_Driver
-   
-   
-
-   
-   
-   
-
-
-

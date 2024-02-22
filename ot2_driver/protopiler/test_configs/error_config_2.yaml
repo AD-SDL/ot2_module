@@ -8,6 +8,7 @@ equipment:
     location: "9"
 commands:
   - name: example command
+    command: transfer
     source: A1
     destination: B1
     volume: 100

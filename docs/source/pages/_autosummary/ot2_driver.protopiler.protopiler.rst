@@ -3,33 +3,24 @@
 
 .. automodule:: ot2_driver.protopiler.protopiler
 
-   
-   
-   
 
-   
-   
+
+
+
+
+
    .. rubric:: Functions
 
    .. autosummary::
-   
-      main
-   
-   
 
-   
-   
+      main
+
+
+
+
+
    .. rubric:: Classes
 
    .. autosummary::
-   
+
       ProtoPiler
-   
-   
-
-   
-   
-   
-
-
-

@@ -3,21 +3,21 @@
 
 .. automodule:: ot2_driver
 
-   
-   
-   
 
-   
-   
-   
 
-   
-   
-   
 
-   
-   
-   
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -31,4 +31,3 @@
    ot2_driver.ot2_driver_http
    ot2_driver.ot2_driver_ssh
    ot2_driver.protopiler
-

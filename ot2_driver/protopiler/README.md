@@ -1,8 +1,8 @@
 # Protopiler
 
-Sub module of the OT2 driver that allows for configuration style creation of protocols. 
+Sub module of the OT2 driver that allows for configuration style creation of protocols.
 
-### Command line arguments: 
+### Command line arguments:
 ```
 usage: protopiler.py [-h] -c CONFIG [-po PROTOCOL_OUT] [-ro RESOURCE_OUT] [-ri RESOURCE_IN]
 
@@ -19,8 +19,8 @@ optional arguments:
 
 ```
 
-### Running with basic configurations 
-To run with the basic configuration found in `ot2_driver/protopiler/test_configs/basic_config.yaml`, run the following 
+### Running with basic configurations
+To run with the basic configuration found in `ot2_driver/protopiler/test_configs/basic_config.yaml`, run the following
 
 ```
 python protopiler.py -c test_configs/basic_config.yaml -po [path/to/protocol/out] -ri [path/to/existing/resource/file] -ro [path/to/resource/out/file]
@@ -28,9 +28,9 @@ python protopiler.py -c test_configs/basic_config.yaml -po [path/to/protocol/out
 
 # Deconstructor \**beta*\*
 
-There is currently a *very* rough implementation of a deconstructor program that takes a protocol.py file and turns it into a config.yml 
+There is currently a *very* rough implementation of a deconstructor program that takes a protocol.py file and turns it into a config.yml
 
-For now I have only tested with protocols I have written but I have no reason to beleive it wouldnt work with them. This requires a lot more testing, though. 
+For now I have only tested with protocols I have written but I have no reason to beleive it wouldnt work with them. This requires a lot more testing, though.
 
 ### Command line args
 
@@ -48,7 +48,7 @@ optional arguments:
 
 ```
 
-To run on the basic_config.py: 
+To run on the basic_config.py:
 ```
 python deconstructor.py -p test_configs/basic_config.py -co [path/to/config/out]
 ```

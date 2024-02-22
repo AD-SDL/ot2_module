@@ -25,12 +25,14 @@ equipment:
 
 commands:
   - name: forward primer
+    command: transfer
     source: forward:Forward Primer
     destination: dest:Destination
     volume: Volume
     mix_cycles: 3
     mix_volume: 100
   - name: backward primer
+    command: transfer
     source: backward:Backward Primer
     destination: dest:Destination
     volume: Volume

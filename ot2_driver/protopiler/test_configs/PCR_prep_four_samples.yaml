@@ -12,7 +12,7 @@ equipment:
     location: "2"
     alias: backward
     offset: [0, 1, 1.4]
-  - name: nest_96_wellplate_100ul_pcr_full_skirt 
+  - name: nest_96_wellplate_100ul_pcr_full_skirt
     location: "3"
     alias: dest
     module: Temperature Module
@@ -48,6 +48,7 @@ equipment:
 
 commands:
   - name: BioWater # FILL TO 10 ML SO PIPETTE DOESNT GET WET
+    command: transfer
     source: 5:A1
     aspirate_clearance: 50
     destination: 5:C2
@@ -57,6 +58,7 @@ commands:
     mix_volume: 0
     drop_tip: [False, False, False, False, True]
   - name: 5x Reaction Buffer
+    command: transfer
     source: 6:[A3, A3]
     aspirate_clearance: 0.1
     destination: 5:C2
@@ -66,6 +68,7 @@ commands:
     mix_volume: [20, 20]
     drop_tip: [False, True]
   - name: DNA Polymerase
+    command: transfer
     source: 6:A1
     aspirate_clearance: 0.1
     destination: 5:C2
@@ -75,6 +78,7 @@ commands:
     mix_volume: 20
     drop_tip: True
   - name: DNTPs
+    command: transfer
     source: 6:A5
     aspirate_clearance: 0.1
     destination: 5:C2
@@ -84,6 +88,7 @@ commands:
     mix_volume: 20
     drop_tip: True
   - name: GC Enhancer
+    command: transfer
     source: 6:B3
     aspirate_clearance: 0.1
     destination: 5:C2
@@ -93,6 +98,7 @@ commands:
     mix_volume: [20, 20]
     drop_tip: [False, True]
   - name: master mix distribute
+    command: transfer
     source: 5:C2
     aspirate_clearance: 1
     destination: dest:Destination
@@ -100,6 +106,7 @@ commands:
     volume: 15
     drop_tip: True
   - name: master mix distribute 2
+    command: transfer
     source: 5:C2
     aspirate_clearance: 1
     destination: dest:Destination
@@ -107,6 +114,7 @@ commands:
     volume: 15
     drop_tip: True
   - name: forward primer
+    command: transfer
     source: forward:Forward Primer
     aspirate_clearance: 0.1
     destination: dest:Destination
@@ -116,6 +124,7 @@ commands:
     mix_volume: 10
     drop_tip: True
   - name: backward primer
+    command: transfer
     source: backward:Backward Primer
     aspirate_clearance: 0.1
     destination: dest:Destination
@@ -125,6 +134,7 @@ commands:
     mix_volume: 10
     drop_tip: True
   - name: template
+    command: transfer
     source: template:DNA
     aspirate_clearance: 0.1
     destination: dest:Destination
