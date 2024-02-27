@@ -133,9 +133,6 @@ dmypy.json
 .pyre/
 .vscode/
 
-# Config files
-# we will leave the *.yaml files public
-*.yml
 
 # DS store
 .DS_Store
