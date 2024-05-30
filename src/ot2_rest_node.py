@@ -260,8 +260,6 @@ def ot2_startup(state: State):
     check_resources_folder(state.resources_folder_path)
     check_protocols_folder(state.protocols_folder_path)
     connect_robot(state)
-    yield
-    pass
 
 
 @rest_module.action(name="run_protocol", description="Run a provided protocol file")
