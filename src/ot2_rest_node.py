@@ -234,7 +234,7 @@ rest_module = RESTModule(
         model="ot2",
     )
 
-rest_module.arg_parser.add_argument( type=str, help="ot2 ip value")
+rest_module.arg_parser.add_argument( "--ot2_ip", type=str, help="ot2 ip value")
 rest_module.arg_parser.add_argument( "--ot2_port", type=int, help="ot2 port value")
 
 @rest_module.startup()
@@ -344,4 +344,4 @@ def run_protocol(state: State, action: ActionRequest,
             return response
    
 
-
+rest_module.start()
