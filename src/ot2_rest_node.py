@@ -249,9 +249,8 @@ def ot2_startup(state: State):
             -------
             None"""
    
-    args = rest_module.arg_parser.parse_args()
-    state.node_name = args.name
-    state.ip = args.ot2_ip
+    state.node_name = state.name
+    state.ip = state.ot2_ip
     state.status = "UNKNOWN"
     temp_dir = Path.home() / ".wei" / ".ot2_temp"
     temp_dir.mkdir(exist_ok=True)
