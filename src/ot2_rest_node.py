@@ -25,7 +25,7 @@ from wei.types.module_types import (
     ModuleStatus
 )
 from fastapi.datastructures import State
-from wei.helpers import extract_version
+from wei.utils import extract_version
 
 from ot2_driver.ot2_driver_http import OT2_Config, OT2_Driver
 
