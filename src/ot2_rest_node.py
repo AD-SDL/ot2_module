@@ -19,7 +19,7 @@ import yaml
 from fastapi import FastAPI, UploadFile
 from fastapi.responses import JSONResponse
 from urllib3.exceptions import ConnectTimeoutError
-from wei.core.data_classes import (
+from wei.types import (
     ModuleAbout,
     ModuleAction,
     ModuleActionArg,
@@ -29,7 +29,7 @@ from wei.core.data_classes import (
     StepResponse,
     StepStatus,
 )
-from wei.helpers import extract_version
+from wei.utils import extract_version
 
 from ot2_driver.ot2_driver_http import OT2_Config, OT2_Driver
 
