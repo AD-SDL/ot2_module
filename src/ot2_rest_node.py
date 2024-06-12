@@ -62,9 +62,7 @@ def check_resources_folder(resources_folder_path):
     isPathExist = os.path.exists(resources_folder_path)
     if not isPathExist:
         os.makedirs(resources_folder_path)
-    if not isPathExist:
-        os.makedirs(protocols_folder_path)
-        print("Creating: " + protocols_folder_path)
+    
 
 
 def connect_robot(state: State):
@@ -148,7 +146,7 @@ def save_config_files(protocol: str, resource_config=None):
         return config_file_path, None
 
 
-def execute(protocol_path, payload=None, resource_config=None):
+def execute(state, protocol_path, payload=None, resource_config=None):
     """
     Compiles the yaml at protocol_path into .py file;
     Transfers and Executes the .py file
@@ -164,18 +162,17 @@ def execute(protocol_path, payload=None, resource_config=None):
         If the ot2 execution was successful
     """
 
-    global run_id, node_name, protocols_folder_path, resources_folder_path
     if Path(protocol_path).suffix == ".yaml":
         print("YAML")
         (
             protocol_file_path,
             resource_file_path,
-        ) = ot2.compile_protocol(
+        ) = state.ot2.compile_protocol(
             protocol_path,
             payload=payload,
             resource_file=resource_config,
-            resource_path=resources_folder_path,
-            protocol_out_path=protocols_folder_path,
+            resource_path=state.resources_folder_path,
+            protocol_out_path=state.protocols_folder_path,
         )
         protocol_file_path = Path(protocol_file_path)
     else:
@@ -183,21 +180,21 @@ def execute(protocol_path, payload=None, resource_config=None):
         protocol_file_path = Path(protocol_path)
     print(f"{protocol_file_path.resolve()=}")
     try:
-        protocol_id, run_id = ot2.transfer(protocol_file_path)
-        print("OT2 " + node_name + " protocol transfer successful")
-        resp = ot2.execute(run_id)
+        protocol_id, run_id = state.ot2.transfer(protocol_file_path)
+        print("OT2 " + state.node_name + " protocol transfer successful")
+        resp = state.ot2.execute(run_id)
 
         if resp["data"]["status"] == "succeeded":
             # poll_OT2_until_run_completion()
-            print("OT2 " + node_name + " succeeded in executing a protocol")
-            response_msg = "OT2 " + node_name + " successfully IDLE running a protocol"
+            print("OT2 " + state.node_name + " succeeded in executing a protocol")
+            response_msg = "OT2 " + state.node_name + " successfully IDLE running a protocol"
             return True, response_msg, run_id
 
         else:
-            print("OT2 " + node_name + " failed in executing a protocol")
+            print("OT2 " + state.node_name + " failed in executing a protocol")
             print(resp["data"])
             response_msg = (
-                "OT2 " + node_name + " failed running a protocol\n" + str(resp["data"])
+                "OT2 " + state.node_name + " failed running a protocol\n" + str(resp["data"])
             )
             return False, response_msg, run_id
     except Exception as err:
@@ -257,6 +254,7 @@ def ot2_startup(state: State):
     state.resources_folder_path = str(temp_dir / state.node_name / "resources/")
     state.protocols_folder_path = str(temp_dir / state.node_name / "protocols/")
     state.logs_folder_path = str(temp_dir / state.node_name / "logs/")
+    print(state.resources_folder_path)
     check_resources_folder(state.resources_folder_path)
     check_protocols_folder(state.protocols_folder_path)
     connect_robot(state)
@@ -270,7 +268,7 @@ def run_protocol(state: State, action: ActionRequest,
         Run a given protocol
         """
     
-        
+        resource_config = None
 
         if use_existing_resources:
             try:
@@ -304,15 +302,15 @@ def run_protocol(state: State, action: ActionRequest,
             print(f"ot2 {payload=}")
             print(f"config_file_path: {config_file_path}")
 
-            response_flag, response_msg, run_id = execute(
+            response_flag, response_msg, run_id = execute(state, 
                 config_file_path, payload, resource_config_path
             )
 
             if response_flag:
-                state = ModuleStatus.IDLE
+                state.status = ModuleStatus.IDLE
                 Path(logs_folder_path).mkdir(parents=True, exist_ok=True)
                 with open(Path(logs_folder_path) / f"{run_id}.json", "w") as f:
-                    json.dump(ot2.get_run_log(run_id), f, indent=2)
+                    json.dump(state.ot2.get_run_log(run_id), f, indent=2)
                     return StepFileResponse(
                         action_response=StepStatus.SUCCEEDED,
                         action_log=response_msg,
