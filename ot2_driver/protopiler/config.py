@@ -184,7 +184,6 @@ class Multi_Transfer(CommandBase):
 
 class Mix(CommandBase):
     """The mix command, used to mix liquids in a wellplate"""
-
     command: Literal["mix"]
     """The command to execute, should be mix for this class"""
     reps: Union[int, List[int]]

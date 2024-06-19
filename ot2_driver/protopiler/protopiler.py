@@ -919,11 +919,37 @@ class ProtoPiler:
                 commands.append(temp_change_command)
 
             elif isinstance(command_block, Mix):
+
+
                 if (
                     isinstance(command_block.location, str)
                     and isinstance(command_block.reps, int)
                     and isinstance(command_block.mix_volume, float)
                 ):
+                    pipette_mount = self.resource_manager.determine_pipette(
+                    command_block.mix_volume, False
+                )
+                    if pipette_mount is None:
+                        raise Exception(
+                            f"No pipette available for {block_name} with volume: {command_block.mix_volume}"
+                        )
+                    #TODO: make more robust
+                    # # check for tip
+                    if not tip_loaded[pipette_mount]:
+
+                        load_command = pick_tip_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        pipette_name = self.resource_manager.mount_to_pipette[
+                            pipette_mount
+                        ]
+                    
+                        commands.append(load_command)
+                        tip_loaded[pipette_mount] = True
+                
+
+
+
                     mix_command = mix_template.replace(
                         "#reps#", str(command_block.reps)
                     )
@@ -985,6 +1011,27 @@ class ProtoPiler:
                     else:
                         mix_reps = command_block.reps
 
+                    pipette_mount = self.resource_manager.determine_pipette(
+                    command_block.mix_volumes[0], False
+                    )
+
+                    if pipette_mount is None:
+                        raise Exception(
+                            f"No pipette available for {block_name} with volume: {command_block.mix_volume}"
+                        )
+                    # # check for tip
+                    if not tip_loaded[pipette_mount]:
+
+                        load_command = pick_tip_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        pipette_name = self.resource_manager.mount_to_pipette[
+                            pipette_mount
+                        ]
+                    
+                        commands.append(load_command)
+                        tip_loaded[pipette_mount] = True
+
                     for loc, mix_vols, rep in zip(locations, mix_volumes, mix_reps):
                         mix_command = mix_template.replace("#reps#", str(rep))
                         mix_command = mix_command.replace("#volume#", str(mix_vols))
@@ -1007,11 +1054,15 @@ class ProtoPiler:
             elif isinstance(command_block, Replace_Tip):
                 if not isinstance(command_block.replace_tip, bool):
                     raise Exception("replace_tip must be bool")
-                replace_tip_command = return_tip_template.replace(
-                    "#pipette#", f'pipettes["{pipette_mount}"]'
-                )
-                commands.append(replace_tip_command)
-                tip_loaded[pipette_mount] = False
+                # check if tip on pipette
+                if tip_loaded[pipette_mount] == False:
+                    print("NO TIP TO REPLACE")
+                else:
+                    replace_tip_command = return_tip_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                    commands.append(replace_tip_command)
+                    tip_loaded[pipette_mount] = False
 
             elif isinstance(command_block, Clear_Pipette):
                 if not isinstance(command_block.clear, bool):
