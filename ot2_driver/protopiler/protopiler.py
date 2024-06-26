@@ -1028,7 +1028,7 @@ class ProtoPiler:
                         mix_reps = command_block.reps
 
                     pipette_mount = self.resource_manager.determine_pipette(
-                    command_block.mix_volume[0], False
+                    command_block.mix_volume, False
                     )
 
                     if pipette_mount is None:
