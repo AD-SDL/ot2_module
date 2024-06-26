@@ -943,6 +943,22 @@ class ProtoPiler:
                         pipette_name = self.resource_manager.mount_to_pipette[
                             pipette_mount
                         ]
+
+                        # TODO: define flag to grab from specific well or just use the ones defined by the OT2
+                        if True:
+                            (
+                                rack_location,
+                                well_location,
+                            ) = self.resource_manager.get_next_tip(pipette_name, 1)
+                            location_string = (
+                                f'deck["{rack_location}"].wells()[{well_location}]'
+                            )
+                            load_command = load_command.replace(
+                                "#location#", location_string
+                            )
+                        else:
+                            load_command = load_command.replace("#location#", "")
+                            self.resource_manager.update_tip_usage(pipette_name)
                     
                         commands.append(load_command)
                         tip_loaded[pipette_mount] = True
@@ -1028,6 +1044,22 @@ class ProtoPiler:
                         pipette_name = self.resource_manager.mount_to_pipette[
                             pipette_mount
                         ]
+
+                        # TODO: define flag to grab from specific well or just use the ones defined by the OT2
+                        if True:
+                            (
+                                rack_location,
+                                well_location,
+                            ) = self.resource_manager.get_next_tip(pipette_name, 1)
+                            location_string = (
+                                f'deck["{rack_location}"].wells()[{well_location}]'
+                            )
+                            load_command = load_command.replace(
+                                "#location#", location_string
+                            )
+                        else:
+                            load_command = load_command.replace("#location#", "")
+                            self.resource_manager.update_tip_usage(pipette_name)
                     
                         commands.append(load_command)
                         tip_loaded[pipette_mount] = True
