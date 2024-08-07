@@ -5,26 +5,24 @@ import glob
 import json
 import os
 import traceback
-from contextlib import asynccontextmanager
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from typing_extensions import Annotated
 from urllib.error import HTTPError, URLError
-from wei.modules.rest_module import RESTModule
+
 import requests
 import yaml
+from fastapi.datastructures import State
+from typing_extensions import Annotated
 from urllib3.exceptions import ConnectTimeoutError
+from wei.modules.rest_module import RESTModule
+from wei.types.module_types import ModuleStatus
 from wei.types.step_types import (
+    ActionRequest,
     StepFileResponse,
     StepResponse,
     StepStatus,
-    ActionRequest
 )
-from wei.types.module_types import (
-    ModuleStatus
-)
-from fastapi.datastructures import State
 from wei.utils import extract_version
 
 from ot2_driver.ot2_driver_http import OT2_Config, OT2_Driver
@@ -58,14 +56,14 @@ def check_resources_folder(resources_folder_path):
     """
     Description: Checks if the resources folder path exists. Creates the resource folder path if it doesn't already exist
     """
-    
+
     isPathExist = os.path.exists(resources_folder_path)
     if not isPathExist:
         os.makedirs(resources_folder_path)
-    
 
 
 def connect_robot(state: State):
+    """Description: Connects to the ot2"""
     try:
         print(state.ip)
         state.ot2 = OT2_Driver(OT2_Config(ip=state.ip))
@@ -187,14 +185,19 @@ def execute(state, protocol_path, payload=None, resource_config=None):
         if resp["data"]["status"] == "succeeded":
             # poll_OT2_until_run_completion()
             print("OT2 " + state.node_name + " succeeded in executing a protocol")
-            response_msg = "OT2 " + state.node_name + " successfully IDLE running a protocol"
+            response_msg = (
+                "OT2 " + state.node_name + " successfully IDLE running a protocol"
+            )
             return True, response_msg, run_id
 
         else:
             print("OT2 " + state.node_name + " failed in executing a protocol")
             print(resp["data"])
             response_msg = (
-                "OT2 " + state.node_name + " failed running a protocol\n" + str(resp["data"])
+                "OT2 "
+                + state.node_name
+                + " failed running a protocol\n"
+                + str(resp["data"])
             )
             return False, response_msg, run_id
     except Exception as err:
@@ -210,42 +213,44 @@ def execute(state, protocol_path, payload=None, resource_config=None):
         return False, response_msg, None
 
 
-def poll_OT2_until_run_completion():
-    """Queries the OT2 run state until reported as 'succeeded'"""
-    global run_id, state
-    print("Polling OT2 run until completion")
-    while state != ModuleStatus.IDLE:
-        run_status = ot2.get_run(run_id)
+# def poll_OT2_until_run_completion():
+#     """Queries the OT2 run state until reported as 'succeeded'"""
+#     global run_id, state
+#     print("Polling OT2 run until completion")
+#     while state != ModuleStatus.IDLE:
+#         run_status = ot2.get_run(run_id)
 
-        if run_status["data"]["status"] and run_status["data"]["status"] == "succeeded":
-            state = ModuleStatus.IDLE
-            print("Stopping Poll")
+#         if run_status["data"]["status"] and run_status["data"]["status"] == "succeeded":
+#             state = ModuleStatus.IDLE
+#             print("Stopping Poll")
 
-        elif run_status["data"]["status"] and run_status["data"]["status"] == "running":
-            state = ModuleStatus.BUSY
+#         elif run_status["data"]["status"] and run_status["data"]["status"] == "running":
+#             state = ModuleStatus.BUSY
+
 
 rest_module = RESTModule(
-        name="ot2_node",
-        version=extract_version(Path(__file__).parent.parent / "pyproject.toml"),
-        description="A node to control the OT2 liquid handling robot",
-        model="ot2",
-    )
+    name="ot2_node",
+    version=extract_version(Path(__file__).parent.parent / "pyproject.toml"),
+    description="A node to control the OT2 liquid handling robot",
+    model="ot2",
+)
 
-rest_module.arg_parser.add_argument( "--ot2_ip", type=str, help="ot2 ip value")
-rest_module.arg_parser.add_argument( "--ot2_port", type=int, help="ot2 port value")
+rest_module.arg_parser.add_argument("--ot2_ip", type=str, help="ot2 ip value")
+rest_module.arg_parser.add_argument("--ot2_port", type=int, help="ot2 port value")
+
 
 @rest_module.startup()
 def ot2_startup(state: State):
     """Initial run function for the app, parses the workcell argument
-            Parameters
-            ----------
-            app : FastApi
-            The REST API app being initialized
+    Parameters
+    ----------
+    app : FastApi
+    The REST API app being initialized
 
-            Returns
-            -------
-            None"""
-   
+    Returns
+    -------
+    None"""
+
     state.node_name = state.name
     state.ip = state.ot2_ip
     state.status = "UNKNOWN"
@@ -261,82 +266,84 @@ def ot2_startup(state: State):
 
 
 @rest_module.action(name="run_protocol", description="Run a provided protocol file")
-def run_protocol(state: State, action: ActionRequest,
-                 use_existing_resources: Annotated[bool, "Whether to use the existing resource file or restart"] = False
-                 ):
-        """
-        Run a given protocol
-        """
-    
-        resource_config = None
+def run_protocol(
+    state: State,
+    action: ActionRequest,
+    use_existing_resources: Annotated[
+        bool, "Whether to use the existing resource file or restart"
+    ] = False,
+):
+    """
+    Run a given protocol
+    """
 
-        if use_existing_resources:
-            try:
-                list_of_files = glob.glob(
-                    state.resources_folder_path + "*.json"
-                )  # Get list of files
-                if len(list_of_files) > 0:
-                    resource_config = max(
-                        list_of_files, key=os.path.getctime
-                    )  # Finding the latest added file
-                    print("Using the resource file: " + resource_config)
+    resource_config = None
 
-            except Exception as er:
-                print(er)
-
-        # * Get the protocol file
+    if use_existing_resources:
         try:
-            protocol = next(file for file in action.files if file.filename == "protocol")
-            protocol = protocol.file.read().decode("utf-8")
-        except StopIteration:
-            protocol = None
+            list_of_files = glob.glob(
+                state.resources_folder_path + "*.json"
+            )  # Get list of files
+            if len(list_of_files) > 0:
+                resource_config = max(
+                    list_of_files, key=os.path.getctime
+                )  # Finding the latest added file
+                print("Using the resource file: " + resource_config)
 
-        print(f"{protocol=}")
+        except Exception as er:
+            print(er)
 
-        if protocol:
-            config_file_path, resource_config_path = save_config_files(
-                protocol, resource_config
-            )
-            payload = deepcopy(action.args)
+    # * Get the protocol file
+    try:
+        protocol = next(file for file in action.files if file.filename == "protocol")
+        protocol = protocol.file.read().decode("utf-8")
+    except StopIteration:
+        protocol = None
 
-            print(f"ot2 {payload=}")
-            print(f"config_file_path: {config_file_path}")
+    print(f"{protocol=}")
 
-            response_flag, response_msg, run_id = execute(state, 
-                config_file_path, payload, resource_config_path
-            )
+    if protocol:
+        config_file_path, resource_config_path = save_config_files(
+            protocol, resource_config
+        )
+        payload = deepcopy(action.args)
 
-            if response_flag:
-                state.status = ModuleStatus.IDLE
-                Path(logs_folder_path).mkdir(parents=True, exist_ok=True)
-                with open(Path(logs_folder_path) / f"{run_id}.json", "w") as f:
-                    json.dump(state.ot2.get_run_log(run_id), f, indent=2)
-                    return StepFileResponse(
-                        action_response=StepStatus.SUCCEEDED,
-                        action_log=response_msg,
-                        path=f.name,
-                    )
-                # if resource_config_path:
-                #   response.resources = str(resource_config_path)
+        print(f"ot2 {payload=}")
+        print(f"config_file_path: {config_file_path}")
 
-            elif not response_flag:
-                state.status = ModuleStatus.ERROR
-                response = StepResponse
-                response.action_response = StepStatus.FAILED
-                response.action_msg = response_msg
-                # if resource_config_path:
-                #   response.resources = str(resource_config_path)
+        response_flag, response_msg, run_id = execute(
+            state, config_file_path, payload, resource_config_path
+        )
 
-            print("Finished Action: " + action.handle)
-            return response
+        if response_flag:
+            state.status = ModuleStatus.IDLE
+            Path(logs_folder_path).mkdir(parents=True, exist_ok=True)
+            with open(Path(logs_folder_path) / f"{run_id}.json", "w") as f:
+                json.dump(state.ot2.get_run_log(run_id), f, indent=2)
+                return StepFileResponse(
+                    status=StepStatus.SUCCEEDED, files={"log": f.name}
+                )
+            # if resource_config_path:
+            #   response.resources = str(resource_config_path)
 
-        else:
-            response["action_msg"] = "Required 'protocol' file was not provided"
-            response.action_response = StepStatus.FAILED
-            print(response.action_msg)
-            state = ModuleStatus.ERROR
+        elif not response_flag:
+            state.status = ModuleStatus.ERROR
+            response = StepResponse
+            response.status = StepStatus.FAILED
+            response.error = "an error occurred"
+            # if resource_config_path:
+            #   response.resources = str(resource_config_path)
 
-            return response
-   
+        print("Finished Action: " + action.handle)
+        return response
+
+    else:
+        response["action_msg"] = "Required 'protocol' file was not provided"
+        response.action_response = StepStatus.FAILED
+        print(response.action_msg)
+        state = ModuleStatus.ERROR
+
+        return response
+
 
 rest_module.start()
