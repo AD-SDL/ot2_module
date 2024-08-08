@@ -69,8 +69,7 @@ class ResourceManager:
         # setup the resource tracker, if exists leave as is, else, create it
         resources = None
         try:
-            test = self.resources
-            print(test)
+            print(self.resources)
         except AttributeError:
             if resource_file:
                 self.resource_file = Path(resource_file)
