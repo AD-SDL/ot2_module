@@ -69,7 +69,8 @@ class ResourceManager:
         # setup the resource tracker, if exists leave as is, else, create it
         resources = None
         try:
-            self.resources
+            test = self.resources
+            print(test)
         except AttributeError:
             if resource_file:
                 self.resource_file = Path(resource_file)
@@ -397,9 +398,8 @@ class ResourceManager:
             raise Exception("ERROR no more available tips")
         # update usage
         if tip_num == 1:
-            for i in range(tip_num):
-                self.resources[loc]["wells_used"].add(str(int(well)))
-                self.resources[loc]["used"] += 1
+            self.resources[loc]["wells_used"].add(str(int(well)))
+            self.resources[loc]["used"] += 1
         else:
             for i in range(tip_num):
                 self.resources[loc]["wells_used"].add(str(int(well[i])))

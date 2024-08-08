@@ -41,9 +41,7 @@ class ProtoPiler:
     def __init__(
         self,
         config_path: Optional[PathLike] = None,
-        template_dir: PathLike = (
-            Path(__file__).parent.resolve() / "protocol_templates"
-        ),
+        template_dir: PathLike = None,
         resource_file: Optional[PathLike] = None,
     ) -> None:
         """Can initialize with the resources we need, or it can be done after initialization
@@ -57,7 +55,10 @@ class ProtoPiler:
         resource_file : Optional[PathLike], optional
             path to the resource file, if using a config and it does not exist, it will be created, by default None
         """
-        self.template_dir = template_dir
+        if template_dir is None:
+            self.template_dir = Path(__file__).parent.resolve() / "protocol_templates"
+        else:
+            self.template_dir = template_dir
         self.resource_file = resource_file
 
         if self.resource_file:
@@ -377,9 +378,7 @@ class ProtoPiler:
         self,
         config_path: Optional[PathLike] = None,
         payload: Optional[Dict] = None,
-        protocol_out_path: PathLike = Path(
-            f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
-        ),
+        protocol_out_path: PathLike = None,
         resource_file: Optional[PathLike] = None,
         resource_file_out: Optional[PathLike] = None,
         write_resources: bool = True,
@@ -410,7 +409,10 @@ class ProtoPiler:
         Tuple[Path]
             returns the path to the protocol.py file as well as the resource file (if it does not exist, None)
         """
-
+        if protocol_out_path is None:
+            protocol_out_path = Path(
+                f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
+            )
         if not self.config:
             self.load_config(config_path)
 
@@ -919,24 +921,21 @@ class ProtoPiler:
                 commands.append(temp_change_command)
 
             elif isinstance(command_block, Mix):
-
-
                 if (
                     isinstance(command_block.location, str)
                     and isinstance(command_block.reps, int)
                     and isinstance(command_block.mix_volume, float)
                 ):
                     pipette_mount = self.resource_manager.determine_pipette(
-                    command_block.mix_volume, False
-                )
+                        command_block.mix_volume, False
+                    )
                     if pipette_mount is None:
                         raise Exception(
                             f"No pipette available for {block_name} with volume: {command_block.mix_volume}"
                         )
-                    #TODO: make more robust
+                    # TODO: make more robust
                     # # check for tip
                     if not tip_loaded[pipette_mount]:
-
                         load_command = pick_tip_template.replace(
                             "#pipette#", f'pipettes["{pipette_mount}"]'
                         )
@@ -959,12 +958,9 @@ class ProtoPiler:
                         else:
                             load_command = load_command.replace("#location#", "")
                             self.resource_manager.update_tip_usage(pipette_name)
-                    
+
                         commands.append(load_command)
                         tip_loaded[pipette_mount] = True
-                
-
-
 
                     mix_command = mix_template.replace(
                         "#reps#", str(command_block.reps)
@@ -1028,7 +1024,7 @@ class ProtoPiler:
                         mix_reps = command_block.reps
 
                     pipette_mount = self.resource_manager.determine_pipette(
-                    command_block.mix_volume, False
+                        command_block.mix_volume, False
                     )
 
                     if pipette_mount is None:
@@ -1037,7 +1033,6 @@ class ProtoPiler:
                         )
                     # # check for tip
                     if not tip_loaded[pipette_mount]:
-
                         load_command = pick_tip_template.replace(
                             "#pipette#", f'pipettes["{pipette_mount}"]'
                         )
@@ -1060,7 +1055,7 @@ class ProtoPiler:
                         else:
                             load_command = load_command.replace("#location#", "")
                             self.resource_manager.update_tip_usage(pipette_name)
-                    
+
                         commands.append(load_command)
                         tip_loaded[pipette_mount] = True
 
@@ -1087,7 +1082,7 @@ class ProtoPiler:
                 if not isinstance(command_block.replace_tip, bool):
                     raise Exception("replace_tip must be bool")
                 # check if tip on pipette
-                if tip_loaded[pipette_mount] == False:
+                if tip_loaded[pipette_mount] is False:
                     print("NO TIP TO REPLACE")
                 else:
                     replace_tip_command = return_tip_template.replace(

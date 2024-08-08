@@ -14,6 +14,8 @@ from ot2_driver.protopiler.protopiler import ProtoPiler
 
 
 class RobotStatus(Enum):
+    """status of ot2"""
+
     IDLE = "idle"
     RUNNING = "running"
     FINISHING = "finishing"
@@ -23,6 +25,8 @@ class RobotStatus(Enum):
 
 
 class RunStatus(Enum):
+    """status of run on ot2"""
+
     IDLE = "idle"
     RUNNING = "running"
     FINISHING = "finishing"
@@ -327,6 +331,7 @@ class OT2_Driver:
                 requests.delete(url=delete_url + run["runID"], headers=self.headers)
 
     def change_lights_status(self, status: bool = False):
+        """switch the lights"""
         change_lights_url = f"{self.base_url}/robot/lights"
         payload = {"on": status}
 
