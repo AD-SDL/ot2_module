@@ -1,3 +1,4 @@
+"""basic config module"""
 from opentrons import protocol_api
 
 metadata = {
@@ -9,6 +10,7 @@ metadata = {
 
 
 def run(protocol: protocol_api.ProtocolContext):
+    """run basic config"""
     deck = {}
     pipettes = {}
 
