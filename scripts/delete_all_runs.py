@@ -1,9 +1,11 @@
+"""delete all runs"""
 from argparse import ArgumentParser
 
 import requests
 
 
 def main(args):
+    """main deletion"""
     base_url = "http://{ip_address}:31950/{extension}"
     headers = {"Opentrons-Version": "2"}
 

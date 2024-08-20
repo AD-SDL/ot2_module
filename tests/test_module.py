@@ -7,7 +7,9 @@ from pathlib import Path
 import pytest
 import requests
 from wei import ExperimentClient
-from wei.core.data_classes import ModuleAbout, WorkcellData, WorkflowStatus
+from wei.types.module_types import ModuleAbout
+from wei.types.workcell_types import Workcell
+from wei.types.workflow_types import WorkflowStatus
 
 
 class TestWEI_Base(unittest.TestCase):
@@ -20,7 +22,7 @@ class TestWEI_Base(unittest.TestCase):
         self.workcell_file = self.root_dir / Path(
             "tests/workcell_defs/test_workcell.yaml"
         )
-        self.workcell = WorkcellData.from_yaml(self.workcell_file)
+        self.workcell = Workcell.from_yaml(self.workcell_file)
         self.server_host = self.workcell.config.server_host
         self.server_port = self.workcell.config.server_port
         self.url = f"http://{self.server_host}:{self.server_port}"

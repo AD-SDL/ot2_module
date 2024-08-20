@@ -41,9 +41,7 @@ class ProtoPiler:
     def __init__(
         self,
         config_path: Optional[PathLike] = None,
-        template_dir: PathLike = (
-            Path(__file__).parent.resolve() / "protocol_templates"
-        ),
+        template_dir: PathLike = None,
         resource_file: Optional[PathLike] = None,
     ) -> None:
         """Can initialize with the resources we need, or it can be done after initialization
@@ -57,7 +55,10 @@ class ProtoPiler:
         resource_file : Optional[PathLike], optional
             path to the resource file, if using a config and it does not exist, it will be created, by default None
         """
-        self.template_dir = template_dir
+        if template_dir is None:
+            self.template_dir = Path(__file__).parent.resolve() / "protocol_templates"
+        else:
+            self.template_dir = template_dir
         self.resource_file = resource_file
 
         if self.resource_file:
@@ -377,9 +378,7 @@ class ProtoPiler:
         self,
         config_path: Optional[PathLike] = None,
         payload: Optional[Dict] = None,
-        protocol_out_path: PathLike = Path(
-            f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
-        ),
+        protocol_out_path: PathLike = None,
         resource_file: Optional[PathLike] = None,
         resource_file_out: Optional[PathLike] = None,
         write_resources: bool = True,
@@ -410,7 +409,10 @@ class ProtoPiler:
         Tuple[Path]
             returns the path to the protocol.py file as well as the resource file (if it does not exist, None)
         """
-
+        if protocol_out_path is None:
+            protocol_out_path = Path(
+                f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
+            )
         if not self.config:
             self.load_config(config_path)
 
@@ -924,6 +926,42 @@ class ProtoPiler:
                     and isinstance(command_block.reps, int)
                     and isinstance(command_block.mix_volume, float)
                 ):
+                    pipette_mount = self.resource_manager.determine_pipette(
+                        command_block.mix_volume, False
+                    )
+                    if pipette_mount is None:
+                        raise Exception(
+                            f"No pipette available for {block_name} with volume: {command_block.mix_volume}"
+                        )
+                    # TODO: make more robust
+                    # # check for tip
+                    if not tip_loaded[pipette_mount]:
+                        load_command = pick_tip_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        pipette_name = self.resource_manager.mount_to_pipette[
+                            pipette_mount
+                        ]
+
+                        # TODO: define flag to grab from specific well or just use the ones defined by the OT2
+                        if True:
+                            (
+                                rack_location,
+                                well_location,
+                            ) = self.resource_manager.get_next_tip(pipette_name, 1)
+                            location_string = (
+                                f'deck["{rack_location}"].wells()[{well_location}]'
+                            )
+                            load_command = load_command.replace(
+                                "#location#", location_string
+                            )
+                        else:
+                            load_command = load_command.replace("#location#", "")
+                            self.resource_manager.update_tip_usage(pipette_name)
+
+                        commands.append(load_command)
+                        tip_loaded[pipette_mount] = True
+
                     mix_command = mix_template.replace(
                         "#reps#", str(command_block.reps)
                     )
@@ -985,6 +1023,42 @@ class ProtoPiler:
                     else:
                         mix_reps = command_block.reps
 
+                    pipette_mount = self.resource_manager.determine_pipette(
+                        command_block.mix_volume, False
+                    )
+
+                    if pipette_mount is None:
+                        raise Exception(
+                            f"No pipette available for {block_name} with volume: {command_block.mix_volume}"
+                        )
+                    # # check for tip
+                    if not tip_loaded[pipette_mount]:
+                        load_command = pick_tip_template.replace(
+                            "#pipette#", f'pipettes["{pipette_mount}"]'
+                        )
+                        pipette_name = self.resource_manager.mount_to_pipette[
+                            pipette_mount
+                        ]
+
+                        # TODO: define flag to grab from specific well or just use the ones defined by the OT2
+                        if True:
+                            (
+                                rack_location,
+                                well_location,
+                            ) = self.resource_manager.get_next_tip(pipette_name, 1)
+                            location_string = (
+                                f'deck["{rack_location}"].wells()[{well_location}]'
+                            )
+                            load_command = load_command.replace(
+                                "#location#", location_string
+                            )
+                        else:
+                            load_command = load_command.replace("#location#", "")
+                            self.resource_manager.update_tip_usage(pipette_name)
+
+                        commands.append(load_command)
+                        tip_loaded[pipette_mount] = True
+
                     for loc, mix_vols, rep in zip(locations, mix_volumes, mix_reps):
                         mix_command = mix_template.replace("#reps#", str(rep))
                         mix_command = mix_command.replace("#volume#", str(mix_vols))
@@ -1007,11 +1081,15 @@ class ProtoPiler:
             elif isinstance(command_block, Replace_Tip):
                 if not isinstance(command_block.replace_tip, bool):
                     raise Exception("replace_tip must be bool")
-                replace_tip_command = return_tip_template.replace(
-                    "#pipette#", f'pipettes["{pipette_mount}"]'
-                )
-                commands.append(replace_tip_command)
-                tip_loaded[pipette_mount] = False
+                # check if tip on pipette
+                if tip_loaded[pipette_mount] is False:
+                    print("NO TIP TO REPLACE")
+                else:
+                    replace_tip_command = return_tip_template.replace(
+                        "#pipette#", f'pipettes["{pipette_mount}"]'
+                    )
+                    commands.append(replace_tip_command)
+                    tip_loaded[pipette_mount] = False
 
             elif isinstance(command_block, Clear_Pipette):
                 if not isinstance(command_block.clear, bool):
