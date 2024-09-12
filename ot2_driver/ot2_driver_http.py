@@ -193,14 +193,14 @@ class OT2_Driver:
         while self.check_run_status(run_id) not in {
             RunStatus.FAILED,
             RunStatus.SUCCEEDED,
-            RunStatus.STOPPED
+            RunStatus.STOPPED,
         }:
             time.sleep(1)
 
         return self.get_run(run_id)
-    
+
     def pause(self, run_id):
-        """Execute a `play` command for a given protocol-id
+        """Execute a `pause` command for a given protocol-id
 
         Parameters
         ----------
@@ -210,7 +210,7 @@ class OT2_Driver:
         Returns
         -------
         Dict[str, Dict[str, str]]
-            the json response from the OT2 execute command
+            the json response from the OT2 pause command
         """
         execute_url = f"{self.base_url}/runs/{run_id}/actions"
         execute_json = {"data": {"actionType": "pause"}}
@@ -219,6 +219,8 @@ class OT2_Driver:
         execute_run_resp = requests.post(
             url=execute_url, headers=self.headers, json=execute_json
         )
+        return execute_run_resp
+
     def resume(self, run_id):
         """Execute a `play` command for a given protocol-id
 
@@ -230,7 +232,7 @@ class OT2_Driver:
         Returns
         -------
         Dict[str, Dict[str, str]]
-            the json response from the OT2 execute command
+            the json response from the OT2 play command
         """
         execute_url = f"{self.base_url}/runs/{run_id}/actions"
         execute_json = {"data": {"actionType": "play"}}
@@ -239,8 +241,10 @@ class OT2_Driver:
         execute_run_resp = requests.post(
             url=execute_url, headers=self.headers, json=execute_json
         )
+        return execute_run_resp
+
     def cancel(self, run_id):
-        """Execute a `play` command for a given protocol-id
+        """Execute a `stop` command for a given protocol-id
 
         Parameters
         ----------
@@ -259,8 +263,7 @@ class OT2_Driver:
         execute_run_resp = requests.post(
             url=execute_url, headers=self.headers, json=execute_json
         )
-        
-        
+        return execute_run_resp
 
     def check_run_status(self, run_id) -> RunStatus:
         """Checks the status of a run
