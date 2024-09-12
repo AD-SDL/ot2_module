@@ -16,7 +16,7 @@ from fastapi.datastructures import State
 from typing_extensions import Annotated
 from urllib3.exceptions import ConnectTimeoutError
 from wei.modules.rest_module import RESTModule
-from wei.types.module_types import ModuleStatus
+from wei.types.module_types import AdminCommands, ModuleStatus
 from wei.types.step_types import (
     ActionRequest,
     StepFileResponse,
@@ -180,7 +180,9 @@ def execute(state, protocol_path, payload=None, resource_config=None):
     try:
         protocol_id, run_id = state.ot2.transfer(protocol_file_path)
         print("OT2 " + state.node_name + " protocol transfer successful")
+        state.run_id = run_id
         resp = state.ot2.execute(run_id)
+        state.run_id = None
 
         if resp["data"]["status"] == "succeeded":
             # poll_OT2_until_run_completion()
@@ -188,7 +190,16 @@ def execute(state, protocol_path, payload=None, resource_config=None):
             response_msg = (
                 "OT2 " + state.node_name + " successfully IDLE running a protocol"
             )
-            return True, response_msg, run_id
+            return "succeeded", response_msg, run_id
+
+        elif resp["data"]["status"] == "stopped":
+            print("OT2 " + state.node_name + " stopped while executing a protocol")
+            response_msg = (
+                "OT2 "
+                + state.node_name
+                + " successfully IDLE after stopping a protocol"
+            )
+            return "stopped", response_msg, run_id
 
         else:
             print("OT2 " + state.node_name + " failed in executing a protocol")
@@ -199,7 +210,7 @@ def execute(state, protocol_path, payload=None, resource_config=None):
                 + " failed running a protocol\n"
                 + str(resp["data"])
             )
-            return False, response_msg, run_id
+            return "failed", response_msg, run_id
     except Exception as err:
         if "no route to host" in str(err.args).lower():
             response_msg = "No route to host error. Ensure that this container \
@@ -233,6 +244,14 @@ rest_module = RESTModule(
     version=extract_version(Path(__file__).parent.parent / "pyproject.toml"),
     description="A node to control the OT2 liquid handling robot",
     model="ot2",
+    admin_commands=set(
+        [
+            AdminCommands.LOCK,
+            AdminCommands.UNLOCK,
+            AdminCommands.RESUME,
+            AdminCommands.PAUSE,
+        ]
+    ),
 )
 
 rest_module.arg_parser.add_argument("--ot2_ip", type=str, help="ot2 ip value")
@@ -259,6 +278,7 @@ def ot2_startup(state: State):
     state.resources_folder_path = str(temp_dir / state.node_name / "resources/")
     state.protocols_folder_path = str(temp_dir / state.node_name / "protocols/")
     state.logs_folder_path = str(temp_dir / state.node_name / "logs/")
+    state.run_id = None
     print(state.resources_folder_path)
     check_resources_folder(state.resources_folder_path)
     check_protocols_folder(state.protocols_folder_path)
@@ -315,7 +335,7 @@ def run_protocol(
             state, config_file_path, payload, resource_config_path
         )
 
-        if response_flag:
+        if response_flag == "succeeded":
             state.status = ModuleStatus.IDLE
             Path(logs_folder_path).mkdir(parents=True, exist_ok=True)
             with open(Path(logs_folder_path) / f"{run_id}.json", "w") as f:
@@ -325,8 +345,14 @@ def run_protocol(
                 )
             # if resource_config_path:
             #   response.resources = str(resource_config_path)
+        elif response_flag == "stopped":
+            state.status = ModuleStatus.IDLE
+            Path(logs_folder_path).mkdir(parents=True, exist_ok=True)
+            with open(Path(logs_folder_path) / f"{run_id}.json", "w") as f:
+                json.dump(state.ot2.get_run_log(run_id), f, indent=2)
+                return StepFileResponse(status=StepStatus.FAILED, files={"log": f.name})
 
-        elif not response_flag:
+        elif response_flag == "failed":
             state.status = ModuleStatus.ERROR
             response = StepResponse
             response.status = StepStatus.FAILED
@@ -334,7 +360,6 @@ def run_protocol(
             # if resource_config_path:
             #   response.resources = str(resource_config_path)
 
-        print("Finished Action: " + action.handle)
         return response
 
     else:
@@ -344,6 +369,30 @@ def run_protocol(
         state = ModuleStatus.ERROR
 
         return response
+
+
+@rest_module.pause()
+def pause(state: State):
+    """pauses the ot2 run"""
+    if state.run_id is not None:
+        state.ot2.pause(state.run_id)
+        state.status = ModuleStatus.PAUSED
+
+
+@rest_module.resume()
+def resume(state: State):
+    """resumes paused ot2_run"""
+    if state.run_id is not None and state.status == ModuleStatus.PAUSED:
+        state.ot2.resume(state.run_id)
+        state.status = ModuleStatus.BUSY
+
+
+@rest_module.cancel()
+def cancel(state: State):
+    """cancels ot2 run"""
+    if state.run_id is not None:
+        state.ot2.cancel(state.run_id)
+        state.status = ModuleStatus.READY
 
 
 rest_module.start()
