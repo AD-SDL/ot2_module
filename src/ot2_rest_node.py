@@ -12,6 +12,7 @@ from urllib.error import HTTPError, URLError
 
 import requests
 import yaml
+from fastapi import UploadFile
 from fastapi.datastructures import State
 from typing_extensions import Annotated
 from urllib3.exceptions import ConnectTimeoutError
@@ -289,6 +290,7 @@ def ot2_startup(state: State):
 def run_protocol(
     state: State,
     action: ActionRequest,
+    protocol: Annotated[UploadFile, "Protocol File"],
     use_existing_resources: Annotated[
         bool, "Whether to use the existing resource file or restart"
     ] = False,
