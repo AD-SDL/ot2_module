@@ -1,0 +1,29 @@
+equipment:
+  - name: nest_96_wellplate_2ml_deep
+    location: "1"
+    alias: plate
+    offset: [0, 1.7, 3.9]
+  - name: opentrons_flex_96_tiprack_200ul
+    location: "9"
+    offset: [0.5, 0.9, -0.3]
+  - name: flex_1channel_1000
+    mount: right
+
+commands:
+  - name: test
+    command: transfer
+    source: 1:A1
+    aspirate_clearance: 2
+    destination: 1:A4
+    dispense_clearance: 2
+    volume: [10, 10, 10]
+    mix_cycles: 0
+    mix_volume: 0
+    drop_tip: [false, false, true]
+
+metadata:
+  protocolName: Flex test
+  author: Abe astroka@anl.gov
+  description: testing flex protocol generation
+  apiLevel: "2.12"
+

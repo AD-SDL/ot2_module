@@ -610,7 +610,7 @@ class ProtoPiler:
                         pipette_mount = self.resource_manager.determine_pipette(
                             volume, False
                         )
-                        print(pipette_mount)
+                        
                         if pipette_mount is None:
                             raise Exception(
                                 f"No pipette available for {block_name} with volume: {volume}"
@@ -763,7 +763,6 @@ class ProtoPiler:
                         pipette_mount = self.resource_manager.determine_pipette(
                             volume, True
                         )
-                        print(pipette_mount)
                         if pipette_mount is None:
                             raise Exception(
                                 f"No pipette available for {block_name} with volume: {volume}"

@@ -269,7 +269,10 @@ class ResourceManager:
         for loc in valid_tiprack_locations:
             tiprack_name = self.location_to_labware[loc]
             # dependent on opentrons naming scheme
-            capacity = int(tiprack_name.split("_")[1])
+            if 'flex' in tiprack_name:
+                capacity = int(tiprack_name.split("_")[2])
+            else:
+                capacity = int(tiprack_name.split("_")[1])
             # just in case someone manually messed with the json...
             if self.resources[loc]["used"] >= capacity:
                 # data sanitization
@@ -391,7 +394,10 @@ class ResourceManager:
         """
         tiprack_name = self.location_to_labware[loc]
         # dependent on opentrons naming scheme
-        capacity = int(tiprack_name.split("_")[1])
+        if 'flex' in tiprack_name:
+            capacity = int(tiprack_name.split("_")[2])
+        else:
+            capacity = int(tiprack_name.split("_")[1])
 
         if self.resources[loc]["used"] >= capacity:
             raise Exception("ERROR no more available tips")
@@ -485,22 +491,44 @@ class ResourceManager:
             A list of string integers representing the location of the valid tipracks on the deck `['1', '2', ... ]`
 
         """
-        pip_volume_pattern = re.compile(r"p\d{2,}")
-        rack_volume_pattern = re.compile(r"\d{2,}ul$")
-        # find suitable tipracks
-        pip_volume = int(
-            pip_volume_pattern.search(pipette_name).group().replace("p", "")
-        )
-        valid_tipracks = []
-        for labware_name, locations in self.labware_to_location.items():
-            matches = rack_volume_pattern.search(labware_name)
-            if matches is not None:
-                vol = int(matches.group().replace("ul", ""))
-                if vol == pip_volume:
-                    for location in locations:
-                        valid_tipracks.append(str(location))
+        if 'flex' in pipette_name:
+            flex_volume_pattern = re.compile(r"(\d+)(?:ul)?$")
+            pip_volume = int(
+                flex_volume_pattern.search(pipette_name).group()
+            )
+            valid_tipracks = []
+            for labware_name, locations in self.labware_to_location.items():
+                matches = flex_volume_pattern.search(labware_name)
+                if matches is not None:
+                    vol = int(matches.group().replace("ul", ""))
+                    if vol == pip_volume: #TODO
+                        for location in locations:
+                            valid_tipracks.append(str(location))
+                    elif vol == 200 and pip_volume == 1000:
+                        for location in locations:
+                            valid_tipracks.append(str(location))
+            
+            return valid_tipracks
 
-        return valid_tipracks
+
+        else:
+            pip_volume_pattern = re.compile(r"p\d{2,}")
+            rack_volume_pattern = re.compile(r"\d{2,}ul$")
+            # find suitable tipracks
+            pip_volume = int(
+                pip_volume_pattern.search(pipette_name).group().replace("p", "")
+            )
+            # print("PIP_VOLUME", pip_volume)
+            valid_tipracks = []
+            for labware_name, locations in self.labware_to_location.items():
+                matches = rack_volume_pattern.search(labware_name)
+                if matches is not None:
+                    vol = int(matches.group().replace("ul", ""))
+                    if vol == pip_volume:
+                        for location in locations:
+                            valid_tipracks.append(str(location))
+
+            return valid_tipracks
 
     def determine_pipette(self, target_volume: int, is_multi: bool) -> str:
         """Determines which pipette to use for a given volume
