@@ -6,20 +6,30 @@ equipment:
   - name: opentrons_flex_96_tiprack_200ul
     location: "9"
     offset: [0.5, 0.9, -0.3]
-  - name: flex_1channel_1000
+  # - name: flex_1channel_1000
+  #   mount: right
+  - name: flex_8channel_1000
     mount: right
 
 commands:
+  # - name: test
+  #   command: transfer
+  #   source: 1:A1
+  #   aspirate_clearance: 2
+  #   destination: 1:A4
+  #   dispense_clearance: 2
+  #   volume: [10, 10, 10]
+  #   mix_cycles: 0
+  #   mix_volume: 0
+  #   drop_tip: [false, false, true]
+
   - name: test
-    command: transfer
-    source: 1:A1
-    aspirate_clearance: 2
-    destination: 1:A4
-    dispense_clearance: 2
-    volume: [10, 10, 10]
-    mix_cycles: 0
-    mix_volume: 0
-    drop_tip: [false, false, true]
+    command: multi_transfer
+    multi_source: 1:[[A1, B1, C1], [A2, B2, C2], [A3, B3, C3]]
+    multi_aspirate_clearance: 1
+    multi_destination: 1:[[A4, B4, C4], [A5, B5, C5], [A6, B6, C6]]
+    multi_dispense_clearance: 1
+    multi_volume: 10
 
 metadata:
   protocolName: Flex test

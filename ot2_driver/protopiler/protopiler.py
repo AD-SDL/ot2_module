@@ -769,11 +769,18 @@ class ProtoPiler:
                             )
                         # check to make sure that appropriate pipette is a multi-channel
                         # TODO: need to change, what if we have single and multi channel of same volume?
-                        if (
-                            "multi"
-                            not in self.resource_manager.mount_to_pipette[pipette_mount]
-                        ):
-                            raise Exception("Selected pipette is not multi-channel")
+                        if "flex" in self.resource_manager.mount_to_pipette[pipette_mount]:
+                            if (
+                                "8"
+                                not in self.resource_manager.mount_to_pipette[pipette_mount]
+                            ):
+                                raise Exception("Selected pipette is not 8-channel")
+                        else:
+                            if (
+                                "multi"
+                                not in self.resource_manager.mount_to_pipette[pipette_mount]
+                            ):
+                                raise Exception("Selected pipette is not multi-channel")
                         # check for tip
                         if not tip_loaded[pipette_mount]:
                             load_command = pick_tip_template.replace(

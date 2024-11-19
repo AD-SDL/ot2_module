@@ -551,7 +551,7 @@ class ResourceManager:
 
             # TODO: make sure the pipettes can handle the max they are labeled as
             if is_multi:
-                if "multi" in name:
+                if "multi" in name or "8" in name:
                     if pip_volume >= target_volume:
                         if pip_volume < min_available:
                             min_available = pip_volume
