@@ -410,24 +410,31 @@ class ProtoPiler:
             returns the path to the protocol.py file as well as the resource file (if it does not exist, None)
         """
         if protocol_out_path is None:
-            protocol_out_path = Path(
+            protocol_out = Path(
                 f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
             )
+
+        else:
+            protocol_out = Path(
+                str(protocol_out_path)
+                + f"/protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
+            )
+
         if not self.config:
             self.load_config(config_path)
 
         if resource_file and not self.resource_file:
             self.load_config(self.config_path, resource_file)
 
-        if self.protocol_out_path is None:
-            protocol_out = Path(
-                f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
-            )
-        else:
-            protocol_out = Path(
-                self.protocol_out_path
-                + f"/protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
-            )
+        # if self.protocol_out_path is None:
+        #     protocol_out = Path(
+        #         f"./protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
+        #     )
+        # else:
+        #     protocol_out = Path(
+        #         self.protocol_out_path
+        #         + f"/protocol_{datetime.now().strftime('%Y%m%d-%H%M%S')}.py"
+        #     )
 
         protocol = []
 
