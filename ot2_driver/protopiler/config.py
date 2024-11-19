@@ -1,7 +1,7 @@
 """Dataclasses and other configuration used in the protopiler"""
 from pathlib import Path
 from typing import List, Literal, Optional, TypeVar, Union
-import ast
+
 from pydantic import ValidationError, field_validator, model_validator
 
 from ..config import BaseModel
@@ -128,8 +128,8 @@ class Transfer(CommandBase):
                         test = s.strip("[]").split(",")
                         if iter_len != len(test):
                             raise ValidationError(
-                        "Multiple iterables of different lengths found, cannot determine dimension to iterate over"
-                    )
+                                "Multiple iterables of different lengths found, cannot determine dimension to iterate over"
+                            )
                     else:
                         setattr(self, field, [getattr(self, field)] * iter_len)
         return self
