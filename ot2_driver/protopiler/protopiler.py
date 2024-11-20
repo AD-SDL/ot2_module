@@ -93,6 +93,7 @@ class ProtoPiler:
         self.config = ProtocolConfig.from_yaml(config_path)
 
         self.load_resources(self.config.resources)
+        self.requirements = self.config.requirements
         self.metadata = self.config.metadata
         self.resource_manager = ResourceManager(
             self.config.equipment, self.resource_file
@@ -448,6 +449,19 @@ class ProtoPiler:
             header = header.replace("#metadata#", "")
         protocol.append(header)
 
+        reqs = open((self.template_dir / "requirements.template")).read()
+        if self.requirements is not None:
+            rtype = self.requirements['robotType']
+            reqs = reqs.replace("#robotType#", f'"{rtype}"')
+        
+        # else:
+        #     reqs = reqs.replace("#robotType#", f'"Flex"')
+        
+        protocol.append(reqs)
+
+
+
+
         # load labware and pipette
         protocol.append(
             "\n    ################\n    # load labware #\n    ################"
@@ -456,6 +470,7 @@ class ProtoPiler:
         labware_block = open((self.template_dir / "load_labware.template")).read()
         module_block = open((self.template_dir / "load_module.template")).read()
         offset_block = open((self.template_dir / "labware_offset.template")).read()
+        trash_block = open((self.template_dir / "trash.template")).read()
         # TODO: think of some better software design for accessing members of resource manager
         for location, name in self.resource_manager.location_to_labware.items():
             match = False
@@ -474,8 +489,11 @@ class ProtoPiler:
                     match = True
 
             if not match:
-                labware_command = labware_block.replace("#name#", f'"{name}"')
-                labware_command = labware_command.replace("#location#", f'"{location}"')
+                if name == 'trash':
+                    labware_command = trash_block.replace("#location#", f'"{location}"')
+                else:
+                    labware_command = labware_block.replace("#name#", f'"{name}"')
+                    labware_command = labware_command.replace("#location#", f'"{location}"')
 
             protocol.append(labware_command)
 
@@ -507,6 +525,8 @@ class ProtoPiler:
             )
             protocol.append(pipette_command)
 
+
+        #TODO: if flex, add trash location
         # execute commands
         protocol.append(
             "\n    ####################\n    # execute commands #\n    ####################"
