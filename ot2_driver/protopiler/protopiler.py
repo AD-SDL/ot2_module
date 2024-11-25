@@ -153,7 +153,6 @@ class ProtoPiler:
                     ):
                         orig_deck_location = orig_command.split(":")[0]
                         new_locations.append(f"{orig_deck_location}:{loc}")
-
                     command.source = new_locations
                 if ":[" in command.destination:
                     command.destination = self._unpack_alias(command.destination)
@@ -863,6 +862,7 @@ class ProtoPiler:
                         src_wellplate_location = self._parse_wellplate_location(src)
                         # should handle things not formed like loc:well
                         src_well = new_src[0]
+                        src_well = src_well.strip('\"')
 
                         aspirate_command = aspirate_template.replace(
                             "#pipette#", f'pipettes["{pipette_mount}"]'
@@ -898,6 +898,7 @@ class ProtoPiler:
                         dst_well = new_dst[
                             0
                         ]  # should handle things not formed like loc:well
+                        dst_well = dst_well.strip('\"')
                         dispense_command = dispense_template.replace(
                             "#pipette#", f'pipettes["{pipette_mount}"]'
                         )
