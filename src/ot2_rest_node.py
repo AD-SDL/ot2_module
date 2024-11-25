@@ -339,6 +339,8 @@ def run_protocol(
             state, config_file_path, payload, resource_config_path
         )
 
+        response = None
+
         if response_flag == "succeeded":
             state.status[ModuleStatus.READY] = True
             Path(logs_folder_path).mkdir(parents=True, exist_ok=True)
