@@ -178,8 +178,10 @@ def execute(state, protocol_path, payload=None, resource_config=None):
         protocol_file_path = Path(protocol_path)
     print(f"{protocol_file_path.resolve()=}")
     try:
+        
         protocol_id, run_id = state.ot2.transfer(protocol_file_path)
         print("OT2 " + state.node_name + " protocol transfer successful")
+
         state.run_id = run_id
         resp = state.ot2.execute(run_id)
         state.run_id = None
@@ -334,6 +336,8 @@ def run_protocol(
         response_flag, response_msg, run_id = execute(
             state, config_file_path, payload, resource_config_path
         )
+
+        response = None
 
         if response_flag == "succeeded":
             state.status = ModuleStatus.IDLE
