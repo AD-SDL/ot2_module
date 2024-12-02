@@ -12,6 +12,7 @@ from urllib.error import HTTPError, URLError
 
 import requests
 import yaml
+from fastapi import UploadFile
 from fastapi.datastructures import State
 from typing_extensions import Annotated
 from urllib3.exceptions import ConnectTimeoutError
@@ -67,10 +68,12 @@ def connect_robot(state: State):
     try:
         print(state.ip)
         state.ot2 = OT2_Driver(OT2_Config(ip=state.ip))
-        state.status = ModuleStatus.IDLE
+        state.status[ModuleStatus.READY] = True
+        state.status[ModuleStatus.INIT] = False
 
     except ConnectTimeoutError as connection_err:
-        state.status = ModuleStatus.ERROR
+        state.status[ModuleStatus.READY] = False
+        state.status[ModuleStatus.ERROR] = True
         print("Connection error code: " + connection_err)
 
     except HTTPError as http_error:
@@ -83,7 +86,8 @@ def connect_robot(state: State):
         print("Connection error code: " + str(conn_err))
 
     except Exception as error_msg:
-        state.status = ModuleStatus.ERROR
+        state.status[ModuleStatus.READY] = False
+        state.status[ModuleStatus.ERROR] = True
         print("-------" + str(error_msg) + " -------")
 
     else:
@@ -274,7 +278,6 @@ def ot2_startup(state: State):
 
     state.node_name = state.name
     state.ip = state.ot2_ip
-    state.status = "UNKNOWN"
     temp_dir = Path.home() / ".wei" / ".ot2_temp"
     temp_dir.mkdir(exist_ok=True)
     state.resources_folder_path = str(temp_dir / state.node_name / "resources/")
@@ -291,6 +294,7 @@ def ot2_startup(state: State):
 def run_protocol(
     state: State,
     action: ActionRequest,
+    protocol: Annotated[UploadFile, "Protocol File"],
     use_existing_resources: Annotated[
         bool, "Whether to use the existing resource file or restart"
     ] = False,
@@ -340,7 +344,7 @@ def run_protocol(
         response = None
 
         if response_flag == "succeeded":
-            state.status = ModuleStatus.IDLE
+            state.status[ModuleStatus.READY] = True
             Path(logs_folder_path).mkdir(parents=True, exist_ok=True)
             with open(Path(logs_folder_path) / f"{run_id}.json", "w") as f:
                 json.dump(state.ot2.get_run_log(run_id), f, indent=2)
@@ -350,14 +354,15 @@ def run_protocol(
             # if resource_config_path:
             #   response.resources = str(resource_config_path)
         elif response_flag == "stopped":
-            state.status = ModuleStatus.IDLE
+            state.status[ModuleStatus.READY] = True
             Path(logs_folder_path).mkdir(parents=True, exist_ok=True)
             with open(Path(logs_folder_path) / f"{run_id}.json", "w") as f:
                 json.dump(state.ot2.get_run_log(run_id), f, indent=2)
                 return StepFileResponse(status=StepStatus.FAILED, files={"log": f.name})
 
         elif response_flag == "failed":
-            state.status = ModuleStatus.ERROR
+            state.status[ModuleStatus.READY] = False
+            state.status[ModuleStatus.ERROR] = True
             response = StepResponse
             response.status = StepStatus.FAILED
             response.error = "an error occurred"
@@ -380,15 +385,15 @@ def pause(state: State):
     """pauses the ot2 run"""
     if state.run_id is not None:
         state.ot2.pause(state.run_id)
-        state.status = ModuleStatus.PAUSED
+        state.status[ModuleStatus.PAUSED] = True
 
 
 @rest_module.resume()
 def resume(state: State):
     """resumes paused ot2_run"""
-    if state.run_id is not None and state.status == ModuleStatus.PAUSED:
+    if state.run_id is not None and state.status[ModuleStatus.PAUSED]:
         state.ot2.resume(state.run_id)
-        state.status = ModuleStatus.BUSY
+        state.status[ModuleStatus.PAUSED] = False
 
 
 @rest_module.cancel()
@@ -396,7 +401,8 @@ def cancel(state: State):
     """cancels ot2 run"""
     if state.run_id is not None:
         state.ot2.cancel(state.run_id)
-        state.status = ModuleStatus.READY
+        state.status[ModuleStatus.PAUSED] = False
+        state.status[ModuleStatus.CANCELLED] = True
 
 
 rest_module.start()

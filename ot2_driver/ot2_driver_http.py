@@ -284,6 +284,7 @@ class OT2_Driver:
 
         if check_run_resp.status_code != 200:
             print(f"Cannot check run {run_id}")
+        
         status = RunStatus(check_run_resp.json()["data"]["status"])
 
         return status
