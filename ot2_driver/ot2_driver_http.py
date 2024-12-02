@@ -148,7 +148,7 @@ class OT2_Driver:
 
         # transfer the protocol
         transfer_resp = requests.post(
-            url=transfer_url, files=files, headers=self.headers
+            url=transfer_url, files=files, headers=self.headers, timeout=600
         )
         print(transfer_resp.status_code)
         print(transfer_resp.text)
@@ -284,7 +284,6 @@ class OT2_Driver:
 
         if check_run_resp.status_code != 200:
             print(f"Cannot check run {run_id}")
-        print(check_run_resp.json())
         status = RunStatus(check_run_resp.json()["data"]["status"])
 
         return status
