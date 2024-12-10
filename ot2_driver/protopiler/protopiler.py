@@ -135,10 +135,12 @@ class ProtoPiler:
                 # Add logic for taking well names from files
                 # peek into the source, check the well destination part
                 peek_elem = command.source
+
                 if isinstance(command.source, list):  # No mixing and matching
                     peek_elem = command.source[0]
 
                 peek_well: str = peek_elem.split(":")[-1]
+
                 # check if it follows naming convention`[A-Z,a-z]?[0-9]{1,3}`
                 # TODO better way to check the naming conventions for the wells
                 if (
@@ -146,6 +148,7 @@ class ProtoPiler:
                     and not peek_well[1:].isdigit()
                     and "payload" not in peek_well
                 ):
+
                     # read from file
                     new_locations = []
                     for orig_command, loc in zip(
@@ -227,7 +230,9 @@ class ProtoPiler:
                     command.location = new_locations
 
             if isinstance(command, Multi_Transfer):
-                if ":[" in command.multi_source:
+
+                if ":[" in command.multi_source:  # not for payload
+                    
                     command.multi_source = self._unpack_multi_alias(
                         command_elem=command.multi_source
                     )
@@ -238,12 +243,19 @@ class ProtoPiler:
                 if isinstance(command.multi_source, list):  # No mixing and matching
                     peek_elem = command.multi_source[0]
                 peek_well = peek_elem.split(":")[-1]
+
                 # check if it follows naming convention`[A-Z,a-z]?[0-9]{1,3}`
                 # TODO better way to check the naming conventions for the wells
                 peek_well = peek_well.split(", ")
-                if len(peek_well) == 1 and "payload" not in peek_well:
+
+
+                # for source
+                if len(peek_well) == 1 and "payload" not in peek_well[0]:   # TESTING added brackets# ISSUE! it's not recognizing payload as in the peek well because it's a list!!!!!! 
+
+                    # PEEK WELL = ['payload.source_wells_1']
                     # read from file
                     new_locations = []
+
                     for orig_command, loc in zip(
                         repeat(command.multi_source),
                         self.resources[resource_key][peek_well[0]],
@@ -267,7 +279,9 @@ class ProtoPiler:
 
                 peek_well = peek_elem.split(":")[-1]
                 peek_well = peek_well.split(", ")
-                if len(peek_well) == 1 and "payload" not in peek_well:
+
+                # for dest
+                if len(peek_well) == 1 and "payload" not in peek_well[0]:      # ISSUE! is this supposed to be the same conditional as above?
                     # read from file
                     new_locations = []
                     for orig_command, loc in zip(
@@ -438,27 +452,24 @@ class ProtoPiler:
 
         protocol = []
 
+        # add requirements 
+        reqs = open((self.template_dir / "requirements.template")).read()
+        if self.requirements is not None:
+            rtype = self.requirements['robotType']
+            reqs = reqs.replace("#robotType#", f'"{rtype}"')
+
+        protocol.append(reqs)
+
         # Header and run() declaration with initial deck and pipette dicts
         header = open((self.template_dir / "header.template")).read()
         if self.metadata is not None:
             header = header.replace(
                 "#metadata#", f"metadata = {self.metadata.model_dump_json(indent=4)}"
             )
+
         else:
             header = header.replace("#metadata#", "")
         protocol.append(header)
-
-        reqs = open((self.template_dir / "requirements.template")).read()
-        if self.requirements is not None:
-            rtype = self.requirements['robotType']
-            reqs = reqs.replace("#robotType#", f'"{rtype}"')
-        
-        # else:
-        #     reqs = reqs.replace("#robotType#", f'"Flex"')
-        
-        protocol.append(reqs)
-
-
 
 
         # load labware and pipette
@@ -531,12 +542,14 @@ class ProtoPiler:
             "\n    ####################\n    # execute commands #\n    ####################"
         )
 
+
+
         commands_python = self._create_commands(payload=payload)
         protocol.extend(commands_python)
 
         # TODO: anything to write for closing?
 
-        with open(protocol_out, "w") as f:
+        with open(protocol_out, "w+") as f:
             f.write("\n".join(protocol))
 
         # Hierarchy:
@@ -565,6 +578,17 @@ class ProtoPiler:
         if reset_when_done:
             self._reset()
 
+        # TESTING
+        with open(protocol_out, "r") as f:
+            print("************************************************************")
+            print()
+            content = f.read()
+            print(content)
+            print()
+            print("*************************************************************")
+            print()
+
+
         return protocol_out, resource_file_out
 
     def _create_commands(self, payload: Optional[Dict]) -> List[str]:
@@ -577,6 +601,10 @@ class ProtoPiler:
         Returns:
             List[str]: python snippets of commands to be run
         """
+
+        # TESTING
+        print(f"PROTOPILER CREATE COMMANDS PAYLoaD: {payload}")
+
         commands = []
 
         # load command templates
@@ -600,22 +628,38 @@ class ProtoPiler:
         move_template = open((self.template_dir / "move_pipette.template")).read()
         tip_loaded = {"left": False, "right": False}
         for i, command_block in enumerate(self.commands):
+
             block_name = (
                 command_block.name if command_block.name is not None else f"command {i}"
             )
+
             commands.append(f"\n    # {block_name}")
             # TODO: Inject the payload here
             # Inject the payload
             if isinstance(payload, dict):
+
                 (arg_keys, arg_values) = zip(*command_block.__dict__.items())
+
+                # TESTING
+                print(f"arg values: {arg_values}")
+                print(f"arg keys: {arg_keys}")
+
                 for key, value in payload.items():
+
+                    # TESTING
+                    print(f"KEY: {key}")
+                    print(f"value: {value}")
+
                     if "payload." not in key:
                         key = f"payload.{key}"
+
                     if key in arg_values:
+                        print("KEY IN ARG VALUES")
                         idx = arg_values.index(key)
                         step_arg_key = arg_keys[idx]
                         # this feels slimy...
-                        setattr(command_block, step_arg_key, value)
+                        setattr(command_block, step_arg_key, value)  # TESTING changes the command block based on the payload
+
             if isinstance(command_block, Transfer):
                 for (
                     volume,
@@ -816,8 +860,9 @@ class ProtoPiler:
                                 pipette_mount
                             ]
                             new_src = copy.copy(src)
-                            new_src = new_src.replace("'", "")
-                            new_src = new_src.split(":")[-1]
+
+                            new_src = new_src.replace("'", "")  
+                            new_src = new_src.split(":")[-1]  
                             new_src = new_src.strip("][").split(", ")
 
                             # TODO: define flag to grab from specific well or just use the ones defined by the OT2
