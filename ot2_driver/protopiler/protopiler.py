@@ -653,12 +653,26 @@ class ProtoPiler:
                     if "payload." not in key:
                         key = f"payload.{key}"
 
-                    if key in arg_values:
-                        print("KEY IN ARG VALUES")
-                        idx = arg_values.index(key)
-                        step_arg_key = arg_keys[idx]
-                        # this feels slimy...
-                        setattr(command_block, step_arg_key, value)  # TESTING changes the command block based on the payload
+                    if isinstance(command_block, Multi_Transfer):
+                        arg_values_list = []
+                        # make all lists in arg_values single items
+                        for val in arg_values:
+                            if isinstance(val, list):
+                                val = val[0]
+                            arg_values_list.append(val)
+                        
+                        if key in arg_values_list:
+                            idx = arg_values.index(key)
+                            step_arg_key = arg_keys[idx]
+                            setattr(command_block, step_arg_key, value[0])
+
+                    else:
+                        if key in arg_values:
+                            print("KEY IN ARG VALUES")
+                            idx = arg_values.index(key)
+                            step_arg_key = arg_keys[idx]
+                            # this feels slimy...
+                            setattr(command_block, step_arg_key, value)  # TESTING changes the command block based on the payload
 
             if isinstance(command_block, Transfer):
                 for (
