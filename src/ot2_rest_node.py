@@ -363,7 +363,7 @@ def run_protocol(
         elif response_flag == "failed":
             state.status[ModuleStatus.READY] = False
             state.status[ModuleStatus.ERROR] = True
-            response = StepResponse
+            response = StepResponse()
             response.status = StepStatus.FAILED
             response.error = "an error occurred"
             # if resource_config_path:

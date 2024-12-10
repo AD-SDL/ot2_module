@@ -173,8 +173,8 @@ class Multi_Transfer(CommandBase):
         """Make sure that all list fields are the same length, if they are lists"""
         iter_len = 0
         listable_fields = [
-            "multi_volume",
-            "multi_source",
+            "multi_volume", 
+            "multi_source",    
             "multi_destination",
             "multi_mix_cycles",
             "multi_mix_volume",
@@ -183,8 +183,22 @@ class Multi_Transfer(CommandBase):
             "multi_blow_out",
             "multi_drop_tip",
         ]
+
         for field in listable_fields:
-            if isinstance(getattr(self, field), list):
+
+            if isinstance(getattr(self, field), str): 
+                if "payload" in getattr(self, field) or ":" in getattr(self,field): 
+                    continue   # skip this iteration and leave the value that contains a payload as is
+
+                else: 
+                    setattr(self, field, [getattr(self, field)])
+
+            # if not already handled in string block and is not a list
+            if not isinstance(getattr(self, field), str) and not isinstance(getattr(self, field), list): 
+                # convert the value into a list of of the value
+                setattr(self, field, [getattr(self, field)])
+
+            if isinstance(getattr(self, field), list):   # just look to see if you have user entered lists of different lengths
                 if iter_len == 0:
                     iter_len = len(getattr(self, field))
                 elif len(getattr(self, field)) != iter_len:
@@ -193,8 +207,11 @@ class Multi_Transfer(CommandBase):
                     )
         if iter_len > 0:
             for field in listable_fields:
-                if not isinstance(getattr(self, field), list):
+                if "payload" in getattr(self, field) and isinstance(getattr(self, field), str):
+                    pass
+                elif not isinstance(getattr(self, field), list):
                     setattr(self, field, [getattr(self, field)] * iter_len)
+
         return self
 
 

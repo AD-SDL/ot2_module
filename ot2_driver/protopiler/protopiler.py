@@ -100,6 +100,7 @@ class ProtoPiler:
         )
 
         self.commands = self.config.commands
+
         self._postprocess_commands()
 
     def _postprocess_commands(self) -> None:  # Could use more testing
@@ -242,17 +243,15 @@ class ProtoPiler:
                 peek_elem = command.multi_source
                 if isinstance(command.multi_source, list):  # No mixing and matching
                     peek_elem = command.multi_source[0]
-                peek_well = peek_elem.split(":")[-1]
+
+                peek_well = peek_elem.split(":")[-1]   # 4:payload.source_wells or 4:['A1,'A2']
 
                 # check if it follows naming convention`[A-Z,a-z]?[0-9]{1,3}`
                 # TODO better way to check the naming conventions for the wells
                 peek_well = peek_well.split(", ")
 
+                if len(peek_well) == 1 and "payload" not in peek_well[0]:   
 
-                # for source
-                if len(peek_well) == 1 and "payload" not in peek_well[0]:   # TESTING added brackets# ISSUE! it's not recognizing payload as in the peek well because it's a list!!!!!! 
-
-                    # PEEK WELL = ['payload.source_wells_1']
                     # read from file
                     new_locations = []
 
@@ -264,6 +263,9 @@ class ProtoPiler:
                         new_locations.append(f"{orig_deck_location}:{loc}")
 
                     command.multi_source = new_locations
+
+
+                # Everything below is for the destination ------------------------------------------------------------
                 if ":[" in command.multi_destination:
                     command.multi_destination = self._unpack_multi_alias(
                         command.multi_destination
@@ -578,16 +580,6 @@ class ProtoPiler:
         if reset_when_done:
             self._reset()
 
-        # TESTING
-        with open(protocol_out, "r") as f:
-            print("************************************************************")
-            print()
-            content = f.read()
-            print(content)
-            print()
-            print("*************************************************************")
-            print()
-
 
         return protocol_out, resource_file_out
 
@@ -601,9 +593,6 @@ class ProtoPiler:
         Returns:
             List[str]: python snippets of commands to be run
         """
-
-        # TESTING
-        print(f"PROTOPILER CREATE COMMANDS PAYLoaD: {payload}")
 
         commands = []
 
@@ -640,39 +629,41 @@ class ProtoPiler:
 
                 (arg_keys, arg_values) = zip(*command_block.__dict__.items())
 
-                # TESTING
-                print(f"arg values: {arg_values}")
-                print(f"arg keys: {arg_keys}")
-
                 for key, value in payload.items():
 
-                    # TESTING
-                    print(f"KEY: {key}")
-                    print(f"value: {value}")
-
                     if "payload." not in key:
+                        old_key = key
                         key = f"payload.{key}"
 
                     if isinstance(command_block, Multi_Transfer):
+
                         arg_values_list = []
                         # make all lists in arg_values single items
                         for val in arg_values:
                             if isinstance(val, list):
                                 val = val[0]
-                            arg_values_list.append(val)
-                        
-                        if key in arg_values_list:
-                            idx = arg_values.index(key)
-                            step_arg_key = arg_keys[idx]
-                            setattr(command_block, step_arg_key, value[0])
+                            arg_values_list.append(val)   # new list without lists, simple
+
+                        for i in range(len(arg_values_list)): 
+                            if old_key in str(arg_values_list[i]): 
+                                idx = i
+                                step_arg_key = arg_keys[idx]  
+
+                                plate_loc = arg_values_list[i].split(":")[0]
+
+                                formatted_value = []
+                                formatted_value.append(str(plate_loc) + ":" + str(value[0]))
+
+                                setattr(command_block, step_arg_key, formatted_value)
+
 
                     else:
                         if key in arg_values:
-                            print("KEY IN ARG VALUES")
                             idx = arg_values.index(key)
                             step_arg_key = arg_keys[idx]
                             # this feels slimy...
-                            setattr(command_block, step_arg_key, value)  # TESTING changes the command block based on the payload
+                            setattr(command_block, step_arg_key, value)  
+                            
 
             if isinstance(command_block, Transfer):
                 for (
