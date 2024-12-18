@@ -250,6 +250,14 @@ class Temperature_Set(CommandBase):
     change_temp: int
     """Temperature to set temperature module to"""
 
+class Move_Labware(CommandBase):
+    """Moving labware internally in the Flex using the gripper"""
+    command: Literal["move_labware"]
+    """The command to execute, should be move_labware for this class"""
+    labware: int
+    """deck position of labware"""
+    destination: int
+    """deck position to move labware"""
 
 class Replace_Tip(CommandBase):
     """The replace_tip command, used to replace a tip(s) into the tip rack"""
@@ -304,6 +312,7 @@ class ProtocolConfig(BaseModel):
             Mix,
             Deactivate,
             Temperature_Set,
+            Move_Labware,
             Replace_Tip,
             Clear_Pipette,
             Move_Pipette,

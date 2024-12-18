@@ -13,6 +13,7 @@ from ot2_driver.protopiler.config import (
     CommandBase,
     Deactivate,
     Mix,
+    Move_Labware,
     Move_Pipette,
     Multi_Transfer,
     PathLike,
@@ -613,11 +614,11 @@ class ProtoPiler:
         temp_change_template = open(
             (self.template_dir / "set_temperature.template")
         ).read()
+        move_labware_template = open((self.template_dir / "move_labware.template")).read()
         deactivate_template = open((self.template_dir / "deactivate.template")).read()
         move_template = open((self.template_dir / "move_pipette.template")).read()
         tip_loaded = {"left": False, "right": False}
         for i, command_block in enumerate(self.commands):
-
             block_name = (
                 command_block.name if command_block.name is not None else f"command {i}"
             )
@@ -988,7 +989,6 @@ class ProtoPiler:
                                 "#pipette#", f'pipettes["{pipette_mount}"]'
                             )
                             commands.append(blowout_command)
-
                         if drop_tip:
                             drop_command = drop_tip_template.replace(
                                 "#pipette#", f'pipettes["{pipette_mount}"]'
@@ -997,6 +997,16 @@ class ProtoPiler:
                             tip_loaded[pipette_mount] = False
 
                         commands.append("")
+
+            elif isinstance(command_block, Move_Labware):
+                move_labware_command = move_labware_template.replace(
+                    "#plate#", str(command_block.labware)
+                )
+                move_labware_command = move_labware_command.replace(
+                    "#destination#", str(command_block.destination)
+                )
+                commands.append(move_labware_command)
+
             elif isinstance(command_block, Temperature_Set):
                 temp_change_command = temp_change_template.replace(
                     "#temp#", str(command_block.change_temp)
@@ -1209,7 +1219,7 @@ class ProtoPiler:
                     drop_tip_template.replace("#pipette#", f'pipettes["{mount}"]')
                 )
                 tip_loaded[mount] = False
-
+        
         return commands
 
     def _parse_wellplate_location(self, command_location: str) -> str:
