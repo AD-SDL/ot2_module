@@ -183,20 +183,17 @@ class Multi_Transfer(CommandBase):
             "multi_blow_out",
             "multi_drop_tip",
         ]
-
         for field in listable_fields:
-
             if isinstance(getattr(self, field), str): 
                 if "payload" in getattr(self, field) or ":" in getattr(self,field): 
                     continue   # skip this iteration and leave the value that contains a payload as is
-
                 else: 
                     setattr(self, field, [getattr(self, field)])
 
             # if not already handled in string block and is not a list
-            if not isinstance(getattr(self, field), str) and not isinstance(getattr(self, field), list): 
-                # convert the value into a list of of the value
-                setattr(self, field, [getattr(self, field)])
+            # if not isinstance(getattr(self, field), str) and not isinstance(getattr(self, field), list): 
+            #     # convert the value into a list of of the value
+            #     setattr(self, field, [getattr(self, field)])
 
             if isinstance(getattr(self, field), list):   # just look to see if you have user entered lists of different lengths
                 if iter_len == 0:
@@ -207,11 +204,19 @@ class Multi_Transfer(CommandBase):
                     )
         if iter_len > 0:
             for field in listable_fields:
+                ###TODO
+                #had to put changing things to list here, so that conditional doesn't catch on first validation
+                if not isinstance(getattr(self, field), str) and not isinstance(getattr(self, field), list):
+                    setattr(self, field, [getattr(self, field)])
+                ###
                 if "payload" in getattr(self, field) and isinstance(getattr(self, field), str):
                     pass
-                elif not isinstance(getattr(self, field), list):
-                    setattr(self, field, [getattr(self, field)] * iter_len)
-
+                #TODO
+                # elif not isinstance(getattr(self, field), list):
+                #should be redundant because everything is now list
+                else:
+                    setattr(self, field, getattr(self, field) * iter_len)
+                    pass
         return self
 
 

@@ -865,7 +865,6 @@ class ProtoPiler:
                                 pipette_mount
                             ]
                             new_src = copy.copy(src)
-
                             new_src = new_src.replace("'", "")  
                             new_src = new_src.split(":")[-1]  
                             new_src = new_src.strip("][").split(", ")
@@ -1340,7 +1339,6 @@ class ProtoPiler:
 
         # Ensure that the command block is a properly validated Multi_Transfer
         command_block = Multi_Transfer.model_validate(command_block)
-
         for row in zip(
             command_block.multi_volume,
             command_block.multi_source,
