@@ -52,6 +52,16 @@ class CommandBase(BaseModel):
     name: Optional[str] = None
     """Name of the command, optional"""
 
+class Ninetysix_Transfer(CommandBase):
+    """used to transfer to and from all 96 well locations on a plate at the same time, for now can only do entire plate"""
+    command: Literal["ns_transfer"]
+    """command to execute, should be ns_transfer"""
+    ns_source: str
+    """deck location of the source plate"""
+    ns_destination: str
+    """deck location of the destination plate"""
+    ns_volume: float
+    """volume to transfer"""
 
 class Transfer(CommandBase):
     """The transfer command, used to move liquids from one place to another"""
@@ -117,10 +127,7 @@ class Transfer(CommandBase):
                 if not isinstance(getattr(self, field), list):
                     get_field = getattr(self, field)
                     if isinstance(get_field, str) and ":[" in get_field:
-                        print(get_field)
-                        print(get_field.split(":")[-1])
                         s = get_field.split(":")[-1]
-                        print("right here thanks")
                         try:
                             print(s.strip("[]").split(","))
                         except Exception as e:
@@ -254,9 +261,9 @@ class Move_Labware(CommandBase):
     """Moving labware internally in the Flex using the gripper"""
     command: Literal["move_labware"]
     """The command to execute, should be move_labware for this class"""
-    labware: int
+    labware: str
     """deck position of labware"""
-    destination: int
+    destination: str
     """deck position to move labware"""
 
 class Replace_Tip(CommandBase):

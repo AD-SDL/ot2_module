@@ -16,6 +16,7 @@ from ot2_driver.protopiler.config import (
     Move_Labware,
     Move_Pipette,
     Multi_Transfer,
+    Ninetysix_Transfer,
     PathLike,
     ProtocolConfig,
     Replace_Tip,
@@ -199,7 +200,7 @@ class ProtoPiler:
                     for vol in self.resources[resource_key][command.volume]:
                         # new_volumes.append(int(vol))
                         new_volumes.append(float(vol))
-                        
+
                         command.volume = new_volumes
             if isinstance(command, Mix):
                 if ":[" in command.location:
@@ -231,7 +232,9 @@ class ProtoPiler:
                         new_locations.append(f"{orig_deck_location}:{loc}")
 
                     command.location = new_locations
-
+            if isinstance(command, Ninetysix_Transfer):
+                pass
+            #TODO
             if isinstance(command, Multi_Transfer):
 
                 if ":[" in command.multi_source:  # not for payload
@@ -370,8 +373,6 @@ class ProtoPiler:
                 self.resources[resource.name] = pd.read_excel(
                     resource.location, header=0
                 )
-        # print(self.resources)
-
     def _reset(
         self,
     ) -> None:
@@ -822,6 +823,18 @@ class ProtoPiler:
                             tip_loaded[pipette_mount] = False
 
                         commands.append("")
+            
+            elif isinstance(command_block, Ninetysix_Transfer):
+                for (
+                    volume,
+                    src,
+                    dst,
+                ) in self._process_96_instruction(command_block):
+                    if volume <= 0:
+                        pass
+                    else:
+                        pass
+                        #TODO
             elif isinstance(command_block, Multi_Transfer):
                 for (
                     volume,
@@ -1363,6 +1376,12 @@ class ProtoPiler:
             command_block.multi_drop_tip,
         ):
             yield row
+    
+    def _process_96_instruction(
+        self, command_block: CommandBase
+    ) -> Generator[list, None, None]:
+        pass
+
 
 
 def main(args):  # noqa: D103
