@@ -248,16 +248,20 @@ class ProtoPiler:
                 peek_elem = command.multi_source
                 if isinstance(command.multi_source, list):  # No mixing and matching
                     peek_elem = command.multi_source[0]
-
                 peek_well = peek_elem.split(":")[-1]   # 4:payload.source_wells or 4:['A1,'A2']
 
                 # check if it follows naming convention`[A-Z,a-z]?[0-9]{1,3}`
                 # TODO better way to check the naming conventions for the wells
                 peek_well = peek_well.split(", ")
 
-                if len(peek_well) == 1 and "payload" not in peek_well[0]:   
+                # if len(peek_well) == 1 and "payload" not in peek_well[0]:   
+                if (
+                    not type(peek_well) is list
+                    # and not peek_well[1:].isdigit()
+                    and "payload" not in peek_well
+                ):
 
-                    # read from file
+                    # read from file #TODO: not necessarily
                     new_locations = []
 
                     for orig_command, loc in zip(
@@ -288,7 +292,12 @@ class ProtoPiler:
                 peek_well = peek_well.split(", ")
 
                 # for dest
-                if len(peek_well) == 1 and "payload" not in peek_well[0]:      # ISSUE! is this supposed to be the same conditional as above?
+                # if len(peek_well) == 1 and "payload" not in peek_well[0]:      # ISSUE! is this supposed to be the same conditional as above?
+                if (
+                    not type(peek_well) is list
+                    # and not peek_well[1:].isdigit()
+                    and "payload" not in peek_well
+                ):    
                     # read from file
                     new_locations = []
                     for orig_command, loc in zip(

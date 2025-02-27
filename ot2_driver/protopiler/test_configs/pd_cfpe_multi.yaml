@@ -1,0 +1,83 @@
+equipment:
+  - name: nest_96_wellplate_100ul_pcr_full_skirt
+    location: C1
+    alias: src
+    offset: [0, 1.7, 3.9]
+  - name: nest_96_wellplate_100ul_pcr_full_skirt
+    location: B1
+    alias: dest
+    module: temperature module gen2
+    offset: [1, 1.6, 11]
+#TODO: heater shaker mod?
+  - name: nest_12_reservoir_15ml
+    location: B3
+    alias: reservoir
+  - name: nest_96_wellplate_200ul_flat
+    location: C2
+    alias: assay
+  - name: nest_96_wellplate_100ul_pcr_full_skirt
+    location: B2
+    alias: staging
+  - name: opentrons_flex_96_tiprack_50ul # 50
+    location: A3
+  - name: opentrons_flex_96_tiprack_50ul
+    location: A2
+  - name: opentrons_flex_96_tiprack_1000ul
+    location: C3
+  - name: flex_8channel_50
+    mount: right
+  - name: flex_1channel_1000
+    mount: left
+  - name: trash
+    location: A1
+
+commands:
+  # - name: set temp
+  #   command: temperature_set
+  #   change_temp: 4
+# move reservoir from B1 to B3 #TODO maybe omit
+  # - name: move_test
+  #   command: move_labware 
+  #   labware: 2
+  #   destination: 3
+  
+  ## Distribute cpfe_reagent_vol (18) µL of reagent H src H1 to all destination wells (dest A1, B1, C1, D1)
+  - name: cfpe reagent
+    command: multi_transfer
+    multi_source: src:[[H1, H1, H1, H1]] #TODO:
+    multi_aspirate_clearance: 2
+    multi_destination: dest:[[A1, B1, C1, D1]]
+    multi_dispense_clearance: 2
+    multi_volume: 18
+    multi_mix_cycles: 3
+    multi_mix_volume: 10
+  
+  #Transfer dna_vol (2) µL of DNA to corresponding wells src[A1, B1, C1, D1] to dest[A1, B1, C1, D1]
+  - name: dna
+    command: multi_transfer
+    multi_source: src:[[A1, B1, C1, D1]]
+    multi_aspirate_clearance: 2
+    multi_destination: dest:[[A1, B1, C1, D1]]
+    multi_dispense_clearance: 2
+    multi_volume: 2
+    multi_mix_cycles: 3
+    multi_mix_volume: 15
+  
+  # move from temp module to staging
+  - name: move dest from temp module to staging
+    command: move_labware 
+    labware: B1 #TODO
+    destination: A4
+
+#incubate plate
+
+
+
+metadata:
+  protocolName: Gyorgy Flex test 1 multi
+  author: Abe astroka@anl.gov
+  description: pd cfpe assay
+  apiLevel: "2.18"
+
+requirements:
+  robotType: Flex
