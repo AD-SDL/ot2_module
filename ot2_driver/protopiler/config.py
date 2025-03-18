@@ -53,6 +53,19 @@ class CommandBase(BaseModel):
     """Name of the command, optional"""
 
 
+class Ninetysix_Transfer(CommandBase):
+    """used to transfer to and from all 96 well locations on a plate at the same time, for now can only do entire plate"""
+
+    command: Literal["ns_transfer"]
+    """command to execute, should be ns_transfer"""
+    ns_source: str
+    """deck location of the source plate"""
+    ns_destination: str
+    """deck location of the destination plate"""
+    ns_volume: float
+    """volume to transfer"""
+
+
 class Transfer(CommandBase):
     """The transfer command, used to move liquids from one place to another"""
 
@@ -117,10 +130,7 @@ class Transfer(CommandBase):
                 if not isinstance(getattr(self, field), list):
                     get_field = getattr(self, field)
                     if isinstance(get_field, str) and ":[" in get_field:
-                        print(get_field)
-                        print(get_field.split(":")[-1])
                         s = get_field.split(":")[-1]
-                        print("right here thanks")
                         try:
                             print(s.strip("[]").split(","))
                         except Exception as e:
@@ -184,7 +194,20 @@ class Multi_Transfer(CommandBase):
             "multi_drop_tip",
         ]
         for field in listable_fields:
-            if isinstance(getattr(self, field), list):
+            if isinstance(getattr(self, field), str):
+                if "payload" in getattr(self, field) or ":" in getattr(self, field):
+                    continue  # skip this iteration and leave the value that contains a payload as is
+                else:
+                    setattr(self, field, [getattr(self, field)])
+
+            # if not already handled in string block and is not a list
+            # if not isinstance(getattr(self, field), str) and not isinstance(getattr(self, field), list):
+            #     # convert the value into a list of of the value
+            #     setattr(self, field, [getattr(self, field)])
+
+            if isinstance(
+                getattr(self, field), list
+            ):  # just look to see if you have user entered lists of different lengths
                 if iter_len == 0:
                     iter_len = len(getattr(self, field))
                 elif len(getattr(self, field)) != iter_len:
@@ -193,8 +216,23 @@ class Multi_Transfer(CommandBase):
                     )
         if iter_len > 0:
             for field in listable_fields:
-                if not isinstance(getattr(self, field), list):
-                    setattr(self, field, [getattr(self, field)] * iter_len)
+                ###TODO
+                # had to put changing things to list here, so that conditional doesn't catch on first validation
+                if not isinstance(getattr(self, field), str) and not isinstance(
+                    getattr(self, field), list
+                ):
+                    setattr(self, field, [getattr(self, field)])
+                ###
+                if "payload" in getattr(self, field) and isinstance(
+                    getattr(self, field), str
+                ):
+                    pass
+                # TODO
+                # elif not isinstance(getattr(self, field), list):
+                # should be redundant because everything is now list
+                else:
+                    setattr(self, field, getattr(self, field) * iter_len)
+                    pass
         return self
 
 
@@ -227,6 +265,17 @@ class Temperature_Set(CommandBase):
     """The command to execute, should be temperature_set or set_temperature for this class"""
     change_temp: int
     """Temperature to set temperature module to"""
+
+
+class Move_Labware(CommandBase):
+    """Moving labware internally in the Flex using the gripper"""
+
+    command: Literal["move_labware"]
+    """The command to execute, should be move_labware for this class"""
+    labware: str
+    """deck position of labware"""
+    destination: str
+    """deck position to move labware"""
 
 
 class Replace_Tip(CommandBase):
@@ -282,6 +331,7 @@ class ProtocolConfig(BaseModel):
             Mix,
             Deactivate,
             Temperature_Set,
+            Move_Labware,
             Replace_Tip,
             Clear_Pipette,
             Move_Pipette,

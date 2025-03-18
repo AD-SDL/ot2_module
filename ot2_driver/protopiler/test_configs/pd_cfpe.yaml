@@ -1,0 +1,85 @@
+equipment:
+  - name: nest_96_wellplate_100ul_pcr_full_skirt
+    location: D2
+    alias: src
+    offset: [0, 1.7, 3.9]
+  - name: nest_96_wellplate_100ul_pcr_full_skirt
+    location: D1
+    alias: dest
+    module: temperature module gen2
+    offset: [1, 1.6, 11]
+#TODO: heater shaker mod?
+  - name: nest_12_reservoir_15ml
+    location: B3
+    alias: reservoir
+  - name: nest_96_wellplate_200ul_flat
+    location: C2
+    alias: assay
+  - name: nest_96_wellplate_100ul_pcr_full_skirt
+    location: B1
+    alias: staging
+  - name: opentrons_flex_96_tiprack_50ul # 50
+    location: A3
+  - name: opentrons_flex_96_tiprack_50ul
+    location: A2
+  - name: opentrons_flex_96_tiprack_1000ul
+    location: B2
+  - name: flex_1channel_50
+    mount: left
+  - name: flex_1channel_1000
+    mount: right
+  - name: trash
+    location: A1
+
+commands:
+  - name: set temp
+    command: temperature_set
+    change_temp: 4
+# move reservoir from B1 to B3 #TODO maybe omit
+  # - name: move_test
+  #   command: move_labware
+  #   labware: 2
+  #   destination: 3
+
+  ## Distribute cpfe_reagent_vol (18) µL of reagent H src H1 to all destination wells (dest A1, B1, C1, D1)
+  - name: cfpe reagent
+    command: transfer
+    source: src:[H1, H1, H1, H1]
+    aspirate_clearance: 2
+    destination: dest:[A1, B1, C1, D1]
+    dispense_clearance: 2
+    volume: [18, 18, 18, 18]
+    mix_cycles: 3
+    mix_volume: 10
+    drop_tip: [false, false, false, true]
+
+  #Transfer dna_vol (2) µL of DNA to corresponding wells src[A1, B1, C1, D1] to dest[A1, B1, C1, D1]
+  - name: dna
+    command: transfer
+    source: src:[A1, B1, C1, D1]
+    aspirate_clearance: 2
+    destination: dest:[A1, B1, C1, D1]
+    dispense_clearance: 2
+    volume: [2, 2, 2, 2]
+    mix_cycles: 3
+    mix_volume: 15
+    drop_tip: [true, true, true, true]
+
+  # move from temp module to staging
+  - name: move dest from temp module to staging
+    command: move_labware
+    labware: D1 #TODO
+    destination: A4
+
+#incubate plate
+
+
+
+metadata:
+  protocolName: Gyorgy Flex test 1
+  author: Abe astroka@anl.gov
+  description: pd cfpe assay
+  apiLevel: "2.18"
+
+requirements:
+  robotType: Flex

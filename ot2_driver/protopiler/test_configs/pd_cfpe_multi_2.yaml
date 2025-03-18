@@ -1,0 +1,166 @@
+equipment:
+  - name: nest_96_wellplate_100ul_pcr_full_skirt
+    location: C1
+    alias: src
+    offset: [0, 1.7, 3.9]
+  - name: nest_96_wellplate_100ul_pcr_full_skirt
+    location: B1
+    alias: dest
+    module: temperature module gen2
+    offset: [1, 1.6, 11]
+#TODO: heater shaker mod?
+  - name: nest_12_reservoir_15ml
+    location: B3
+    alias: reservoir
+  - name: nest_96_wellplate_200ul_flat
+    location: C2
+    alias: assay
+  - name: nest_96_wellplate_100ul_pcr_full_skirt
+    location: B2
+    alias: staging
+  - name: opentrons_flex_96_tiprack_50ul # 50
+    location: A3
+  - name: opentrons_flex_96_tiprack_50ul
+    location: A2
+  - name: opentrons_flex_96_tiprack_1000ul
+    location: C3
+  - name: flex_8channel_50
+    mount: right
+  - name: flex_1channel_1000
+    mount: left
+  - name: trash
+    location: A1
+
+commands:
+  # - name: set temp #TODO: maybe heat?
+  #   command: temperature_set
+  #   change_temp: 37
+# move dest plate from staging area into flex
+  # - name: move_test
+  #   command: move_labware
+  #   labware: A4
+  #   destination: B1 # TODO
+
+    # Transfer cfpe_reaction_dilution_vol (80) µL from reservoir to destination wells with mixing
+  - name: cfpe reaction dilution
+    command: transfer
+    source: reservoir:[A1, A1, A1, A1]
+    aspirate_clearance: 2
+    destination: dest:[A1, B1, C1, D1]
+    dispense_clearance: 2
+    volume: [80, 80, 80, 80]
+    mix_cycles: 3
+    mix_volume: 80
+    drop_tip: [true, true, true, true]
+
+  # Transfer reaction_buffer_vol (80) µL from reservoir to rows 1-4 of assay_plate #TODO: all cols?
+  - name: reaction buffer to assay
+    command: transfer
+    source: reservoir:[A1, A1, A1, A1]
+    aspirate_clearance: 2
+    destination: assay:[A1, B1, C1, D1]
+    dispense_clearance: 2
+    volume: [80, 80, 80, 80]
+    drop_tip: [true, true, true, true]
+
+    # Transfer reaction_buffer_vol + cfpe_reaction_product_per_assay (90) µL from reservoir to all wells in row 5 of assay_plate
+  - name: row 5
+    command: transfer
+    source: reservoir:[A1, A1, A1, A1, A1, A1, A1, A1]
+    aspirate_clearance: 2
+    destination: assay:[A5, B5, C5, D5, E5, F5, G5, H5]
+    dispense_clearance: 2
+    volume: [80, 80, 80, 80, 80, 80, 80, 80]
+    drop_tip: true
+
+# Distribute cfpe_reaction_product_per_assay (10) µL from dest_plate A1 to column 1 of assay_plate
+  - name: cfpe reaction product per assay dest to assay
+    command: multi_transfer
+    multi_source: dest:[[A1], [A1], [A1], [A1], [A1], [A1], [A1], [A1]]
+    multi_aspirate_clearance: 2
+    multi_destination: assay:[[A1], [B1], [C1], [D1], [E1], [F1], [G1], [H1]]
+    multi_dispense_clearance: 2
+    multi_volume: 10
+    multi_mix_cycles: 3
+    multi_mix_volume: 50
+
+  # - name: cfpe reaction product per assay dest to assay
+  #   command: transfer
+  #   source: dest:[A1, A1, A1, A1, A1, A1, A1, A1]
+  #   aspirate_clearance: 2
+  #   destination: assay:[A1, B1, C1, D1, E1, F1, G1, H1]
+  #   dispense_clearance: 2
+  #   volume: 10
+  #   mix_cycles: 3
+  #   mix_volume: 50
+
+  # - name: cfpe reaction product per assay dest to assay
+  #   command: multi_transfer
+  #   multi_source: dest:[[A1]]
+  #   multi_aspirate_clearance: 2
+  #   multi_destination: assay:[[A1]]
+  #   multi_dispense_clearance: 2
+  #   multi_volume: 10
+  #   multi_mix_cycles: 3
+  #   multi_mix_volume: 50
+
+  # - name: cfpe reaction product per assay dest to assay
+  #   command: multi_transfer
+  #   multi_source: dest:[[A1]]
+  #   multi_aspirate_clearance: 2
+  #   multi_destination: assay:[[B1]]
+  #   multi_dispense_clearance: 2
+  #   multi_volume: 10
+  #   multi_mix_cycles: 3
+  #   multi_mix_volume: 50
+# Distribute 10µL from dest_plate B1 to column 2 of assay_plate
+  - name: dest B1 to assay column 2
+    command: multi_transfer
+    multi_source: dest:[[B1], [B1], [B1], [B1], [B1], [B1], [B1], [B1]]
+    multi_aspirate_clearance: 2
+    multi_destination: assay:[[A2], [B2], [C2], [D2], [E2], [F2], [G2], [H2]]
+    multi_dispense_clearance: 2
+    multi_volume: 10
+    multi_mix_cycles: 3
+    multi_mix_volume: 50
+    # Distribute 10µL from dest_plate C1 to column 3 of assay_plate
+  - name: dest C1 to assay column 3
+    command: multi_transfer
+    multi_source: dest:[[C1], [C1], [C1], [C1], [C1], [C1], [C1], [C1]]
+    multi_aspirate_clearance: 2
+    multi_destination: assay:[[A3], [B3], [C3], [D3], [E3], [F3], [G3], [H3]]
+    multi_dispense_clearance: 2
+    multi_volume: 10
+    multi_mix_cycles: 3
+    multi_mix_volume: 50
+
+# Distribute 10µL from dest_plate D1 to column 4 of assay_plate
+  - name: dest D1 to assay column 4
+    command: multi_transfer
+    multi_source: dest:[[D1], [D1], [D1], [D1], [D1], [D1], [D1], [D1]]
+    multi_aspirate_clearance: 2
+    multi_destination: assay:[[A4], [B4], [C4], [D4], [E4], [F4], [G4], [H4]]
+    multi_dispense_clearance: 2
+    multi_volume: 10
+    multi_mix_cycles: 3
+    multi_mix_volume: 50
+# Transfer substrate_volume (40) µL from reservoir A2 to rows 1-5 of assay_plate with mixing #TODO: cols 1-5 and all rows or vice versa?
+
+  - name: reservoir A2 to assay
+    command: multi_transfer
+    multi_source: reservoir:[[A2, B2, C2, D2, E2, F2, G2, H2], [A2, B2, C2, D2, E2, F2, G2, H2], [A2, B2, C2, D2, E2, F2, G2, H2], [A2, B2, C2, D2, E2, F2, G2, H2], [A2, B2, C2, D2, E2, F2, G2, H2]]
+    multi_aspirate_clearance: 2
+    multi_destination: assay:[[A1, B1, C1, D1, E1, F1, G1, H1], [A2, B2, C2, D2, E2, F2, G2, H2], [A3, B3, C3, D3, E3, F3, G3, H3], [A4, B4, C4, D4, E4, F4, G4, H4], [A5, B5, C5, D5, E5, F5, G5, H5]
+    multi_dispense_clearance: 2
+    multi_volume: 40
+    multi_mix_cycles: 3
+    multi_mix_volume: 40
+
+metadata:
+  protocolName: Gyorgy Flex test 2 multi
+  author: Abe astroka@anl.gov
+  description: pd cfpe assay
+  apiLevel: "2.18"
+
+requirements:
+  robotType: Flex

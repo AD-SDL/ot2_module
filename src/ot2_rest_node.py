@@ -184,6 +184,7 @@ def execute(state, protocol_path, payload=None, resource_config=None):
     try:
         protocol_id, run_id = state.ot2.transfer(protocol_file_path)
         print("OT2 " + state.node_name + " protocol transfer successful")
+
         state.run_id = run_id
         resp = state.ot2.execute(run_id)
         state.run_id = None
@@ -361,7 +362,7 @@ def run_protocol(
         elif response_flag == "failed":
             state.status[ModuleStatus.READY] = False
             state.status[ModuleStatus.ERROR] = True
-            response = StepResponse
+            response = StepResponse()
             response.status = StepStatus.FAILED
             response.error = "an error occurred"
             # if resource_config_path:

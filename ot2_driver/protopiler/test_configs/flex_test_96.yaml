@@ -1,0 +1,64 @@
+equipment:
+  - name: nest_96_wellplate_2ml_deep
+    location: "2"
+    alias: plate
+    offset: [0, 1.7, 3.9]
+  - name: opentrons_flex_96_tiprack_50ul
+    location: "11"
+    offset: [0.5, 0.9, -0.3]
+  - name: flex_96channel_1000
+    mount: left
+  - name: trash
+    location: "10"
+
+commands:
+  # - name: test
+  #   command: transfer
+  #   source: 2:[A1, A2, A3]
+  #   aspirate_clearance: 2
+  #   destination: 2:[A4, A5, A6]
+  #   dispense_clearance: 2
+  #   volume: [10, 10, 10]
+  #   mix_cycles: 0
+  #   mix_volume: 0
+  #   drop_tip: [false, false, true]
+
+  - name: test
+    command: ns_transfer
+    ns_source: 2
+    # multi_source: 2:[["A1", "B1", "C1"], ["A2", "B2", "C2"], ["A3", "B3", "C3"]]
+    # multi_aspirate_clearance: 1
+    ns_destination: 3
+    # multi_destination: 2:[["A4", "B4", "C4"], ["A5", "B5", "C5"], ["A6", "B6", "C6"]]
+    # multi_dispense_clearance: 1
+    ns_volume: 50
+
+  # - name: move_test
+  #   command: move_labware
+  #   labware: 2
+  #   destination: 3
+
+  # - name: other_test
+  #   command: multi_transfer
+  #   multi_source: 2:[[A4, B4, C4], [A5, B5, C5], [A6, B6, C6]]
+  #   # multi_source: 2:[["A1", "B1", "C1"], ["A2", "B2", "C2"], ["A3", "B3", "C3"]]
+  #   multi_aspirate_clearance: 1
+  #   multi_destination: 2:[[A1, B1, C1], [A2, B2, C2], [A3, B3, C3]]
+  #   # multi_destination: 2:[["A4", "B4", "C4"], ["A5", "B5", "C5"], ["A6", "B6", "C6"]]
+  #   multi_dispense_clearance: 1
+  #   multi_volume: 50
+
+  # - name: move_test
+  #   command: move_labware
+  #   labware: 2
+  #   destination: 6
+
+
+metadata:
+  protocolName: Flex test 96
+  author: Abe astroka@anl.gov
+  description: testing flex 96 channel pipetting
+  apiLevel: "2.18"
+
+requirements:
+  robotType: Flex

@@ -269,7 +269,10 @@ class ResourceManager:
         for loc in valid_tiprack_locations:
             tiprack_name = self.location_to_labware[loc]
             # dependent on opentrons naming scheme
-            capacity = int(tiprack_name.split("_")[1])
+            if "flex" in tiprack_name:
+                capacity = int(tiprack_name.split("_")[2])
+            else:
+                capacity = int(tiprack_name.split("_")[1])
             # just in case someone manually messed with the json...
             if self.resources[loc]["used"] >= capacity:
                 # data sanitization
@@ -285,10 +288,10 @@ class ResourceManager:
                 raise Exception(
                     "Resource data manipulation suspected... check resource file"
                 )
-
             # leveraging the 0 indexing of the rack and the 1 indexing of the count
             # has to be a str because of the protocol writing
-            if tip_num == 1:  # TODO:, maybe change to if using single channel
+            # if tip_num == 1:  # TODO:, maybe change to if using single channel
+            if "1" in pipette_name or "single" in pipette_name:
                 # next_tip = str(self.resources[loc]["used"]) # TODO: need to change, pick up from bottom row
                 for i in range(96):
                     if str(i) not in self.resources[loc]["wells_used"]:
@@ -297,8 +300,13 @@ class ResourceManager:
                 self.update_tip_count(loc, next_tip, tip_num)
             # multi transfer, need to determine uppermost tip pick up point
             # iterate through "wells_used", find "tip_num" number of tips all still in same column
-            elif tip_num > 1:
-                next_tip = self.find_multi_pickup_spot(loc, tip_num)
+            # elif tip_num > 1:
+            elif "8" in pipette_name or "multi" in pipette_name:
+                if tip_num == 1:
+                    next_tip = self.find_multi_pickup_1_tip(loc, tip_num)
+
+                else:
+                    next_tip = self.find_multi_pickup_spot(loc, tip_num)
                 self.update_tip_count(loc, next_tip, tip_num)
                 # update usage
                 # self.resources[loc]["used"] += tip_num
@@ -309,6 +317,48 @@ class ResourceManager:
             return loc, next_tip
 
         raise Exception(f"Not enough tips found for '{pipette_name}'...")
+
+    def find_multi_pickup_1_tip(self, loc: str, tip_num: int) -> str:
+        """Finds best location to pick up tip for if you're picking
+        up a single tip with a multi channel head
+
+        Parameters
+        ----------
+        loc: str
+            deck location of chosen tip rack
+        tip_num: int
+            number of tips to be mounted on pipette
+
+        Returns
+        -------
+        tips: int
+            well number to pick up tips at
+        """
+        good = False
+        for i in range(96):
+            tips = []
+            tips.append(i)
+            if str(i) not in self.resources[loc]["wells_used"]:
+                if i % 8 == 7:
+                    good = True
+                else:
+                    bottom = i
+                    done = False
+                    t = 1
+                    while not done:
+                        curr_val = bottom + t
+                        if str(curr_val) in self.resources[loc]["wells_used"]:
+                            t = t + 1
+                            if curr_val % 8 == 7:
+                                done = True
+                                good = True
+                        else:
+                            done = True
+                if good:
+                    break
+        if good is False:
+            raise Exception("No available group of tips for multi dispensing")
+        return tips
 
     def find_multi_pickup_spot(
         self, loc: str, tip_num: int
@@ -337,6 +387,11 @@ class ResourceManager:
             for j in range(tip_num):
                 tips.append(i + j)
             # check if any tips selected are in wells_used
+            # for p in range(len(tips)):
+            #     if str(tips[p]) in self.resources[loc]["wells_used"]:
+            #         tips = []
+            #         break
+            # if len(tips) > 1:
             for p in range(len(tips)):
                 if str(tips[p]) in self.resources[loc]["wells_used"]:
                     tips = []
@@ -391,12 +446,17 @@ class ResourceManager:
         """
         tiprack_name = self.location_to_labware[loc]
         # dependent on opentrons naming scheme
-        capacity = int(tiprack_name.split("_")[1])
+        if "flex" in tiprack_name:
+            capacity = int(tiprack_name.split("_")[2])
+        else:
+            capacity = int(tiprack_name.split("_")[1])
 
         if self.resources[loc]["used"] >= capacity:
             raise Exception("ERROR no more available tips")
         # update usage
-        if tip_num == 1:
+        # if tip_num == 1:
+        # if type(well) is not list:
+        if isinstance(well, list):
             self.resources[loc]["wells_used"].add(str(int(well)))
             self.resources[loc]["used"] += 1
         else:
@@ -485,22 +545,40 @@ class ResourceManager:
             A list of string integers representing the location of the valid tipracks on the deck `['1', '2', ... ]`
 
         """
-        pip_volume_pattern = re.compile(r"p\d{2,}")
-        rack_volume_pattern = re.compile(r"\d{2,}ul$")
-        # find suitable tipracks
-        pip_volume = int(
-            pip_volume_pattern.search(pipette_name).group().replace("p", "")
-        )
-        valid_tipracks = []
-        for labware_name, locations in self.labware_to_location.items():
-            matches = rack_volume_pattern.search(labware_name)
-            if matches is not None:
-                vol = int(matches.group().replace("ul", ""))
-                if vol == pip_volume:
-                    for location in locations:
-                        valid_tipracks.append(str(location))
+        if "flex" in pipette_name:
+            flex_volume_pattern = re.compile(r"(\d+)(?:ul)?$")
+            pip_volume = int(flex_volume_pattern.search(pipette_name).group())
+            valid_tipracks = []
+            for labware_name, locations in self.labware_to_location.items():
+                matches = flex_volume_pattern.search(labware_name)
+                if matches is not None:
+                    vol = int(matches.group().replace("ul", ""))
+                    if vol == pip_volume:  # TODO
+                        for location in locations:
+                            valid_tipracks.append(str(location))
+                    elif vol == 200 and pip_volume == 1000:
+                        for location in locations:
+                            valid_tipracks.append(str(location))
 
-        return valid_tipracks
+            return valid_tipracks
+
+        else:
+            pip_volume_pattern = re.compile(r"p\d{2,}")
+            rack_volume_pattern = re.compile(r"\d{2,}ul$")
+            # find suitable tipracks
+            pip_volume = int(
+                pip_volume_pattern.search(pipette_name).group().replace("p", "")
+            )
+            valid_tipracks = []
+            for labware_name, locations in self.labware_to_location.items():
+                matches = rack_volume_pattern.search(labware_name)
+                if matches is not None:
+                    vol = int(matches.group().replace("ul", ""))
+                    if vol == pip_volume:
+                        for location in locations:
+                            valid_tipracks.append(str(location))
+
+            return valid_tipracks
 
     def determine_pipette(self, target_volume: int, is_multi: bool) -> str:
         """Determines which pipette to use for a given volume
@@ -523,19 +601,18 @@ class ResourceManager:
 
             # TODO: make sure the pipettes can handle the max they are labeled as
             if is_multi:
-                if "multi" in name:
+                if "multi" in name or "8" in name:
                     if pip_volume >= target_volume:
                         if pip_volume < min_available:
                             min_available = pip_volume
                             pipette = mount
 
             else:
-                if "multi" not in name:
+                if "multi" not in name and "8" not in name:
                     if pip_volume >= target_volume:
                         if pip_volume < min_available:
                             min_available = pip_volume
                             pipette = mount
-
         return pipette
 
     def dump_resource_json(self, out_file: Optional[PathLike] = None) -> str:

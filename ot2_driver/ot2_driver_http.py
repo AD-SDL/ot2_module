@@ -190,12 +190,20 @@ class OT2_Driver:
             print(f"Could not run play action on {run_id}")
             print(execute_run_resp.json())
 
-        while self.check_run_status(run_id) not in {
-            RunStatus.FAILED,
-            RunStatus.SUCCEEDED,
-            RunStatus.STOPPED,
-        }:
-            time.sleep(1)
+        while True:
+            try:
+                if self.check_run_status(run_id) in {
+                    RunStatus.FAILED,
+                    RunStatus.SUCCEEDED,
+                    RunStatus.STOPPED,
+                }:
+                    break
+                else:
+                    time.sleep(1)
+
+            except Exception as e:
+                print(e)
+                pass
 
         return self.get_run(run_id)
 
@@ -284,7 +292,7 @@ class OT2_Driver:
 
         if check_run_resp.status_code != 200:
             print(f"Cannot check run {run_id}")
-        
+
         status = RunStatus(check_run_resp.json()["data"]["status"])
 
         return status
