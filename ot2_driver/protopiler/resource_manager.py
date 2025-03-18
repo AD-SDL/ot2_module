@@ -269,7 +269,7 @@ class ResourceManager:
         for loc in valid_tiprack_locations:
             tiprack_name = self.location_to_labware[loc]
             # dependent on opentrons naming scheme
-            if 'flex' in tiprack_name:
+            if "flex" in tiprack_name:
                 capacity = int(tiprack_name.split("_")[2])
             else:
                 capacity = int(tiprack_name.split("_")[1])
@@ -317,9 +317,23 @@ class ResourceManager:
             return loc, next_tip
 
         raise Exception(f"Not enough tips found for '{pipette_name}'...")
-    def find_multi_pickup_1_tip(
-            self, loc: str, tip_num: int
-    ) -> str:
+
+    def find_multi_pickup_1_tip(self, loc: str, tip_num: int) -> str:
+        """Finds best location to pick up tip for if you're picking
+        up a single tip with a multi channel head
+
+        Parameters
+        ----------
+        loc: str
+            deck location of chosen tip rack
+        tip_num: int
+            number of tips to be mounted on pipette
+
+        Returns
+        -------
+        tips: int
+            well number to pick up tips at
+        """
         good = False
         for i in range(96):
             tips = []
@@ -333,10 +347,8 @@ class ResourceManager:
                     t = 1
                     while not done:
                         curr_val = bottom + t
-                        if (
-                            str(curr_val) in self.resources[loc]["wells_used"]
-                        ):
-                            t = t+1
+                        if str(curr_val) in self.resources[loc]["wells_used"]:
+                            t = t + 1
                             if curr_val % 8 == 7:
                                 done = True
                                 good = True
@@ -344,11 +356,9 @@ class ResourceManager:
                             done = True
                 if good:
                     break
-        if good == False:
+        if good is False:
             raise Exception("No available group of tips for multi dispensing")
         return tips
-
-
 
     def find_multi_pickup_spot(
         self, loc: str, tip_num: int
@@ -436,7 +446,7 @@ class ResourceManager:
         """
         tiprack_name = self.location_to_labware[loc]
         # dependent on opentrons naming scheme
-        if 'flex' in tiprack_name:
+        if "flex" in tiprack_name:
             capacity = int(tiprack_name.split("_")[2])
         else:
             capacity = int(tiprack_name.split("_")[1])
@@ -445,7 +455,8 @@ class ResourceManager:
             raise Exception("ERROR no more available tips")
         # update usage
         # if tip_num == 1:
-        if type(well) is not list:
+        # if type(well) is not list:
+        if isinstance(well, list):
             self.resources[loc]["wells_used"].add(str(int(well)))
             self.resources[loc]["used"] += 1
         else:
@@ -534,25 +545,22 @@ class ResourceManager:
             A list of string integers representing the location of the valid tipracks on the deck `['1', '2', ... ]`
 
         """
-        if 'flex' in pipette_name:
+        if "flex" in pipette_name:
             flex_volume_pattern = re.compile(r"(\d+)(?:ul)?$")
-            pip_volume = int(
-                flex_volume_pattern.search(pipette_name).group()
-            )
+            pip_volume = int(flex_volume_pattern.search(pipette_name).group())
             valid_tipracks = []
             for labware_name, locations in self.labware_to_location.items():
                 matches = flex_volume_pattern.search(labware_name)
                 if matches is not None:
                     vol = int(matches.group().replace("ul", ""))
-                    if vol == pip_volume: #TODO
+                    if vol == pip_volume:  # TODO
                         for location in locations:
                             valid_tipracks.append(str(location))
                     elif vol == 200 and pip_volume == 1000:
                         for location in locations:
                             valid_tipracks.append(str(location))
-            
-            return valid_tipracks
 
+            return valid_tipracks
 
         else:
             pip_volume_pattern = re.compile(r"p\d{2,}")

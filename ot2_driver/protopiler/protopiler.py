@@ -151,7 +151,6 @@ class ProtoPiler:
                     and not peek_well[1:].isdigit()
                     and "payload" not in peek_well
                 ):
-
                     # read from file
                     new_locations = []
                     for orig_command, loc in zip(
@@ -234,11 +233,9 @@ class ProtoPiler:
                     command.location = new_locations
             if isinstance(command, Ninetysix_Transfer):
                 pass
-            #TODO
+            # TODO
             if isinstance(command, Multi_Transfer):
-
                 if ":[" in command.multi_source:  # not for payload
-                    
                     command.multi_source = self._unpack_multi_alias(
                         command_elem=command.multi_source
                     )
@@ -248,19 +245,20 @@ class ProtoPiler:
                 peek_elem = command.multi_source
                 if isinstance(command.multi_source, list):  # No mixing and matching
                     peek_elem = command.multi_source[0]
-                peek_well = peek_elem.split(":")[-1]   # 4:payload.source_wells or 4:['A1,'A2']
+                peek_well = peek_elem.split(":")[
+                    -1
+                ]  # 4:payload.source_wells or 4:['A1,'A2']
 
                 # check if it follows naming convention`[A-Z,a-z]?[0-9]{1,3}`
                 # TODO better way to check the naming conventions for the wells
                 peek_well = peek_well.split(", ")
 
-                # if len(peek_well) == 1 and "payload" not in peek_well[0]:   
+                # if len(peek_well) == 1 and "payload" not in peek_well[0]:
                 if (
-                    not type(peek_well) is list
-                    # and not peek_well[1:].isdigit()
+                    isinstance(peek_well, list)
+                    # type(peek_well) is not list
                     and "payload" not in peek_well
                 ):
-
                     # read from file #TODO: not necessarily
                     new_locations = []
 
@@ -272,7 +270,6 @@ class ProtoPiler:
                         new_locations.append(f"{orig_deck_location}:{loc}")
 
                     command.multi_source = new_locations
-
 
                 # Everything below is for the destination ------------------------------------------------------------
                 if ":[" in command.multi_destination:
@@ -294,10 +291,9 @@ class ProtoPiler:
                 # for dest
                 # if len(peek_well) == 1 and "payload" not in peek_well[0]:      # ISSUE! is this supposed to be the same conditional as above?
                 if (
-                    not type(peek_well) is list
-                    # and not peek_well[1:].isdigit()
-                    and "payload" not in peek_well
-                ):    
+                    # type(peek_well) is not list
+                    isinstance(peek_well, list) and "payload" not in peek_well
+                ):
                     # read from file
                     new_locations = []
                     for orig_command, loc in zip(
@@ -382,6 +378,7 @@ class ProtoPiler:
                 self.resources[resource.name] = pd.read_excel(
                     resource.location, header=0
                 )
+
     def _reset(
         self,
     ) -> None:
@@ -467,10 +464,10 @@ class ProtoPiler:
 
         protocol = []
 
-        # add requirements 
+        # add requirements
         reqs = open((self.template_dir / "requirements.template")).read()
         if self.requirements is not None:
-            rtype = self.requirements['robotType']
+            rtype = self.requirements["robotType"]
             reqs = reqs.replace("#robotType#", f'"{rtype}"')
 
         protocol.append(reqs)
@@ -485,7 +482,6 @@ class ProtoPiler:
         else:
             header = header.replace("#metadata#", "")
         protocol.append(header)
-
 
         # load labware and pipette
         protocol.append(
@@ -514,11 +510,13 @@ class ProtoPiler:
                     match = True
 
             if not match:
-                if name == 'trash':
+                if name == "trash":
                     labware_command = trash_block.replace("#location#", f'"{location}"')
                 else:
                     labware_command = labware_block.replace("#name#", f'"{name}"')
-                    labware_command = labware_command.replace("#location#", f'"{location}"')
+                    labware_command = labware_command.replace(
+                        "#location#", f'"{location}"'
+                    )
 
             protocol.append(labware_command)
 
@@ -550,14 +548,11 @@ class ProtoPiler:
             )
             protocol.append(pipette_command)
 
-
-        #TODO: if flex, add trash location
+        # TODO: if flex, add trash location
         # execute commands
         protocol.append(
             "\n    ####################\n    # execute commands #\n    ####################"
         )
-
-
 
         commands_python = self._create_commands(payload=payload)
         protocol.extend(commands_python)
@@ -593,7 +588,6 @@ class ProtoPiler:
         if reset_when_done:
             self._reset()
 
-
         return protocol_out, resource_file_out
 
     def _create_commands(self, payload: Optional[Dict]) -> List[str]:
@@ -626,7 +620,9 @@ class ProtoPiler:
         temp_change_template = open(
             (self.template_dir / "set_temperature.template")
         ).read()
-        move_labware_template = open((self.template_dir / "move_labware.template")).read()
+        move_labware_template = open(
+            (self.template_dir / "move_labware.template")
+        ).read()
         deactivate_template = open((self.template_dir / "deactivate.template")).read()
         move_template = open((self.template_dir / "move_pipette.template")).read()
         tip_loaded = {"left": False, "right": False}
@@ -639,44 +635,43 @@ class ProtoPiler:
             # TODO: Inject the payload here
             # Inject the payload
             if isinstance(payload, dict):
-
                 (arg_keys, arg_values) = zip(*command_block.__dict__.items())
 
                 for key, value in payload.items():
-
                     if "payload." not in key:
                         old_key = key
                         key = f"payload.{key}"
 
                     if isinstance(command_block, Multi_Transfer):
-
                         arg_values_list = []
                         # make all lists in arg_values single items
                         for val in arg_values:
                             if isinstance(val, list):
                                 val = val[0]
-                            arg_values_list.append(val)   # new list without lists, simple
+                            arg_values_list.append(
+                                val
+                            )  # new list without lists, simple
 
-                        for i in range(len(arg_values_list)): 
-                            if old_key in str(arg_values_list[i]): 
+                        for i in range(len(arg_values_list)):
+                            if old_key in str(arg_values_list[i]):
                                 idx = i
-                                step_arg_key = arg_keys[idx]  
+                                step_arg_key = arg_keys[idx]
 
                                 plate_loc = arg_values_list[i].split(":")[0]
 
                                 formatted_value = []
-                                formatted_value.append(str(plate_loc) + ":" + str(value[0]))
+                                formatted_value.append(
+                                    str(plate_loc) + ":" + str(value[0])
+                                )
 
                                 setattr(command_block, step_arg_key, formatted_value)
-
 
                     else:
                         if key in arg_values:
                             idx = arg_values.index(key)
                             step_arg_key = arg_keys[idx]
                             # this feels slimy...
-                            setattr(command_block, step_arg_key, value)  
-                            
+                            setattr(command_block, step_arg_key, value)
 
             if isinstance(command_block, Transfer):
                 for (
@@ -698,7 +693,7 @@ class ProtoPiler:
                         pipette_mount = self.resource_manager.determine_pipette(
                             volume, False
                         )
-                        
+
                         if pipette_mount is None:
                             raise Exception(
                                 f"No pipette available for {block_name} with volume: {volume}"
@@ -832,18 +827,9 @@ class ProtoPiler:
                             tip_loaded[pipette_mount] = False
 
                         commands.append("")
-            
+
             elif isinstance(command_block, Ninetysix_Transfer):
-                for (
-                    volume,
-                    src,
-                    dst,
-                ) in self._process_96_instruction(command_block):
-                    if volume <= 0:
-                        pass
-                    else:
-                        pass
-                        #TODO
+                pass
             elif isinstance(command_block, Multi_Transfer):
                 for (
                     volume,
@@ -869,16 +855,23 @@ class ProtoPiler:
                             )
                         # check to make sure that appropriate pipette is a multi-channel
                         # TODO: need to change, what if we have single and multi channel of same volume?
-                        if "flex" in self.resource_manager.mount_to_pipette[pipette_mount]:
+                        if (
+                            "flex"
+                            in self.resource_manager.mount_to_pipette[pipette_mount]
+                        ):
                             if (
                                 "8"
-                                not in self.resource_manager.mount_to_pipette[pipette_mount]
+                                not in self.resource_manager.mount_to_pipette[
+                                    pipette_mount
+                                ]
                             ):
                                 raise Exception("Selected pipette is not 8-channel")
                         else:
                             if (
                                 "multi"
-                                not in self.resource_manager.mount_to_pipette[pipette_mount]
+                                not in self.resource_manager.mount_to_pipette[
+                                    pipette_mount
+                                ]
                             ):
                                 raise Exception("Selected pipette is not multi-channel")
                         # check for tip
@@ -890,8 +883,8 @@ class ProtoPiler:
                                 pipette_mount
                             ]
                             new_src = copy.copy(src)
-                            new_src = new_src.replace("'", "")  
-                            new_src = new_src.split(":")[-1]  
+                            new_src = new_src.replace("'", "")
+                            new_src = new_src.split(":")[-1]
                             new_src = new_src.strip("][").split(", ")
 
                             # TODO: define flag to grab from specific well or just use the ones defined by the OT2
@@ -936,7 +929,7 @@ class ProtoPiler:
                         src_wellplate_location = self._parse_wellplate_location(src)
                         # should handle things not formed like loc:well
                         src_well = new_src[0]
-                        src_well = src_well.strip('\"')
+                        src_well = src_well.strip('"')
 
                         aspirate_command = aspirate_template.replace(
                             "#pipette#", f'pipettes["{pipette_mount}"]'
@@ -972,7 +965,7 @@ class ProtoPiler:
                         dst_well = new_dst[
                             0
                         ]  # should handle things not formed like loc:well
-                        dst_well = dst_well.strip('\"')
+                        dst_well = dst_well.strip('"')
                         dispense_command = dispense_template.replace(
                             "#pipette#", f'pipettes["{pipette_mount}"]'
                         )
@@ -1243,7 +1236,7 @@ class ProtoPiler:
                     drop_tip_template.replace("#pipette#", f'pipettes["{mount}"]')
                 )
                 tip_loaded[mount] = False
-        
+
         return commands
 
     def _parse_wellplate_location(self, command_location: str) -> str:
@@ -1385,12 +1378,11 @@ class ProtoPiler:
             command_block.multi_drop_tip,
         ):
             yield row
-    
+
     def _process_96_instruction(
         self, command_block: CommandBase
     ) -> Generator[list, None, None]:
         pass
-
 
 
 def main(args):  # noqa: D103

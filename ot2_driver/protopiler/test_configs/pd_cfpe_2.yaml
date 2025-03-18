@@ -37,10 +37,10 @@ commands:
   #   change_temp: 37
 # move dest plate from staging area into flex
   - name: move_test
-    command: move_labware 
+    command: move_labware
     labware: 2
     destination: 3 # TODO
-  
+
     # Transfer cfpe_reaction_dilution_vol (80) µL from reservoir to destination wells with mixing
   - name: cfpe reaction dilution
     command: transfer
@@ -52,7 +52,7 @@ commands:
     mix_cycles: 3
     mix_volume: 80
     drop_tip: [true, true, true, true]
-  
+
   # Transfer reaction_buffer_vol (80) µL from reservoir to rows 1-4 of assay_plate #TODO: all cols?
   - name: reaction buffer to assay
     command: transfer
@@ -62,7 +62,7 @@ commands:
     dispense_clearance: 2
     volume: [80, 80, 80, 80]
     drop_tip: [true, true, true, true]
-  
+
     # Transfer reaction_buffer_vol + cfpe_reaction_product_per_assay (90) µL from reservoir to all wells in row 5 of assay_plate
   - name: row 5
     command: transfer

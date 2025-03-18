@@ -26,7 +26,7 @@ equipment:
     location: C3
   - name: flex_8channel_50
     mount: right
-  - name: flex_1channel_1000
+  - name: flex_8channel_1000
     mount: left
   - name: trash
     location: A1
@@ -44,9 +44,9 @@ commands:
   ## Distribute cpfe_reagent_vol (18) µL of reagent H src H1 to all destination wells (dest A1, B1, C1, D1)
   - name: cfpe reagent
     command: multi_transfer
-    multi_source: src:[[H1, H1, H1, H1]] #TODO:
+    multi_source: src:[[H1], [H1], [H1], [H1]] #TODO:
     multi_aspirate_clearance: 2
-    multi_destination: dest:[[A1, B1, C1, D1]]
+    multi_destination: dest:[[A1], [B1], [C1], [D1]]
     multi_dispense_clearance: 2
     multi_volume: 18
     multi_mix_cycles: 3
@@ -64,10 +64,10 @@ commands:
     multi_mix_volume: 15
 
   # move from temp module to staging
-  - name: move dest from temp module to staging
-    command: move_labware
-    labware: B1 #TODO
-    destination: A4
+  # - name: move dest from temp module to staging
+  #   command: move_labware
+  #   labware: B1 #TODO
+  #   destination: A4
 
 #incubate plate
 

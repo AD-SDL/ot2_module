@@ -182,7 +182,6 @@ def execute(state, protocol_path, payload=None, resource_config=None):
         protocol_file_path = Path(protocol_path)
     print(f"{protocol_file_path.resolve()=}")
     try:
-        
         protocol_id, run_id = state.ot2.transfer(protocol_file_path)
         print("OT2 " + state.node_name + " protocol transfer successful")
 

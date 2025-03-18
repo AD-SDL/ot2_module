@@ -1,5 +1,5 @@
 resources:
- 
+
   - location: /Users/abestroka/Argonne/git_repos/ot2_module/ot2_driver/protopiler/test_configs/PCR_test_four_samples.xlsx
     name: primers_and_templates
 
@@ -37,7 +37,7 @@ commands:
     # multi_destination: 2:[["A4", "B4", "C4"], ["A5", "B5", "C5"], ["A6", "B6", "C6"]]
     dispense_clearance: 1
     volume: Primer Volume
-  
+
   - name: move_test
     command: move_labware
     labware: 2
@@ -52,7 +52,7 @@ commands:
   #   # multi_destination: 2:[["A4", "B4", "C4"], ["A5", "B5", "C5"], ["A6", "B6", "C6"]]
   #   multi_dispense_clearance: 1
   #   multi_volume: 50
-  
+
   # - name: move_test
   #   command: move_labware
   #   labware: 2
