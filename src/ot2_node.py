@@ -40,8 +40,7 @@ class OT2NodeConfig(RestNodeConfig):
     """name of node being used is required"""
     ip: str 
     "ip of opentrons device"
-    ot2_port: int 
-    "port of opentrons device"
+
 
 
 class OT2Node(RestNode):
