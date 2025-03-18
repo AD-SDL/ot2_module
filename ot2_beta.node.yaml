@@ -1,0 +1,33 @@
+node_name: ot2_beta
+node_id: 01JPNMZF3SPK48EWA1VXMVYHWV
+node_url: null
+node_description: Node for the OT2 Beta in the RPL Workcell
+node_type: device
+module_name: ot2_module
+module_version: 0.0.1
+capabilities:
+  get_info: true
+  get_state: true
+  get_status: true
+  send_action: true
+  get_action_result: true
+  get_action_history: true
+  action_files: true
+  send_admin_commands: true
+  set_config: true
+  get_resources: false
+  get_log: true
+  admin_commands:
+  - reset
+  - unlock
+  - pause
+  - resume
+  - shutdown
+  - safety_stop
+  - lock
+  - cancel
+commands: {}
+is_template: false
+config_defaults:
+  ip: 146.137.240.100
+  name: ot2_beta

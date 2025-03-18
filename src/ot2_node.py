@@ -1,23 +1,22 @@
-from typing import Optional
+"""OT2 Node Module implementation"""
+
+import ast
+import traceback
+from copy import deepcopy
+from datetime import datetime
 from pathlib import Path
 from urllib.error import HTTPError, URLError
+
 import requests
-from typing_extensions import Annotated
 from fastapi import UploadFile
-import ast
-from datetime import datetime
-from copy import deepcopy
-from urllib3.exceptions import ConnectTimeoutError
-import traceback
-
-
-from madsci.client.event_client import EventClient
-from madsci.common.types.action_types import ActionFailed, ActionSucceeded
 from madsci.common.types.node_types import RestNodeConfig
 from madsci.node_module.abstract_node_module import action
 from madsci.node_module.rest_node_module import RestNode
+from typing_extensions import Annotated
+from urllib3.exceptions import ConnectTimeoutError
 
 from ot2_driver.ot2_driver_http import OT2_Config, OT2_Driver
+
 
 class OT2NodeConfig(RestNodeConfig):
     """Configuration for the OT2 node module."""
@@ -34,9 +33,8 @@ class OT2NodeConfig(RestNodeConfig):
     # """local port for ot2 node"""
     name: str
     """name of node being used is required"""
-    ip: str 
+    ip: str
     "ip of opentrons device"
-
 
 
 class OT2Node(RestNode):
@@ -52,11 +50,11 @@ class OT2Node(RestNode):
         temp_dir = Path.home() / ".madsci" / ".ot2_temp"
         temp_dir.mkdir(exist_ok=True)
         self.protocols_folder_path = str(temp_dir / self.config.name / "protocols/")
-        #TODO: eventual path for resources?
-        #TODO: setup logs folder path?
+        # TODO: eventual path for resources?
+        # TODO: setup logs folder path?
         self.run_id = None
         self.ip = self.config.ip
-        #TODO: check if resource and protocols folders exist, if not create them
+        # TODO: check if resource and protocols folders exist, if not create them
         self.connect_robot()
         self.startup_has_run = True
         self.logger.log("OT2 node initialized!")
@@ -76,11 +74,10 @@ class OT2Node(RestNode):
                 "test_status_code": self.ot2_interface.status_code,
             }
 
-
     def connect_robot(self) -> None:
         """Description: Connects to the ot2"""
         try:
-            self.ot2 = OT2_Driver(OT2_Config(ip=self.config.ip))
+            self.ot2_interface = OT2_Driver(OT2_Config(ip=self.config.ip))
 
         except ConnectTimeoutError as connection_err:
             self.node_status.errored = True
@@ -102,29 +99,28 @@ class OT2Node(RestNode):
         else:
             self.logger.log("OT2 node online")
 
-
     @action(name="run_protocol", description="run a given opentrons protocol")
     def run_protocol(
         self,
-        protocol: Annotated[UploadFile, "Protocol File"]
-        #TODO: whether or not to use existing resources?
+        protocol: Annotated[UploadFile, "Protocol File"],
+        # TODO: whether or not to use existing resources?
     ):
         """
         Run a given protocol on the ot2
         """
-        #TODO: if use existing resources.... (find and use a ot2 json file)
+        # TODO: if use existing resources.... (find and use a ot2 json file)
 
-        #get the next protocol file
+        # get the next protocol file
         try:
-            protocol = next(file for file in action.files if file.filename == "protocol")
+            protocol = next(
+                file for file in action.files if file.filename == "protocol"
+            )
             protocol = protocol.file.read().decode("utf-8")
         except StopIteration:
             protocol = None
-        
+
         if protocol:
-            config_file_path = self.save_config_files(
-                protocol
-            )
+            config_file_path = self.save_config_files(protocol)
             payload = deepcopy(action.args)
 
             response_flag, response_msg, run_id = self.execute(
@@ -134,7 +130,7 @@ class OT2Node(RestNode):
             response = None
 
             if response_flag == "succeeded":
-                #TODO logging
+                # TODO logging
                 pass
                 # Path(logs_folder_path).mkdir(parents=True, exist_ok=True)
                 # with open(Path(logs_folder_path) / f"{run_id}.json", "w") as f:
@@ -166,7 +162,6 @@ class OT2Node(RestNode):
 
             return response
 
-
     def execute(self, protocol_path, payload=None, resource_config=None):
         """
         Transfers and Executes the .py protocol file
@@ -185,23 +180,27 @@ class OT2Node(RestNode):
         protocol_file_path = Path(protocol_path)
         self.logger.log(f"{protocol_file_path.resolve()=}")
         try:
-            protocol_id, run_id = self.ot2.transfer(protocol_file_path)
+            protocol_id, run_id = self.ot2_interface.transfer(protocol_file_path)
             self.logger.log("OT2 " + self.config.name + " protocol transfer successful")
 
             self.run_id = run_id
-            resp = self.ot2.execute(run_id)
+            resp = self.ot2_interface.execute(run_id)
             self.run_id = None
 
             if resp["data"]["status"] == "succeeded":
                 # poll_OT2_until_run_completion()
-                self.logger.log("OT2 " + self.config.name + " succeeded in executing a protocol")
+                self.logger.log(
+                    "OT2 " + self.config.name + " succeeded in executing a protocol"
+                )
                 response_msg = (
                     "OT2 " + self.config.name + " successfully IDLE running a protocol"
                 )
                 return "succeeded", response_msg, run_id
 
             elif resp["data"]["status"] == "stopped":
-                self.logger.log("OT2 " + self.config.name + " stopped while executing a protocol")
+                self.logger.log(
+                    "OT2 " + self.config.name + " stopped while executing a protocol"
+                )
                 response_msg = (
                     "OT2 "
                     + self.config.name
@@ -210,7 +209,9 @@ class OT2Node(RestNode):
                 return "stopped", response_msg, run_id
 
             else:
-                self.logger.log("OT2 " + self.config.name + " failed in executing a protocol")
+                self.logger.log(
+                    "OT2 " + self.config.name + " failed in executing a protocol"
+                )
                 self.logger.log(resp["data"])
                 response_msg = (
                     "OT2 "
@@ -231,7 +232,6 @@ class OT2Node(RestNode):
             print(response_msg)
             return False, response_msg, None
 
-
     def save_config_files(self, protocol: str, resource_config=None):
         """
         Saves protocol string to a local yaml or python file
@@ -249,7 +249,7 @@ class OT2Node(RestNode):
         config_dir_path = Path.home().resolve() / self.protocols_folder_path
         config_dir_path.mkdir(exist_ok=True, parents=True)
 
-        #TODO: resources
+        # TODO: resources
         # resource_dir_path = Path.home().resolve() / resources_folder_path
         # resource_dir_path.mkdir(exist_ok=True, parents=True)
 
@@ -264,15 +264,15 @@ class OT2Node(RestNode):
                 pc_file.write(protocol)
         except SyntaxError:
             self.logger.log("Error: no protocol python file detected")
-        
-        #TODO: json dump of resources
+
+        # TODO: json dump of resources
 
         return config_file_path
 
     def pause(self) -> None:
         """Pause the node."""
         self.logger.log("Pausing node...")
-        self.ot2.pause(self.run_id)
+        self.ot2_interface.pause(self.run_id)
         self.node_status.paused = True
         self.logger.log("Node paused.")
         return True
@@ -280,12 +280,12 @@ class OT2Node(RestNode):
     def resume(self) -> None:
         """Resume the node."""
         self.logger.log("Resuming node...")
-        self.ot2.resume(self.run_id)
+        self.ot2_interface.resume(self.run_id)
         self.node_status.paused = False
         self.logger.log("Node resumed.")
         return True
 
-#TODO: shutdown, safety stop, reset
+    # TODO: shutdown, safety stop, reset
     def shutdown(self) -> None:
         """Shutdown the node."""
         self.shutdown_handler()
@@ -308,11 +308,12 @@ class OT2Node(RestNode):
     def cancel(self) -> None:
         """Cancel the node."""
         self.logger.log("Canceling node...")
-        self.ot2.cancel(self.run_id)
+        self.ot2_interface.cancel(self.run_id)
         self.node_status.cancelled = True
         self.logger.log("Node cancelled.")
         return True
-    
+
+
 if __name__ == "__main__":
     ot2_node = OT2Node()
     ot2_node.start_node()

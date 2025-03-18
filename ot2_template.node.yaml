@@ -1,0 +1,11 @@
+node_name: ot2_template
+node_url: null
+node_description: Template for a MADSci Opentrons OT2 node
+node_type: device
+module_name: ot2_module
+module_version: 0.0.1
+capabilities:
+  admin_commands: []
+commands: {}
+is_template: true
+config_defaults: {}
