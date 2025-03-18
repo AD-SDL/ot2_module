@@ -34,8 +34,8 @@ class OT2NodeConfig(RestNodeConfig):
     """Serial port connection for OT2"""
     local_ip: str = "parker.alcf.anl.gov"
     """local ip for computer running ot2 node"""
-    local_port: str = "8000"
-    """local port for ot2 node"""
+    # local_port: str = "8000"
+    # """local port for ot2 node"""
     name: str
     """name of node being used is required"""
     ip: str = "" #TODO: is currently command line
