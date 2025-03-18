@@ -38,9 +38,9 @@ class OT2NodeConfig(RestNodeConfig):
     # """local port for ot2 node"""
     name: str
     """name of node being used is required"""
-    ip: str = "" #TODO: is currently command line
+    ip: str 
     "ip of opentrons device"
-    port: int = 0000 #TODO: is currently command line
+    port: int 
     "port of opentrons device"
 
 
@@ -277,6 +277,7 @@ class OT2Node(RestNode):
     def pause(self) -> None:
         """Pause the node."""
         self.logger.log("Pausing node...")
+        self.ot2.pause(self.run_id)
         self.node_status.paused = True
         self.logger.log("Node paused.")
         return True
@@ -284,10 +285,12 @@ class OT2Node(RestNode):
     def resume(self) -> None:
         """Resume the node."""
         self.logger.log("Resuming node...")
+        self.ot2.resume(self.run_id)
         self.node_status.paused = False
         self.logger.log("Node resumed.")
         return True
 
+#TODO: shutdown, safety stop, reset
     def shutdown(self) -> None:
         """Shutdown the node."""
         self.shutdown_handler()
@@ -310,6 +313,7 @@ class OT2Node(RestNode):
     def cancel(self) -> None:
         """Cancel the node."""
         self.logger.log("Canceling node...")
+        self.ot2.cancel(self.run_id)
         self.node_status.cancelled = True
         self.logger.log("Node cancelled.")
         return True
