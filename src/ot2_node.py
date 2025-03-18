@@ -30,10 +30,6 @@ class OT2NodeConfig(RestNodeConfig):
     # """An optional parameter."""
     # test_default_param: int = 42
     # """A parameter with a default value."""
-    serial_port: str = "/dev/ttyUSB0"
-    """Serial port connection for OT2"""
-    local_ip: str = "parker.alcf.anl.gov"
-    """local ip for computer running ot2 node"""
     # local_port: str = "8000"
     # """local port for ot2 node"""
     name: str
@@ -55,11 +51,11 @@ class OT2Node(RestNode):
         self.logger.log("Node initializing...")
         temp_dir = Path.home() / ".madsci" / ".ot2_temp"
         temp_dir.mkdir(exist_ok=True)
-        self.protocols_folder_path = str(temp_dir / self.config_model.name / "protocols/")
+        self.protocols_folder_path = str(temp_dir / self.config.name / "protocols/")
         #TODO: eventual path for resources?
         #TODO: setup logs folder path?
         self.run_id = None
-        self.ip = self.config_model.ip
+        self.ip = self.config.ip
         #TODO: check if resource and protocols folders exist, if not create them
         self.connect_robot()
         self.startup_has_run = True
@@ -84,7 +80,7 @@ class OT2Node(RestNode):
     def connect_robot(self) -> None:
         """Description: Connects to the ot2"""
         try:
-            self.ot2 = OT2_Driver(OT2_Config(ip=self.config_model.ip))
+            self.ot2 = OT2_Driver(OT2_Config(ip=self.config.ip))
 
         except ConnectTimeoutError as connection_err:
             self.node_status.errored = True
@@ -190,7 +186,7 @@ class OT2Node(RestNode):
         self.logger.log(f"{protocol_file_path.resolve()=}")
         try:
             protocol_id, run_id = self.ot2.transfer(protocol_file_path)
-            self.logger.log("OT2 " + self.config_model.name + " protocol transfer successful")
+            self.logger.log("OT2 " + self.config.name + " protocol transfer successful")
 
             self.run_id = run_id
             resp = self.ot2.execute(run_id)
@@ -198,27 +194,27 @@ class OT2Node(RestNode):
 
             if resp["data"]["status"] == "succeeded":
                 # poll_OT2_until_run_completion()
-                self.logger.log("OT2 " + self.config_model.name + " succeeded in executing a protocol")
+                self.logger.log("OT2 " + self.config.name + " succeeded in executing a protocol")
                 response_msg = (
-                    "OT2 " + self.config_model.name + " successfully IDLE running a protocol"
+                    "OT2 " + self.config.name + " successfully IDLE running a protocol"
                 )
                 return "succeeded", response_msg, run_id
 
             elif resp["data"]["status"] == "stopped":
-                self.logger.log("OT2 " + self.config_model.name + " stopped while executing a protocol")
+                self.logger.log("OT2 " + self.config.name + " stopped while executing a protocol")
                 response_msg = (
                     "OT2 "
-                    + self.config_model.name
+                    + self.config.name
                     + " successfully IDLE after stopping a protocol"
                 )
                 return "stopped", response_msg, run_id
 
             else:
-                self.logger.log("OT2 " + self.config_model.name + " failed in executing a protocol")
+                self.logger.log("OT2 " + self.config.name + " failed in executing a protocol")
                 self.logger.log(resp["data"])
                 response_msg = (
                     "OT2 "
-                    + self.config_model.name
+                    + self.config.name
                     + " failed running a protocol\n"
                     + str(resp["data"])
                 )
