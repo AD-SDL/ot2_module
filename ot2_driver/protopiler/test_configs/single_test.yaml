@@ -1,25 +1,28 @@
 equipment:
   - name: nest_96_wellplate_2ml_deep
-    location: "2"
+    location: "1"
     alias: backward
   - name: nest_96_wellplate_2ml_deep
     location: "4"
     alias: dest
-  - name: opentrons_96_tiprack_300ul
-    location: "8"
-  - name: p300_single_gen2
+  - name: opentrons_96_tiprack_20ul
+    location: "10"
+  - name: p20_single_gen2
     mount: left
 commands:
   - name:  Step one
     command: transfer
     source: 4:[A1, A2, A3, A4, A5, A6, A7, A8]
     aspirate_clearance: 1
-    destination: 2:[A1, A2, A3, A4, A5, A6, A7, A8]
+    destination: 1:[A1, A2, A3, A4, A5, A6, A7, A8]
     dispense_clearance: 1
-    volume: 200
+    volume: 20
 
 metadata:
   protocolName: rpl demo
   author: Abe astroka@anl.gov
   description: demonstrates ot2 for rpl demo
   apiLevel: "2.12"
+
+requirements:
+  robotType: OT-2
