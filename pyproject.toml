@@ -12,7 +12,8 @@ authors = [
     {name = "Dozgulbas", email = "dozgulbas@anl.gov"},
 ]
 dependencies = [
-    "ad_sdl.wei>=0.5.3",
+    "madsci.node_modules>=0.1.3",
+    "madsci.client>=0.1.3",
     "pydantic>=2.4",
     "pyyaml>=6.0.1",
     "fastapi>=0.103.2",
