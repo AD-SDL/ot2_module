@@ -9,8 +9,8 @@ import requests
 import yaml
 from urllib3 import Retry
 
-from ot2_driver.config import OT2_Config, PathLike, parse_ot2_args
-from ot2_driver.protopiler.protopiler import ProtoPiler
+from ot2_interface.config import OT2_Config, PathLike, parse_ot2_args
+from ot2_interface.protopiler.protopiler import ProtoPiler
 
 
 class RobotStatus(Enum):

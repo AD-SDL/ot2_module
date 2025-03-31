@@ -1,15 +1,14 @@
-name: ot2_module
+name: ot2
 services:
   ot2_module:
-    container_name: ot2_module
-    image: ${IMAGE}
+    container_name: ot2
+    image: ot2
     build:
       context: .
       dockerfile: Dockerfile
       tags:
-        - ${IMAGE}:latest
-        - ${IMAGE}:${PROJECT_VERSION}
-        - ${IMAGE}:dev
+        - ot2:latest
+        - ot2:dev
     command: python ot2_module/src/ot2_rest_node.py --port 2000 --ot2_ip ${OT2_IP}
     privileged: true
     env_file: .env

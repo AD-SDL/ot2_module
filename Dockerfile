@@ -1,4 +1,4 @@
-FROM ghcr.io/ad-sdl/wei
+FROM madsci
 
 LABEL org.opencontainers.image.source=https://github.com/AD-SDL/ot2_module
 LABEL org.opencontainers.image.description="Drivers and REST API's for the Opentrons OT2 LiquidHandling robots"
@@ -10,7 +10,6 @@ LABEL org.opencontainers.image.licenses=MIT
 
 RUN mkdir -p ot2_module
 
-COPY ./ot2_driver ot2_module/ot2_driver
 COPY ./src ot2_module/src
 COPY ./README.md ot2_module/README.md
 COPY ./pyproject.toml ot2_module/pyproject.toml

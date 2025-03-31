@@ -8,7 +8,7 @@ from typing import Dict, Generator, List, Optional, Tuple, Union
 
 import pandas as pd
 
-from ot2_driver.protopiler.config import (
+from ot2_interface.protopiler.config import (
     Clear_Pipette,
     CommandBase,
     Deactivate,
@@ -24,7 +24,7 @@ from ot2_driver.protopiler.config import (
     Temperature_Set,
     Transfer,
 )
-from ot2_driver.protopiler.resource_manager import ResourceManager
+from ot2_interface.protopiler.resource_manager import ResourceManager
 
 """ Things to do:
         [x] take in current resources, if empty default is full

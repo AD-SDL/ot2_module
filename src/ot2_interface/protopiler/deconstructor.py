@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Dict, Optional
 
-from ot2_driver.protopiler.config import (
+from ot2_interface.protopiler.config import (
     Command,
     Labware,
     Metadata,

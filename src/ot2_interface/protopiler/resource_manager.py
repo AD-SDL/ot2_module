@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from ot2_driver.protopiler.config import Labware, PathLike, Pipette, ProtocolConfig
+from ot2_interface.protopiler.config import Labware, PathLike, Pipette, ProtocolConfig
 
 """
 Notes
