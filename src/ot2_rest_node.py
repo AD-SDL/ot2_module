@@ -17,8 +17,14 @@ from typing_extensions import Annotated
 from typing import Any
 from urllib3.exceptions import ConnectTimeoutError
 from madsci.common.types.action_types import ActionResult, ActionSucceeded, ActionFailed
-
+from madsci.client.resource_client import ResourceClient
 from ot2_interface.ot2_driver_http import OT2_Config, OT2_Driver
+from madsci.client.resource_client import ResourceClient
+from madsci.common.types.auth_types import OwnershipInfo
+from madsci.common.types.resource_types.definitions import (
+    AssetResourceDefinition,
+    SlotResourceDefinition,
+)
 
 
 class OT2NodeConfig(RestNodeConfig):
@@ -43,6 +49,34 @@ class OT2Node(RestNode):
         temp_dir = Path.home() / ".madsci" / ".ot2_temp"
         temp_dir.mkdir(exist_ok=True)
         self.protocols_folder_path = str(temp_dir / self.node_definition.node_name / "protocols/")
+        if self.config.resource_server_url:
+            self.resource_client = ResourceClient(self.config.resource_server_url)
+            self.resource_owner = OwnershipInfo(
+                node_id=self.node_definition.node_id
+            )
+            self.deck_slots = {}
+            for i in range(1,13):
+                self.deck_slots[str(i)] = self.resource_client.init_resource(
+                SlotResourceDefinition(
+                    resource_name="ot2_" + self.node_definition.node_name + "_deck" + str(i),
+                    owner=self.resource_owner,
+                )
+            )
+            self.pipette_slots = {}
+            self.pipette_slots["left"] = self.resource_client.init_resource(
+                SlotResourceDefinition(
+                    resource_name="ot2_" + self.node_definition.node_name + "_left_pipette_slot",
+                    owner=self.resource_owner,
+                ))
+            self.pipette_slots["right"] = self.resource_client.init_resource(
+                SlotResourceDefinition(
+                    resource_name="ot2_" + self.node_definition.node_name + "_right_pipette_slot",
+                    owner=self.resource_owner,
+                ))
+
+        else:
+            self.resource_client = None
+            self.deck_slots = None
         # TODO: eventual path for resources?
         # TODO: setup logs folder path?
         self.run_id = None
@@ -118,8 +152,10 @@ class OT2Node(RestNode):
             response_flag, response_msg, run_id = self.execute(
                 config_file_path, parameters
             )
+            if self.resource_client is not None:
+                self.parse_logs(self.ot2_interface.get_run_log(run_id))
 
-            response = ActionSucceeded()
+            response = ActionFailed()
             if response_flag == "succeeded":
                 # TODO logging
                 pass
@@ -131,7 +167,7 @@ class OT2Node(RestNode):
                 #     )
                 # if resource_config_path:
                 #   response.resources = str(resource_config_path)
-                response = ActionSucceeded()
+                response = ActionSucceeded(data={"log_value": self.ot2_interface.get_run_log(run_id)})
             elif response_flag == "stopped":
                 pass
                 # Path(logs_folder_path).mkdir(parents=True, exist_ok=True)
@@ -251,14 +287,13 @@ class OT2Node(RestNode):
         try:  # *Check if the protocol is a python file
 
             ast.parse(protocol.open(mode='r').read())
-            print(protocol)
+
             config_file_path = config_dir_path / f"protocol-{time_str}.py"
             text = protocol.open(mode='r').read()
             with open(config_file_path, "w", encoding="utf-8") as pc_file:
                 pc_file.write(text)
         except SyntaxError as e:
 
-            print(e)
             self.logger.log("Error: no protocol python file detected")
 
         # TODO: json dump of resources
@@ -308,8 +343,34 @@ class OT2Node(RestNode):
         self.node_status.cancelled = True
         self.logger.log("Node cancelled.")
         return True
-
-
+    def find_resource(self, logs: Any, command: Any):
+        labwares = logs["data"]["labware"]
+        labware_id = command["params"]["labwareId"]
+        labware = next(labware for labware in labwares if labware["id"] == labware_id)
+        resource = self.deck_slots[labware["location"]["slotName"]]
+        return resource
+    def parse_logs(self, logs: Any):
+        try:
+            for command in logs["commands"]["data"]:
+                if command["commandType"] == "aspirate":
+                    resource = self.find_resource(logs, command)
+                    print(resource)
+                    #self.resource_client.decrease_resource(command["params"]["volume"])
+                elif command["commandType"] == "dispense":
+                    resource = self.find_resource(logs, command)
+                    print(resource)
+                    #self.resource_client.decrease_resource(command["params"]["volume"])
+                elif command["commandType"] == "pickUpTip":
+                    resource = self.find_resource(logs, command)
+                    
+                    print(resource)
+                elif command["commandType"] == "dropTip":
+                    resource = self.find_resource(logs, command)
+                    
+                    print(resource)
+                    #self.resource_client.decrease_resource(command["params"]["volume"])
+        except Exception as e:
+            print("Couldn't update resources, no longer tracked")
 if __name__ == "__main__":
     ot2_node = OT2Node()
     ot2_node.start_node()
