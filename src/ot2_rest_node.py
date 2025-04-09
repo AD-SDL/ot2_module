@@ -24,6 +24,7 @@ from madsci.common.types.auth_types import OwnershipInfo
 from madsci.common.types.resource_types.definitions import (
     AssetResourceDefinition,
     SlotResourceDefinition,
+    ContainerResourceDefinition
 )
 
 
@@ -54,14 +55,23 @@ class OT2Node(RestNode):
             self.resource_owner = OwnershipInfo(
                 node_id=self.node_definition.node_id
             )
-            self.deck_slots = {}
-            for i in range(1,13):
-                self.deck_slots[str(i)] = self.resource_client.init_resource(
-                SlotResourceDefinition(
-                    resource_name="ot2_" + self.node_definition.node_name + "_deck" + str(i),
+            self.deck = self.resource_client.init_resource(
+                ContainerResourceDefinition(
+                    resource_name="ot2_"+self.node_definition.node_name+"_deck",
                     owner=self.resource_owner,
                 )
             )
+
+            for i in range(1,13):
+                rec_def = SlotResourceDefinition(
+                    resource_name="ot2_" + self.node_definition.node_name + "_deck" + str(i),
+                    owner=self.resource_owner,
+                )
+                try:
+                    self.resource_client.set_child(self.deck, str(i), self.resource_client.init_resource(
+                        rec_def))
+                except Exception:
+                    print("Already has child")
             self.pipette_slots = {}
             self.pipette_slots["left"] = self.resource_client.init_resource(
                 SlotResourceDefinition(
