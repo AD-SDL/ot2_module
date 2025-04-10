@@ -332,13 +332,19 @@ class OT2_Driver:
             The response json dictionary
         """
         run_url = f"{self.base_url}/runs/{run_id}"
-        run_resp = requests.get(url=run_url, headers=self.headers, params={"cursor": 0, "pageLength": 1000})
+        run_resp = requests.get(
+            url=run_url, headers=self.headers, params={"cursor": 0, "pageLength": 1000}
+        )
 
         if run_resp.status_code != 200:
             print(f"Could not get run {run_id}")
 
         commands_url = f"{self.base_url}/runs/{run_id}/commands"
-        commands_resp = requests.get(url=commands_url, headers=self.headers, params={"cursor": 0, "pageLength": 1000})
+        commands_resp = requests.get(
+            url=commands_url,
+            headers=self.headers,
+            params={"cursor": 0, "pageLength": 1000},
+        )
 
         if commands_resp.status_code != 200:
             print(f"Could not get run {run_id} commands")

@@ -2,19 +2,17 @@ requirements = {"robotType": "OT-2"}
 
 from opentrons import protocol_api
 
-
 metadata = {
     "protocolName": "rpl demo",
     "author": "Abe astroka@anl.gov",
     "description": "demonstrates ot2 for rpl demo",
-    "apiLevel": "2.12"
+    "apiLevel": "2.12",
 }
 
-def run(protocol: protocol_api.ProtocolContext):
 
+def run(protocol: protocol_api.ProtocolContext):
     deck = {}
     pipettes = {}
-
 
     ################
     # load labware #
@@ -25,8 +23,9 @@ def run(protocol: protocol_api.ProtocolContext):
 
     deck["10"] = protocol.load_labware("opentrons_96_tiprack_20ul", "10")
 
-    pipettes["left"] = protocol.load_instrument("p20_single_gen2", "left", tip_racks=[deck["10"]])
-
+    pipettes["left"] = protocol.load_instrument(
+        "p20_single_gen2", "left", tip_racks=[deck["10"]]
+    )
 
     ####################
     # execute commands #
@@ -47,7 +46,6 @@ def run(protocol: protocol_api.ProtocolContext):
 
     pipettes["left"].drop_tip()
 
-
     pipettes["left"].pick_up_tip(deck["10"].wells()[1])
 
     pipettes["left"].well_bottom_clearance.aspirate = 1.0
@@ -61,7 +59,6 @@ def run(protocol: protocol_api.ProtocolContext):
     pipettes["left"].blow_out()
 
     pipettes["left"].drop_tip()
-
 
     pipettes["left"].pick_up_tip(deck["10"].wells()[2])
 
@@ -77,7 +74,6 @@ def run(protocol: protocol_api.ProtocolContext):
 
     pipettes["left"].drop_tip()
 
-
     pipettes["left"].pick_up_tip(deck["10"].wells()[3])
 
     pipettes["left"].well_bottom_clearance.aspirate = 1.0
@@ -91,7 +87,6 @@ def run(protocol: protocol_api.ProtocolContext):
     pipettes["left"].blow_out()
 
     pipettes["left"].drop_tip()
-
 
     pipettes["left"].pick_up_tip(deck["10"].wells()[4])
 
@@ -107,7 +102,6 @@ def run(protocol: protocol_api.ProtocolContext):
 
     pipettes["left"].drop_tip()
 
-
     pipettes["left"].pick_up_tip(deck["10"].wells()[5])
 
     pipettes["left"].well_bottom_clearance.aspirate = 1.0
@@ -121,7 +115,6 @@ def run(protocol: protocol_api.ProtocolContext):
     pipettes["left"].blow_out()
 
     pipettes["left"].drop_tip()
-
 
     pipettes["left"].pick_up_tip(deck["10"].wells()[6])
 
@@ -137,7 +130,6 @@ def run(protocol: protocol_api.ProtocolContext):
 
     pipettes["left"].drop_tip()
 
-
     pipettes["left"].pick_up_tip(deck["10"].wells()[7])
 
     pipettes["left"].well_bottom_clearance.aspirate = 1.0
@@ -151,4 +143,3 @@ def run(protocol: protocol_api.ProtocolContext):
     pipettes["left"].blow_out()
 
     pipettes["left"].drop_tip()
-
