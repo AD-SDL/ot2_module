@@ -1,19 +1,19 @@
 name: ot2
 services:
   ot2_module:
-    container_name: ot2
-    image: ot2
+    container_name: ot2_module
+    image: ghcr.io/ad-sdl/ot2_module
+    environment:
+      - USER_ID=${USER_ID:-1000}
+      - GROUP_ID=${GROUP_ID:-1000}
     build:
       context: .
       dockerfile: Dockerfile
       tags:
-        - ot2:latest
-        - ot2:dev
-    command: python ot2_module/src/ot2_rest_node.py --port 2000 --ot2_ip ${OT2_IP}
+        - ghcr.io/ad-sdl/ot2_module:latest
+        - ghcr.io/ad-sdl/ot2_module:dev
+    command: python ot2_module/src/ot2_rest_node.py --definition definitions/ot2_template.node.yaml
     privileged: true
-    env_file: .env
     volumes:
-      - ./src:/home/app/ot2_module/src
-      - ./tests:/home/app/ot2_module/tests
-    ports:
-      - 2000:2000
+      - ./definitions:/home/madsci/definitions
+    network_mode: host

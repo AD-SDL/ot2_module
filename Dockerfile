@@ -1,4 +1,4 @@
-FROM madsci
+FROM ghcr.io/ad-sdl/madsci
 
 LABEL org.opencontainers.image.source=https://github.com/AD-SDL/ot2_module
 LABEL org.opencontainers.image.description="Drivers and REST API's for the Opentrons OT2 LiquidHandling robots"
