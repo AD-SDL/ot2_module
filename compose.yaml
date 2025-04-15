@@ -13,7 +13,6 @@ services:
         - ghcr.io/ad-sdl/ot2_module:latest
         - ghcr.io/ad-sdl/ot2_module:dev
     command: python ot2_module/src/ot2_rest_node.py --definition definitions/ot2_template.node.yaml
-    privileged: true
     volumes:
       - ./definitions:/home/madsci/definitions
     network_mode: host

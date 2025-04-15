@@ -375,6 +375,7 @@ class OT2Node(RestNode):
         return True
 
     def find_resource(self, logs: Any, command: Any):
+        """Extract resource information from logs"""
         labwares = logs["data"]["labware"]
         labware_id = command["params"]["labwareId"]
         labware = next(labware for labware in labwares if labware["id"] == labware_id)
@@ -382,6 +383,7 @@ class OT2Node(RestNode):
         return resource
 
     def parse_logs(self, logs: Any):
+        """Extract useful information from the ot2's logs"""
         try:
             for command in logs["commands"]["data"]:
                 if command["commandType"] == "aspirate":

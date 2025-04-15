@@ -50,6 +50,7 @@ exclude = [
     "node_modules",
     "venv",
     "docs",
+    "tests", # ignore tests for now
 ]
 
 # Same as Black.

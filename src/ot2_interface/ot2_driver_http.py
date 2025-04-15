@@ -7,10 +7,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 import yaml
-from urllib3 import Retry
-
 from ot2_interface.config import OT2_Config, PathLike, parse_ot2_args
 from ot2_interface.protopiler.protopiler import ProtoPiler
+from urllib3 import Retry
 
 
 class RobotStatus(Enum):
