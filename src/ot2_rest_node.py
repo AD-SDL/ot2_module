@@ -1,9 +1,7 @@
 #! /usr/bin/env python3
 """OT2 Node Module implementation"""
 
-import ast
 import traceback
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -166,10 +164,7 @@ class OT2Node(RestNode):
                     file_text = file_text.replace("$" + key, str(parameters[key]))
             with protocol.open(mode="w") as f:
                 f.write(file_text)
-            config_file_path = self.save_config_files(protocol)
-            response_flag, response_msg, run_id = self.execute(
-                config_file_path, parameters
-            )
+            response_flag, response_msg, run_id = self.execute(protocol, parameters)
             if self.resource_client is not None:
                 self.parse_logs(self.ot2_interface.get_run_log(run_id))
 
@@ -291,44 +286,6 @@ class OT2Node(RestNode):
             response_msg = f"Error: {traceback.format_exc()}"
             print(response_msg)
             return False, response_msg, None
-
-    def save_config_files(self, protocol: Path, resource_config=None):
-        """
-        Saves protocol string to a local yaml or python file
-
-        Parameters:
-        -----------
-        protocol: str
-            String contents of yaml or python protocol file
-
-        Returns
-        -----------
-        config_file_path: str
-            Absolute path to generated yaml or python file
-        """
-        config_dir_path = Path.home().resolve() / self.protocols_folder_path
-        config_dir_path.mkdir(exist_ok=True, parents=True)
-
-        # TODO: resources
-        # resource_dir_path = Path.home().resolve() / resources_folder_path
-        # resource_dir_path.mkdir(exist_ok=True, parents=True)
-
-        time_str = datetime.now().strftime("%Y%m%d-%H%m%s")
-
-        config_file_path = None
-        try:  # *Check if the protocol is a python file
-            ast.parse(protocol.open(mode="r").read())
-
-            config_file_path = config_dir_path / f"protocol-{time_str}.py"
-            text = protocol.open(mode="r").read()
-            with open(config_file_path, "w", encoding="utf-8") as pc_file:
-                pc_file.write(text)
-        except SyntaxError:
-            self.logger.log("Error: no protocol python file detected")
-
-        # TODO: json dump of resources
-
-        return config_file_path
 
     def pause(self) -> None:
         """Pause the node."""
