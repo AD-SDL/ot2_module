@@ -112,8 +112,8 @@ class OT2Node(RestNode):
         with protocol.open(mode="w") as f:
             f.write(file_text)
         config_file_path = self.save_config_files(protocol)
-        response_flag, _, run_id = self.execute(config_file_path, parameters)
-        if self.resource_client:
+        response_flag, _, run_id = self.execute(config_file_path)
+        if False:  # TODO: Resource handling
             self.parse_logs(self.ot2_interface.get_run_log(run_id))
 
         response = ActionFailed()
@@ -123,12 +123,16 @@ class OT2Node(RestNode):
             )
         elif response_flag == "stopped":
             response = ActionCancelled(
-                data={"log_value": self.ot2_interface.get_run_log(run_id)}
+                errors=f"OT2 stopped during protocol run: {run_id}",
+                data={"log_value": self.ot2_interface.get_run_log(run_id)},
             )
         elif response_flag == "failed":
             response = ActionFailed(
-                data={"log_value": self.ot2_interface.get_run_log(run_id)}
+                errors=f"OT2 failed during protocol run: {run_id}",
+                data={"log_value": self.ot2_interface.get_run_log(run_id)},
             )
+        else:
+            response = ActionFailed(errors=f"Unknown response: {response_flag}. ")
         return response
 
     def execute(
@@ -150,66 +154,52 @@ class OT2Node(RestNode):
 
         protocol_file_path = Path(protocol_path)
         self.logger.log(f"{protocol_file_path.resolve()=}")
-        try:
-            protocol_id, run_id = self.ot2_interface.transfer(protocol_file_path)
+
+        protocol_id, run_id = self.ot2_interface.transfer(protocol_file_path)
+        self.logger.log(
+            "OT2 " + self.node_definition.node_name + " protocol transfer successful"
+        )
+
+        self.run_id = run_id
+        resp = self.ot2_interface.execute(run_id)
+        self.run_id = None
+        if resp["data"]["status"] == "succeeded":
             self.logger.log(
                 "OT2 "
                 + self.node_definition.node_name
-                + " protocol transfer successful"
+                + " succeeded in executing a protocol"
             )
-
-            self.run_id = run_id
-            resp = self.ot2_interface.execute(run_id)
-            self.run_id = None
-            if resp["data"]["status"] == "succeeded":
-                self.logger.log(
-                    "OT2 "
-                    + self.node_definition.node_name
-                    + " succeeded in executing a protocol"
-                )
-                response_msg = (
-                    "OT2 "
-                    + self.node_definition.node_name
-                    + " successfully IDLE running a protocol"
-                )
-                return "succeeded", response_msg, run_id
-
-            if resp["data"]["status"] == "stopped":
-                self.logger.log(
-                    "OT2 "
-                    + self.node_definition.node_name
-                    + " stopped while executing a protocol"
-                )
-                response_msg = (
-                    "OT2 "
-                    + self.node_definition.node_name
-                    + " successfully IDLE after stopping a protocol"
-                )
-                return "stopped", response_msg, run_id
-
-            self.logger.log(
-                "OT2 "
-                + self.node_definition.node_name
-                + " failed in executing a protocol"
-            )
-            self.logger.log(resp["data"])
             response_msg = (
                 "OT2 "
                 + self.node_definition.node_name
-                + " failed running a protocol\n"
-                + str(resp["data"])
+                + " successfully IDLE running a protocol"
             )
-            return "failed", response_msg, run_id
-        except Exception as err:
-            if "no route to host" in str(err.args).lower():
-                response_msg = "No route to host error. Ensure that this container \
-                has network access to the robot and that the environment \
-                variable, robot_ip, matches the ip of the connected robot \
-                on the shared LAN."
-                self.logger.log(response_msg)
+            return "succeeded", response_msg, run_id
 
-            response_msg = f"Error: {traceback.format_exc()}"
-            return False, response_msg, None
+        if resp["data"]["status"] == "stopped":
+            self.logger.log(
+                "OT2 "
+                + self.node_definition.node_name
+                + " stopped while executing a protocol"
+            )
+            response_msg = (
+                "OT2 "
+                + self.node_definition.node_name
+                + " successfully IDLE after stopping a protocol"
+            )
+            return "stopped", response_msg, run_id
+
+        self.logger.log(
+            "OT2 " + self.node_definition.node_name + " failed in executing a protocol"
+        )
+        self.logger.log(resp["data"])
+        response_msg = (
+            "OT2 "
+            + self.node_definition.node_name
+            + " failed running a protocol\n"
+            + str(resp["data"])
+        )
+        return "failed", response_msg, run_id
 
     def save_config_files(self, protocol: Path) -> Optional[Path]:
         """
