@@ -1,2 +1,0 @@
-    #nickname# = protocol.load_module(#module_name#, #location#)
-    deck[#location#] = #nickname#.load_labware(#labware_name#)

@@ -1,1 +1,0 @@
-    deck[#location#] = protocol.load_trash_bin(#location#)

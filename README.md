@@ -18,7 +18,7 @@ source .venv/bin/activate
 # Install the module and dependencies in the venv
 pip install .
 # Start the node
-python -m ot2_rest_node --definition <path/to/definition>
+python -m ot2_rest_node --node_definition <path/to/definition> --node_url http://localhost:2000
 ```
 
 ### Docker

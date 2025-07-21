@@ -1,14 +1,12 @@
 """Driver implemented using HTTP protocol supported by Opentrons"""
-import subprocess
+
 import time
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import requests
-import yaml
-from ot2_interface.config import OT2_Config, PathLike, parse_ot2_args
-from ot2_interface.protopiler.protopiler import ProtoPiler
+from madsci.common.types.base_types import PathLike
 from urllib3 import Retry
 
 
@@ -36,15 +34,16 @@ class RunStatus(Enum):
     STOPPED = "stopped"
 
 
-class OT2_Driver:
+class OpentronsInterface:
     """Driver code for the OT2 utilizing the built in HTTP server."""
 
     def __init__(
         self,
-        config: OT2_Config,
+        ot2_ip: str,
+        ot2_port: int = 31950,
         retries: int = 5,
         retry_backoff: float = 1.0,
-        retry_status_codes: Optional[List[int]] = None,
+        retry_status_codes: Optional[list[int]] = None,
     ) -> None:
         """Initialize OT2 driver.
 
@@ -53,11 +52,6 @@ class OT2_Driver:
         config : OT2_Config
             Dataclass of the ot2_config
         """
-        self.config: OT2_Config = config
-        template_dir = Path(__file__).parent.resolve() / "protopiler/protocol_templates"
-        assert template_dir.exists(), f"Template dir: {template_dir} does not exist"
-        self.protopiler: ProtoPiler = ProtoPiler(template_dir=template_dir)
-
         self.retry_strategy = Retry(
             total=retries,
             backoff_factor=retry_backoff,
@@ -65,13 +59,15 @@ class OT2_Driver:
         )
 
         # Test connection
-        self.base_url = f"http://{self.config.ip}:{self.config.port}"
+        self.base_url = f"http://{ot2_ip}:{ot2_port}"
         self.headers = {"Opentrons-Version": "2"}
         test_conn_url = f"{self.base_url}/robot/lights"
 
-        resp = requests.get(test_conn_url, headers=self.headers)
+        resp = requests.get(test_conn_url, headers=self.headers, timeout=10)
         if resp.status_code != 200:
-            raise RuntimeError(f"Could not connect to opentrons with config {config}")
+            raise RuntimeError(
+                f"Could not connect to opentrons with url {self.base_url}"
+            )
 
         if "on" in resp.json() and not resp.json()["on"]:
             self.change_lights_status(status=True)
@@ -80,53 +76,7 @@ class OT2_Driver:
             time.sleep(1)  # Can mix later
             self.change_lights_status(status=True)
 
-    def compile_protocol(
-        self,
-        config_path,
-        resource_file=None,
-        resource_path=None,
-        payload: Optional[Dict[str, Any]] = None,
-        protocol_out_path=None,
-    ) -> Tuple[str, str]:
-        """Compile the protocols via protopiler
-
-        This step will be skipped if a full protocol file is detected
-
-        Parameters
-        ----------
-        config_path : PathLike
-            path to the configuration file (the one with the ot2 commands )
-        resource_file : PathLike, optional
-            path to an existing resource file, by default None, will be created if None
-
-        Returns
-        -------
-        Tuple: [str, str]
-            path to the protocol file and resource file
-        """
-        if ".py" not in str(config_path):
-            self.protopiler.load_config(
-                config_path=config_path,
-                resource_file=resource_file,
-                resource_path=resource_path,
-                protocol_out_path=protocol_out_path,
-            )
-            print("resource_file = {}".format(str(resource_file)))
-            (
-                protocol_out_path,
-                protocol_resource_file,
-            ) = self.protopiler.yaml_to_protocol(
-                config_path,
-                resource_file=resource_file,
-                resource_file_out=resource_path,
-                payload=payload,
-            )
-
-            return protocol_out_path, protocol_resource_file
-        else:
-            return config_path, None
-
-    def transfer(self, protocol_path: PathLike) -> Tuple[str, str]:
+    def transfer(self, protocol_path: PathLike) -> tuple[str, str]:
         """Transfer the protocol file to the OT2 via http
 
         Parameters
@@ -147,23 +97,22 @@ class OT2_Driver:
 
         # transfer the protocol
         transfer_resp = requests.post(
-            url=transfer_url, files=files, headers=self.headers, timeout=600
+            url=transfer_url, files=files, headers=self.headers, timeout=10
         )
-        print(transfer_resp.status_code)
-        print(transfer_resp.text)
-        print(transfer_resp.reason)
         protocol_id = transfer_resp.json()["data"]["id"]
 
         # create the run
         run_url = f"{self.base_url}/runs"
         run_json = {"data": {"protocolId": protocol_id}}
-        run_resp = requests.post(url=run_url, headers=self.headers, json=run_json)
+        run_resp = requests.post(
+            url=run_url, headers=self.headers, json=run_json, timeout=10
+        )
 
         run_id = run_resp.json()["data"]["id"]
 
         return protocol_id, run_id
 
-    def execute(self, run_id: str) -> Dict[str, Dict[str, str]]:
+    def execute(self, run_id: str) -> dict[str, dict[str, str]]:
         """Execute a `play` command for a given protocol-id
 
         Parameters
@@ -181,13 +130,12 @@ class OT2_Driver:
 
         # TODO: do some error checking/handling on execute
         execute_run_resp = requests.post(
-            url=execute_url, headers=self.headers, json=execute_json
+            url=execute_url, headers=self.headers, json=execute_json, timeout=10
         )
         if (
             execute_run_resp.status_code != 201
         ):  # this is the good response code for this endpoint
-            print(f"Could not run play action on {run_id}")
-            print(execute_run_resp.json())
+            pass
 
         while True:
             try:
@@ -197,16 +145,16 @@ class OT2_Driver:
                     RunStatus.STOPPED,
                 }:
                     break
-                else:
-                    time.sleep(1)
+                time.sleep(1)
 
             except Exception as e:
-                print(e)
-                pass
+                self.logger.log_error(
+                    f"Error while checking run status: {e}, continuing to wait for run to finish"
+                )
 
         return self.get_run(run_id)
 
-    def pause(self, run_id):
+    def pause(self, run_id: str) -> dict[str, dict[str, str]]:
         """Execute a `pause` command for a given protocol-id
 
         Parameters
@@ -223,12 +171,11 @@ class OT2_Driver:
         execute_json = {"data": {"actionType": "pause"}}
 
         # TODO: do some error checking/handling on execute
-        execute_run_resp = requests.post(
-            url=execute_url, headers=self.headers, json=execute_json
+        return requests.post(
+            url=execute_url, headers=self.headers, json=execute_json, timeout=10
         )
-        return execute_run_resp
 
-    def resume(self, run_id):
+    def resume(self, run_id: str) -> dict[str, dict[str, str]]:
         """Execute a `play` command for a given protocol-id
 
         Parameters
@@ -245,12 +192,11 @@ class OT2_Driver:
         execute_json = {"data": {"actionType": "play"}}
 
         # TODO: do some error checking/handling on execute
-        execute_run_resp = requests.post(
-            url=execute_url, headers=self.headers, json=execute_json
+        return requests.post(
+            url=execute_url, headers=self.headers, json=execute_json, timeout=10
         )
-        return execute_run_resp
 
-    def cancel(self, run_id):
+    def cancel(self, run_id: str) -> dict[str, dict[str, str]]:
         """Execute a `stop` command for a given protocol-id
 
         Parameters
@@ -267,12 +213,11 @@ class OT2_Driver:
         execute_json = {"data": {"actionType": "stop"}}
 
         # TODO: do some error checking/handling on execute
-        execute_run_resp = requests.post(
-            url=execute_url, headers=self.headers, json=execute_json
+        return requests.post(
+            url=execute_url, headers=self.headers, json=execute_json, timeout=10
         )
-        return execute_run_resp
 
-    def check_run_status(self, run_id) -> RunStatus:
+    def check_run_status(self, run_id: str) -> RunStatus:
         """Checks the status of a run
 
         Parameters
@@ -287,16 +232,13 @@ class OT2_Driver:
         """
         # check run
         check_run_url = f"{self.base_url}/runs/{run_id}"
-        check_run_resp = requests.get(url=check_run_url, headers=self.headers)
+        check_run_resp = requests.get(
+            url=check_run_url, headers=self.headers, timeout=10
+        )
 
-        if check_run_resp.status_code != 200:
-            print(f"Cannot check run {run_id}")
+        return RunStatus(check_run_resp.json()["data"]["status"])
 
-        status = RunStatus(check_run_resp.json()["data"]["status"])
-
-        return status
-
-    def get_run(self, run_id) -> Dict:
+    def get_run(self, run_id: str) -> dict:
         """Get the OT2 summary of a specific run
 
         Parameters
@@ -310,14 +252,14 @@ class OT2_Driver:
             The response json dictionary
         """
         run_url = f"{self.base_url}/runs/{run_id}"
-        run_resp = requests.get(url=run_url, headers=self.headers)
+        run_resp = requests.get(url=run_url, headers=self.headers, timeout=10)
 
         if run_resp.status_code != 200:
-            print(f"Could not get run {run_id}")
+            pass
 
         return run_resp.json()
 
-    def get_run_log(self, run_id) -> Dict:
+    def get_run_log(self, run_id: str) -> dict:
         """Get the OT2 summary of a specific run, with commands
 
         Parameters
@@ -332,28 +274,32 @@ class OT2_Driver:
         """
         run_url = f"{self.base_url}/runs/{run_id}"
         run_resp = requests.get(
-            url=run_url, headers=self.headers, params={"cursor": 0, "pageLength": 1000}
+            url=run_url,
+            headers=self.headers,
+            params={"cursor": 0, "pageLength": 1000},
+            timeout=10,
         )
 
         if run_resp.status_code != 200:
-            print(f"Could not get run {run_id}")
+            pass
 
         commands_url = f"{self.base_url}/runs/{run_id}/commands"
         commands_resp = requests.get(
             url=commands_url,
             headers=self.headers,
             params={"cursor": 0, "pageLength": 1000},
+            timeout=10,
         )
 
         if commands_resp.status_code != 200:
-            print(f"Could not get run {run_id} commands")
+            pass
 
         result = run_resp.json()
         result["commands"] = commands_resp.json()
 
         return result
 
-    def get_runs(self) -> Optional[List[Dict[str, str]]]:
+    def get_runs(self) -> Optional[list[dict[str, str]]]:
         """Get all the runs currently stored on the ot2
 
         Returns
@@ -362,7 +308,7 @@ class OT2_Driver:
             Returns a list of dictionaries that contain simplified information about the runs
         """
         runs_url = f"{self.base_url}/runs"
-        runs_resp = requests.get(url=runs_url, headers=self.headers)
+        runs_resp = requests.get(url=runs_url, headers=self.headers, timeout=10)
 
         if runs_resp.status_code == 200:
             runs_simplified = []
@@ -394,31 +340,34 @@ class OT2_Driver:
 
         for run in runs:
             run_status = run["status"]
-            if (
-                run_status == "succeeded" or run_status == "stop-requested"
-            ):  # Can't handle succeeded in client
+            if run_status in {
+                "succeeded",
+                "stop-requested",
+            }:  # Can't handle succeeded in client
                 continue
             if run_status in [elem.value for elem in RunStatus]:
                 return RobotStatus(run_status).value
 
         return RobotStatus.IDLE.value
 
-    def reset_robot_data(self):
+    def reset_robot_data(self) -> None:
         """Reset the robot data remove failed runs and protocols"""
         delete_url = f"{self.base_url}/runs/"
 
         for run in self.get_runs():
             if run["status"] == "failed":
-                requests.delete(url=delete_url + run["runID"], headers=self.headers)
+                requests.delete(
+                    url=delete_url + run["runID"], headers=self.headers, timeout=10
+                )
 
-    def change_lights_status(self, status: bool = False):
+    def change_lights_status(self, status: bool = False) -> None:
         """switch the lights"""
         change_lights_url = f"{self.base_url}/robot/lights"
         payload = {"on": status}
 
-        requests.post(change_lights_url, headers=self.headers, json=payload)
+        requests.post(change_lights_url, headers=self.headers, json=payload, timeout=10)
 
-    def send_request(self, request_extension: str, **kwargs) -> requests.Response:
+    def send_request(self, request_extension: str, **kwargs: Any) -> requests.Response:
         """Allows us to send arbitrary requests to the ot2 http server.
 
         Parameters
@@ -438,7 +387,7 @@ class OT2_Driver:
         """
         # sanitize preceding '/'
         request_extension = (
-            request_extension if "/" != request_extension[0] else request_extension[1:]
+            request_extension if request_extension[0] != "/" else request_extension[1:]
         )
         url = f"{self.base_url}/{request_extension}"
 
@@ -450,16 +399,15 @@ class OT2_Driver:
             raise Exception(
                 "No request method specified, please provide GET, POST, UPDATE, DELETE as keyword argument"
             )
-        else:
-            kwargs["method"] = kwargs["method"].upper()
+        kwargs["method"] = kwargs["method"].upper()
 
-        return requests.request(url=url, **kwargs)
+        return requests.request(url=url, **kwargs, timeout=10)
 
     def stream(
         self,
         command: str,
         params: dict,
-        run_id: str = None,
+        run_id: Optional[str] = None,
         execute: bool = True,
         intent: str = "setup",
     ) -> str:
@@ -486,7 +434,14 @@ class OT2_Driver:
 
         return self._stream(command, params, run_id, execute=execute, intent=intent)
 
-    def _stream(self, command, params, run_id=None, execute=True, intent="setup"):
+    def _stream(
+        self,
+        command: str,
+        params: dict,
+        run_id: Optional[str] = None,
+        execute: bool = True,
+        intent: Optional[str] = "setup",
+    ) -> str:
         """Helper method that runs the streaming
 
                 Parameters
@@ -515,6 +470,7 @@ class OT2_Driver:
                 headers=self.headers,
                 json={"data": {}},
                 max_retries=self.retry_strategy,
+                timeout=10,
             )
             run_id = run_resp.json()["data"]["id"]
 
@@ -522,58 +478,22 @@ class OT2_Driver:
         enqueue_payload = {
             "data": {"commandType": command, "params": params, "intent": intent}
         }
-        enqueue_resp = requests.post(
+        requests.post(
             url=f"{self.base_url}/runs/{run_id}/commands",
             headers=self.headers,
             json=enqueue_payload,
             max_retries=self.retry_strategy,
+            timeout=10,
         )
-        print(f"Enqueue return: {enqueue_resp.json()}")
 
         # run the command
         if execute:
-            execute_command_resp = requests.post(
+            requests.post(
                 url=f"{self.base_url}/runs/{run_id}/actions",
                 headers=self.headers,
                 json={"data": {"actionType": "play"}},
                 max_retries=self.retry_strategy,
+                timeout=10,
             )
-            print(f"Execute return: {execute_command_resp.json()}")
 
         return run_id
-
-
-def main(args):  # noqa: D103
-    ot2s = []
-    for ot2_raw_cfg in yaml.safe_load(open(args.robot_config)):
-        ot2s.append(OT2_Driver(OT2_Config(**ot2_raw_cfg)))
-
-    ot2: OT2_Driver = ot2s[0]
-
-    # Can pass in a full python file here, no resource files will be created, but it won't break the system
-    protocol_file, resource_file = ot2.compile_protocol(
-        config_path=args.protocol_config, resource_file=args.resource_file
-    )
-    if args.simulate:
-        print("Beginning simulation")
-        cmd = ["opentrons_simulate", protocol_file]
-        subprocess.run(cmd)
-        if args.delete:
-            protocol_file.unlink()
-            if not args.resource_file:
-                resource_file.unlink()
-    else:
-        print("Beginning protocol")
-        protocol_id, run_id = ot2.transfer(protocol_file)
-
-        resp_data = ot2.execute(run_id)
-        print(f"Protocol execution response data: {resp_data}")
-
-        if args.delete:
-            # TODO: add way to delete things from ot2
-            pass
-
-
-if __name__ == "__main__":
-    args = parse_ot2_args()
-    main(args)

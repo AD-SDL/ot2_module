@@ -6,13 +6,14 @@ services:
     environment:
       - USER_ID=${USER_ID:-1000}
       - GROUP_ID=${GROUP_ID:-1000}
+      - OT2_IP=${OT2_IP}
     build:
       context: .
       dockerfile: Dockerfile
       tags:
         - ghcr.io/ad-sdl/ot2_module:latest
         - ghcr.io/ad-sdl/ot2_module:dev
-    command: python ot2_module/src/ot2_rest_node.py --definition definitions/ot2_template.node.yaml
+    command: python ot2_module/src/ot2_rest_node.py --node_definition definitions/ot2_template.node.yaml --node_url http://127.0.0.1:2000
     volumes:
       - ./definitions:/home/madsci/definitions
     network_mode: host

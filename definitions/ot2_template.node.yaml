@@ -1,11 +1,7 @@
 node_name: ot2_template
-node_url: null
+node_id: 01JXDGSGWV3405HC0F3CMD547G
 node_description: Template for a MADSci Opentrons OT2 node
 node_type: device
 module_name: ot2_module
-module_version: 0.0.1
-capabilities:
-  admin_commands: []
-commands: {}
-is_template: true
-config_defaults: {}
+module_version: 2.1.0
+capabilities: null

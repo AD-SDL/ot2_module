@@ -1,1 +1,0 @@
-    deck[#location#].set_offset(x=#x_offset#, y=#y_offset#, z=#z_offset#)
