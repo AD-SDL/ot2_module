@@ -149,7 +149,7 @@ class OT2Node(RestNode):
             dict[str, Any], "Parameters for insertion into the protocol"
         ] = {},
         # TODO: whether or not to use existing resources?
-    ):
+    ) -> Annotated[dict[str, Any], "ot2 action log"]:
         """
         Run a given protocol on the ot2
         """
@@ -168,7 +168,6 @@ class OT2Node(RestNode):
             if self.resource_client is not None:
                 self.parse_logs(self.ot2_interface.get_run_log(run_id))
 
-            response = ActionFailed()
             if response_flag == "succeeded":
                 # TODO logging
                 pass
@@ -180,16 +179,14 @@ class OT2Node(RestNode):
                 #     )
                 # if resource_config_path:
                 #   response.resources = str(resource_config_path)
-                response = ActionSucceeded(
-                    data={"log_value": self.ot2_interface.get_run_log(run_id)}
-                )
+                return self.ot2_interface.get_run_log(run_id)
             elif response_flag == "stopped":
                 pass
                 # Path(logs_folder_path).mkdir(parents=True, exist_ok=True)
                 # with open(Path(logs_folder_path) / f"{run_id}.json", "w") as f:
                 #     json.dump(state.ot2.get_run_log(run_id), f, indent=2)
                 #     return StepFileResponse(status=StepStatus.FAILED, files={"log": f.name})
-                response = ActionFailed()
+                raise Exception("Run was stopped")
             elif response_flag == "failed":
                 pass
                 # response = StepResponse()
@@ -197,13 +194,9 @@ class OT2Node(RestNode):
                 # response.error = "an error occurred"
                 # if resource_config_path:
                 #   response.resources = str(resource_config_path)
-                response = ActionFailed()
-            return response
+                raise Exception("Run failed: " + response_msg)
         else:
-            response["action_msg"] = "Required 'protocol' file was not provided"
-            print(response.action_msg)
-
-            return response
+            raise Exception("No protocol file found")
 
     def execute(self, protocol_path, payload=None, resource_config=None):
         """
