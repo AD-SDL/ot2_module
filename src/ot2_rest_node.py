@@ -8,7 +8,6 @@ from urllib.error import HTTPError, URLError
 
 import requests
 from madsci.client.resource_client import ResourceClient
-from madsci.common.types.action_types import ActionFailed, ActionSucceeded
 from madsci.common.types.auth_types import OwnershipInfo
 from madsci.common.types.node_types import RestNodeConfig
 from madsci.common.types.resource_types.definitions import (
