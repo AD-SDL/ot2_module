@@ -7,13 +7,8 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 
 import requests
-from madsci.client.resource_client import ResourceClient
-from madsci.common.types.auth_types import OwnershipInfo
 from madsci.common.types.node_types import RestNodeConfig
-from madsci.common.types.resource_types.definitions import (
-    ContainerResourceDefinition,
-    SlotResourceDefinition,
-)
+from madsci.common.types.resource_types import Container, Pool, Slot
 from madsci.node_module.helpers import action
 from madsci.node_module.rest_node_module import RestNode
 from ot2_interface.ot2_driver_http import OT2_Config, OT2_Driver
@@ -45,51 +40,42 @@ class OT2Node(RestNode):
         self.protocols_folder_path = str(
             temp_dir / self.node_definition.node_name / "protocols/"
         )
-        if self.config.resource_server_url:
-            self.resource_client = ResourceClient(self.config.resource_server_url)
-            self.resource_owner = OwnershipInfo(node_id=self.node_definition.node_id)
-            self.deck = self.resource_client.init_resource(
-                ContainerResourceDefinition(
-                    resource_name="ot2_" + self.node_definition.node_name + "_deck",
-                    owner=self.resource_owner,
-                )
+        # Create templates
+        self._create_ot2_templates()
+
+        # Create deck instance
+        self.deck = self.resource_client.create_resource_from_template(
+            template_name="ot2_deck",
+            resource_name=f"ot2_{self.node_definition.node_name}_deck",
+            add_to_database=True,
+        )
+
+        # Create 12 deck slots (1-11 standard, 12 is trash)
+        for i in range(1, 13):
+            slot_name = f"ot2_{self.node_definition.node_name}_deck_slot_{i}"
+            template_name = "ot2_trash_slot" if i == 12 else "ot2_deck_slot"
+
+            slot = self.resource_client.create_resource_from_template(
+                template_name=template_name,
+                resource_name=slot_name,
+                add_to_database=True,
             )
 
-            for i in range(1, 13):
-                rec_def = SlotResourceDefinition(
-                    resource_name="ot2_"
-                    + self.node_definition.node_name
-                    + "_deck"
-                    + str(i),
-                    owner=self.resource_owner,
-                )
-                try:
-                    self.resource_client.set_child(
-                        self.deck, str(i), self.resource_client.init_resource(rec_def)
-                    )
-                except Exception:
-                    print("Already has child")
-            self.pipette_slots = {}
-            self.pipette_slots["left"] = self.resource_client.init_resource(
-                SlotResourceDefinition(
-                    resource_name="ot2_"
-                    + self.node_definition.node_name
-                    + "_left_pipette_slot",
-                    owner=self.resource_owner,
-                )
-            )
-            self.pipette_slots["right"] = self.resource_client.init_resource(
-                SlotResourceDefinition(
-                    resource_name="ot2_"
-                    + self.node_definition.node_name
-                    + "_right_pipette_slot",
-                    owner=self.resource_owner,
-                )
-            )
+            try:
+                self.resource_client.set_child(self.deck, str(i), slot)
+            except Exception:
+                self.logger.log(f"Deck slot {i} already exists")
 
-        else:
-            self.resource_client = None
-            self.deck_slots = None
+        # Create pipette mount slots
+        self.pipette_slots = {}
+        for mount in ["left", "right"]:
+            mount_slot = self.resource_client.create_resource_from_template(
+                template_name="ot2_pipette_mount",
+                resource_name=f"ot2_{self.node_definition.node_name}_{mount}_mount",
+                add_to_database=True,
+            )
+            self.pipette_slots[mount] = mount_slot
+
         # TODO: eventual path for resources?
         # TODO: setup logs folder path?
         self.run_id = None
@@ -99,6 +85,261 @@ class OT2Node(RestNode):
         self.connect_robot()
         self.startup_has_run = True
         self.logger.log("OT2 node initialized!")
+
+    def _create_ot2_templates(self) -> None:
+        """Create all OT2-specific resource templates."""
+
+        # 0. Deck container template
+        deck_container = Container(
+            resource_name="ot2_deck",
+            resource_class="OT2Deck",
+            capacity=12,
+            attributes={
+                "deck_type": "OT2",
+                "slot_count": 12,
+                "sbs_compatible": True,
+                "description": "OT2 deck with 11 standard slots plus trash bin",
+            },
+        )
+
+        self.resource_client.init_template(
+            resource=deck_container,
+            template_name="ot2_deck",
+            description="Template for OT2 deck container. Holds 11 deck slots plus trash bin.",
+            required_overrides=["resource_name"],
+            tags=["ot2", "deck", "container"],
+            created_by=self.node_definition.node_id,
+            version="1.0.0",
+        )
+
+        # 1. Deck slot template (standard slots 1-11)
+        deck_slot = Slot(
+            resource_name="ot2_deck_slot",
+            resource_class="OT2DeckSlot",
+            capacity=1,
+            attributes={
+                "slot_type": "deck_position",
+                "sbs_compatible": True,
+                "description": "OT2 deck slot for labware",
+            },
+        )
+
+        self.resource_client.init_template(
+            resource=deck_slot,
+            template_name="ot2_deck_slot",
+            description="Template for OT2 deck slot. Standard SBS-compatible position.",
+            required_overrides=["resource_name"],
+            tags=["ot2", "deck", "slot"],
+            created_by=self.node_definition.node_id,
+            version="1.0.0",
+        )
+
+        # 2. Trash slot template (slot 12)
+        trash_slot = Slot(
+            resource_name="ot2_trash",
+            resource_class="OT2TrashBin",
+            capacity=1000,
+            attributes={
+                "slot_type": "trash_bin",
+                "removable": True,
+                "description": "OT2 removable trash bin at slot 12",
+            },
+        )
+
+        self.resource_client.init_template(
+            resource=trash_slot,
+            template_name="ot2_trash_slot",
+            description="Template for OT2 trash bin slot.",
+            required_overrides=["resource_name"],
+            tags=["ot2", "trash", "slot"],
+            created_by=self.node_definition.node_id,
+            version="1.0.0",
+        )
+
+        # 3. Pipette mount template
+        pipette_mount = Slot(
+            resource_name="ot2_pipette_mount",
+            resource_class="OT2PipetteMount",
+            capacity=1,
+            attributes={
+                "mount_type": "pipette_mount",
+                "description": "OT2 pipette mount (left or right)",
+            },
+        )
+
+        self.resource_client.init_template(
+            resource=pipette_mount,
+            template_name="ot2_pipette_mount",
+            description="Template for OT2 pipette mount slot.",
+            required_overrides=["resource_name"],
+            tags=["ot2", "pipette", "mount", "slot"],
+            created_by=self.node_definition.node_id,
+            version="1.0.0",
+        )
+
+        # 4. P20 Single-Channel Pipette
+        p20_single = Pool(
+            resource_name="ot2_p20_single",
+            resource_class="OT2_P20_Single",
+            capacity=20.0,
+            attributes={
+                "pipette_type": "p20_single_gen2",
+                "channels": 1,
+                "min_volume": 1.0,
+                "max_volume": 20.0,
+                "accuracy_1ul": {"random_error_pct": 15.0, "systematic_error_pct": 5.0},
+                "accuracy_10ul": {"random_error_pct": 2.0, "systematic_error_pct": 1.0},
+                "accuracy_20ul": {"random_error_pct": 1.5, "systematic_error_pct": 0.8},
+                "description": "P20 Single-Channel pipette (1-20 µL)",
+            },
+        )
+
+        self.resource_client.init_template(
+            resource=p20_single,
+            template_name="ot2_p20_single_pipette",
+            description="Template for OT2 P20 Single-Channel pipette (1-20 µL).",
+            required_overrides=["resource_name"],
+            tags=["ot2", "pipette", "p20", "single-channel", "pool"],
+            created_by=self.node_definition.node_id,
+            version="1.0.0",
+        )
+
+        # 5. P300 Single-Channel Pipette
+        p300_single = Pool(
+            resource_name="ot2_p300_single",
+            resource_class="OT2_P300_Single",
+            capacity=300.0,
+            attributes={
+                "pipette_type": "p300_single_gen2",
+                "channels": 1,
+                "min_volume": 20.0,
+                "max_volume": 300.0,
+                "accuracy_20ul": {"random_error_pct": 4.0, "systematic_error_pct": 2.5},
+                "accuracy_150ul": {
+                    "random_error_pct": 1.0,
+                    "systematic_error_pct": 0.4,
+                },
+                "accuracy_300ul": {
+                    "random_error_pct": 0.6,
+                    "systematic_error_pct": 0.3,
+                },
+                "description": "P300 Single-Channel pipette (20-300 µL)",
+            },
+        )
+
+        self.resource_client.init_template(
+            resource=p300_single,
+            template_name="ot2_p300_single_pipette",
+            description="Template for OT2 P300 Single-Channel pipette (20-300 µL).",
+            required_overrides=["resource_name"],
+            tags=["ot2", "pipette", "p300", "single-channel", "pool"],
+            created_by=self.node_definition.node_id,
+            version="1.0.0",
+        )
+
+        # 6. P1000 Single-Channel Pipette
+        p1000_single = Pool(
+            resource_name="ot2_p1000_single",
+            resource_class="OT2_P1000_Single",
+            capacity=1000.0,
+            attributes={
+                "pipette_type": "p1000_single_gen2",
+                "channels": 1,
+                "min_volume": 100.0,
+                "max_volume": 1000.0,
+                "accuracy_100ul": {
+                    "random_error_pct": 2.0,
+                    "systematic_error_pct": 1.0,
+                },
+                "accuracy_500ul": {
+                    "random_error_pct": 1.0,
+                    "systematic_error_pct": 0.2,
+                },
+                "accuracy_1000ul": {
+                    "random_error_pct": 0.7,
+                    "systematic_error_pct": 0.15,
+                },
+                "description": "P1000 Single-Channel pipette (100-1000 µL)",
+            },
+        )
+
+        self.resource_client.init_template(
+            resource=p1000_single,
+            template_name="ot2_p1000_single_pipette",
+            description="Template for OT2 P1000 Single-Channel pipette (100-1000 µL).",
+            required_overrides=["resource_name"],
+            tags=["ot2", "pipette", "p1000", "single-channel", "pool"],
+            created_by=self.node_definition.node_id,
+            version="1.0.0",
+        )
+
+        # 7. P20 8-Channel Pipette
+        p20_multi = Pool(
+            resource_name="ot2_p20_multi",
+            resource_class="OT2_P20_Multi",
+            capacity=20.0,
+            attributes={
+                "pipette_type": "p20_multi_gen2",
+                "channels": 8,
+                "min_volume": 1.0,
+                "max_volume": 20.0,
+                "accuracy_1ul": {
+                    "random_error_pct": 20.0,
+                    "systematic_error_pct": 10.0,
+                },
+                "accuracy_10ul": {"random_error_pct": 3.0, "systematic_error_pct": 2.0},
+                "accuracy_20ul": {"random_error_pct": 2.2, "systematic_error_pct": 1.5},
+                "fill_96well_time_seconds": 22,
+                "description": "P20 8-Channel pipette (1-20 µL)",
+            },
+        )
+
+        self.resource_client.init_template(
+            resource=p20_multi,
+            template_name="ot2_p20_multi_pipette",
+            description="Template for OT2 P20 8-Channel pipette (1-20 µL).",
+            required_overrides=["resource_name"],
+            tags=["ot2", "pipette", "p20", "8-channel", "multi-channel", "pool"],
+            created_by=self.node_definition.node_id,
+            version="1.0.0",
+        )
+
+        # 8. P300 8-Channel Pipette
+        p300_multi = Pool(
+            resource_name="ot2_p300_multi",
+            resource_class="OT2_P300_Multi",
+            capacity=300.0,
+            attributes={
+                "pipette_type": "p300_multi_gen2",
+                "channels": 8,
+                "min_volume": 20.0,
+                "max_volume": 300.0,
+                "accuracy_20ul": {
+                    "random_error_pct": 10.0,
+                    "systematic_error_pct": 4.0,
+                },
+                "accuracy_150ul": {
+                    "random_error_pct": 2.5,
+                    "systematic_error_pct": 0.8,
+                },
+                "accuracy_300ul": {
+                    "random_error_pct": 1.5,
+                    "systematic_error_pct": 0.5,
+                },
+                "fill_96well_time_seconds": 26,
+                "description": "P300 8-Channel pipette (20-300 µL)",
+            },
+        )
+
+        self.resource_client.init_template(
+            resource=p300_multi,
+            template_name="ot2_p300_multi_pipette",
+            description="Template for OT2 P300 8-Channel pipette (20-300 µL).",
+            required_overrides=["resource_name"],
+            tags=["ot2", "pipette", "p300", "8-channel", "multi-channel", "pool"],
+            created_by=self.node_definition.node_id,
+            version="1.0.0",
+        )
 
     def shutdown_handler(self) -> None:
         """Called to shutdown the node. Should be used to close connections to devices or release any other resources."""
