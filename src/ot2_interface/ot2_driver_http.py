@@ -1,4 +1,5 @@
 """Driver implemented using HTTP protocol supported by Opentrons"""
+
 import subprocess
 import time
 from enum import Enum
@@ -7,9 +8,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 import yaml
+from urllib3 import Retry
+
 from ot2_interface.config import OT2_Config, PathLike, parse_ot2_args
 from ot2_interface.protopiler.protopiler import ProtoPiler
-from urllib3 import Retry
 
 
 class RobotStatus(Enum):
@@ -157,7 +159,9 @@ class OT2_Driver:
         # create the run
         run_url = f"{self.base_url}/runs"
         run_json = {"data": {"protocolId": protocol_id}}
-        run_resp = requests.post(url=run_url, headers=self.headers, json=run_json)
+        run_resp = requests.post(
+            url=run_url, headers=self.headers, json=run_json, timeout=60
+        )
 
         run_id = run_resp.json()["data"]["id"]
 
