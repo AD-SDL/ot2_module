@@ -3,33 +3,28 @@
 
 import traceback
 from pathlib import Path
-from typing import Any
-from urllib.error import HTTPError, URLError
+from typing import Any, Optional
 
-import requests
 from madsci.common.types.node_types import RestNodeConfig
-from madsci.common.types.resource_types import Container, Pool, Slot
+from madsci.common.types.resource_types import Container, Pool, Slot, Stack
 from madsci.node_module.helpers import action
 from madsci.node_module.rest_node_module import RestNode
 from ot2_interface.ot2_driver_http import OT2_Config, OT2_Driver
 from typing_extensions import Annotated
-from urllib3.exceptions import ConnectTimeoutError
 
 
 class OT2NodeConfig(RestNodeConfig):
     """Configuration for the OT2 node module."""
 
-    __test__ = False
-
-    ot2_ip: str
+    ot2_ip: Optional[str] = None
     "ip of opentrons device"
 
 
 class OT2Node(RestNode):
     """Node module for Opentrons Robots"""
 
-    __test__ = False
-    ot2_interface: OT2_Driver
+    ot2_interface: OT2_Driver = None
+    config: OT2NodeConfig = OT2NodeConfig()
     config_model = OT2NodeConfig
 
     def startup_handler(self) -> None:
@@ -76,15 +71,17 @@ class OT2Node(RestNode):
             )
             self.pipette_slots[mount] = mount_slot
 
-        # TODO: eventual path for resources?
-        # TODO: setup logs folder path?
+        if self.config.ot2_ip is None:
+            raise ValueError("OT2 IP address is not configured.")
+        try:
+            self.ot2_interface = OT2_Driver(OT2_Config(ip=self.config.ot2_ip))
+        except Exception as e:
+            self.logger.error(f"Failed to connect to OT2: {e}")
+            raise e
+
         self.run_id = None
-        self.ip = self.config.ot2_ip
-        # TODO: check if resource and protocols folders exist, if not create them
-        self.ot2_interface = None
-        self.connect_robot()
         self.startup_has_run = True
-        self.logger.log("OT2 node initialized!")
+        self.logger.info("OT2 node initialized!")
 
     def _create_ot2_templates(self) -> None:
         """Create all OT2-specific resource templates."""
@@ -134,24 +131,23 @@ class OT2Node(RestNode):
             version="1.0.0",
         )
 
-        # 2. Trash slot template (slot 12)
-        trash_slot = Slot(
+        # 2. Trash bin template (slot 12) - Stack type for collecting tips/waste
+        trash_bin = Stack(
             resource_name="ot2_trash",
             resource_class="OT2TrashBin",
-            capacity=1000,
             attributes={
-                "slot_type": "trash_bin",
+                "container_type": "trash_bin",
                 "removable": True,
                 "description": "OT2 removable trash bin at slot 12",
             },
         )
 
         self.resource_client.init_template(
-            resource=trash_slot,
+            resource=trash_bin,
             template_name="ot2_trash_slot",
             description="Template for OT2 trash bin slot.",
             required_overrides=["resource_name"],
-            tags=["ot2", "trash", "slot"],
+            tags=["ot2", "trash", "stack"],
             created_by=self.node_definition.node_id,
             version="1.0.0",
         )
@@ -353,33 +349,8 @@ class OT2Node(RestNode):
         """Periodically called to update the current state of the node."""
         if self.ot2_interface is not None:
             self.node_state = {
-                #  "test_status_code": self.ot2_interface.status_code,
+                "ot2_status_code": self.ot2_interface.get_robot_status(),
             }
-
-    def connect_robot(self) -> None:
-        """Description: Connects to the ot2"""
-        try:
-            self.ot2_interface = OT2_Driver(OT2_Config(ip=self.config.ot2_ip))
-
-        except ConnectTimeoutError as connection_err:
-            self.node_status.errored = True
-            print("Connection error code: " + connection_err)
-
-        except HTTPError as http_error:
-            print("HTTP error code: " + http_error)
-
-        except URLError as url_err:
-            print("Url error code: " + url_err)
-
-        except requests.exceptions.ConnectionError as conn_err:
-            print("Connection error code: " + str(conn_err))
-
-        except Exception as error_msg:
-            self.node_status.errored = True
-            print("-------" + str(error_msg) + " -------")
-
-        else:
-            self.logger.log("OT2 node online")
 
     @action(name="run_protocol", description="run a given opentrons protocol")
     def run_protocol(
