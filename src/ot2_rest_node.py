@@ -19,6 +19,11 @@ class OT2NodeConfig(RestNodeConfig):
     ot2_ip: Optional[str] = None
     "ip of opentrons device"
 
+    robot_model: str = "OT2"
+    "robot model: 'OT2' or 'Flex'"
+
+    #TODO resource json here?
+
 
 class OT2Node(RestNode):
     """Node module for Opentrons Robots"""
@@ -70,6 +75,8 @@ class OT2Node(RestNode):
                 add_to_database=True,
             )
             self.pipette_slots[mount] = mount_slot
+        
+        #TODO: if flex, gripper?
 
         if self.config.ot2_ip is None:
             raise ValueError("OT2 IP address is not configured.")
@@ -85,6 +92,7 @@ class OT2Node(RestNode):
 
     def _create_ot2_templates(self) -> None:
         """Create all OT2-specific resource templates."""
+        #TODO: conditionals for difference in flex and ot2
 
         # 0. Deck container template
         deck_container = Container(
@@ -130,7 +138,7 @@ class OT2Node(RestNode):
             created_by=self.node_definition.node_id,
             version="1.0.0",
         )
-
+        #TODO: chute if flex
         # 2. Trash bin template (slot 12) - Stack type for collecting tips/waste
         trash_bin = Stack(
             resource_name="ot2_trash",
@@ -172,7 +180,7 @@ class OT2Node(RestNode):
             created_by=self.node_definition.node_id,
             version="1.0.0",
         )
-
+        # TODO: flex pipettes etc
         # 4. P20 Single-Channel Pipette
         p20_single = Pool(
             resource_name="ot2_p20_single",
@@ -351,7 +359,7 @@ class OT2Node(RestNode):
             self.node_state = {
                 "ot2_status_code": self.ot2_interface.get_robot_status(),
             }
-
+    #TODO: 2 new functions, load_resources, save_resources, see necessary formatting, need helper functions for translating
     @action(name="run_protocol", description="run a given opentrons protocol")
     def run_protocol(
         self,

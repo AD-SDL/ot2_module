@@ -56,9 +56,9 @@ class OT2_Driver:
             Dataclass of the ot2_config
         """
         self.config: OT2_Config = config
-        template_dir = Path(__file__).parent.resolve() / "protopiler/protocol_templates"
-        assert template_dir.exists(), f"Template dir: {template_dir} does not exist"
-        self.protopiler: ProtoPiler = ProtoPiler(template_dir=template_dir)
+        # template_dir = Path(__file__).parent.resolve() / "protopiler/protocol_templates"
+        # assert template_dir.exists(), f"Template dir: {template_dir} does not exist"
+        # self.protopiler: ProtoPiler = ProtoPiler(template_dir=template_dir)
 
         self.retry_strategy = Retry(
             total=retries,
@@ -82,51 +82,51 @@ class OT2_Driver:
             time.sleep(1)  # Can mix later
             self.change_lights_status(status=True)
 
-    def compile_protocol(
-        self,
-        config_path,
-        resource_file=None,
-        resource_path=None,
-        payload: Optional[Dict[str, Any]] = None,
-        protocol_out_path=None,
-    ) -> Tuple[str, str]:
-        """Compile the protocols via protopiler
+    # def compile_protocol(
+    #     self,
+    #     config_path,
+    #     resource_file=None,
+    #     resource_path=None,
+    #     payload: Optional[Dict[str, Any]] = None,
+    #     protocol_out_path=None,
+    # ) -> Tuple[str, str]:
+    #     """Compile the protocols via protopiler
 
-        This step will be skipped if a full protocol file is detected
+    #     This step will be skipped if a full protocol file is detected
 
-        Parameters
-        ----------
-        config_path : PathLike
-            path to the configuration file (the one with the ot2 commands )
-        resource_file : PathLike, optional
-            path to an existing resource file, by default None, will be created if None
+    #     Parameters
+    #     ----------
+    #     config_path : PathLike
+    #         path to the configuration file (the one with the ot2 commands )
+    #     resource_file : PathLike, optional
+    #         path to an existing resource file, by default None, will be created if None
 
-        Returns
-        -------
-        Tuple: [str, str]
-            path to the protocol file and resource file
-        """
-        if ".py" not in str(config_path):
-            self.protopiler.load_config(
-                config_path=config_path,
-                resource_file=resource_file,
-                resource_path=resource_path,
-                protocol_out_path=protocol_out_path,
-            )
-            print("resource_file = {}".format(str(resource_file)))
-            (
-                protocol_out_path,
-                protocol_resource_file,
-            ) = self.protopiler.yaml_to_protocol(
-                config_path,
-                resource_file=resource_file,
-                resource_file_out=resource_path,
-                payload=payload,
-            )
+    #     Returns
+    #     -------
+    #     Tuple: [str, str]
+    #         path to the protocol file and resource file
+    #     """
+    #     if ".py" not in str(config_path):
+    #         self.protopiler.load_config(
+    #             config_path=config_path,
+    #             resource_file=resource_file,
+    #             resource_path=resource_path,
+    #             protocol_out_path=protocol_out_path,
+    #         )
+    #         print("resource_file = {}".format(str(resource_file)))
+    #         (
+    #             protocol_out_path,
+    #             protocol_resource_file,
+    #         ) = self.protopiler.yaml_to_protocol(
+    #             config_path,
+    #             resource_file=resource_file,
+    #             resource_file_out=resource_path,
+    #             payload=payload,
+    #         )
 
-            return protocol_out_path, protocol_resource_file
-        else:
-            return config_path, None
+    #         return protocol_out_path, protocol_resource_file
+    #     else:
+    #         return config_path, None
 
     def transfer(self, protocol_path: PathLike) -> Tuple[str, str]:
         """Transfer the protocol file to the OT2 via http
@@ -143,6 +143,9 @@ class OT2_Driver:
         """
         # Make sure its a path object
         protocol_path = Path(protocol_path)
+
+        if not str(protocol_path).endswith(".py"):
+            raise ValueError("protocol file must be a python file")
 
         transfer_url = f"{self.base_url}/protocols"
         files = {"files": protocol_path.open("rb")}
@@ -555,9 +558,10 @@ def main(args):  # noqa: D103
     ot2: OT2_Driver = ot2s[0]
 
     # Can pass in a full python file here, no resource files will be created, but it won't break the system
-    protocol_file, resource_file = ot2.compile_protocol(
-        config_path=args.protocol_config, resource_file=args.resource_file
-    )
+    # protocol_file, resource_file = ot2.compile_protocol(
+    #     config_path=args.protocol_config, resource_file=args.resource_file
+    # )
+    protocol_file = args.protocol_config
     if args.simulate:
         print("Beginning simulation")
         cmd = ["opentrons_simulate", protocol_file]
