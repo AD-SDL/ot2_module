@@ -9,8 +9,10 @@ from madsci.common.types.node_types import RestNodeConfig
 from madsci.common.types.resource_types import Container, Pool, Slot, Stack
 from madsci.node_module.helpers import action
 from madsci.node_module.rest_node_module import RestNode
-from ot2_interface.ot2_driver_http import OT2_Config, OT2_Driver
+from ot2_driver_http import OT2_Config, OT2_Driver
+from opentrons_resources import Opentrons_Resources
 from typing_extensions import Annotated
+import json
 
 
 class OT2NodeConfig(RestNodeConfig):
@@ -19,11 +21,6 @@ class OT2NodeConfig(RestNodeConfig):
     ot2_ip: Optional[str] = None
     "ip of opentrons device"
 
-    robot_model: str = "OT2"
-    "robot model: 'OT2' or 'Flex'"
-
-    #TODO resource json here?
-
 
 class OT2Node(RestNode):
     """Node module for Opentrons Robots"""
@@ -31,6 +28,7 @@ class OT2Node(RestNode):
     ot2_interface: OT2_Driver = None
     config: OT2NodeConfig = OT2NodeConfig()
     config_model = OT2NodeConfig
+    resources = Opentrons_Resources()
 
     def startup_handler(self) -> None:
         """Called to (re)initialize the node. Should be used to open connections to devices or initialize any other resources."""
@@ -92,7 +90,6 @@ class OT2Node(RestNode):
 
     def _create_ot2_templates(self) -> None:
         """Create all OT2-specific resource templates."""
-        #TODO: conditionals for difference in flex and ot2
 
         # 0. Deck container template
         deck_container = Container(
@@ -138,7 +135,7 @@ class OT2Node(RestNode):
             created_by=self.node_definition.node_id,
             version="1.0.0",
         )
-        #TODO: chute if flex
+
         # 2. Trash bin template (slot 12) - Stack type for collecting tips/waste
         trash_bin = Stack(
             resource_name="ot2_trash",
@@ -180,7 +177,7 @@ class OT2Node(RestNode):
             created_by=self.node_definition.node_id,
             version="1.0.0",
         )
-        # TODO: flex pipettes etc
+
         # 4. P20 Single-Channel Pipette
         p20_single = Pool(
             resource_name="ot2_p20_single",
@@ -359,7 +356,7 @@ class OT2Node(RestNode):
             self.node_state = {
                 "ot2_status_code": self.ot2_interface.get_robot_status(),
             }
-    #TODO: 2 new functions, load_resources, save_resources, see necessary formatting, need helper functions for translating
+
     @action(name="run_protocol", description="run a given opentrons protocol")
     def run_protocol(
         self,
@@ -367,12 +364,10 @@ class OT2Node(RestNode):
         parameters: Annotated[
             dict[str, Any], "Parameters for insertion into the protocol"
         ] = {},
-        # TODO: whether or not to use existing resources?
     ) -> Annotated[dict[str, Any], "ot2 action log"]:
         """
         Run a given protocol on the ot2
         """
-        # TODO: if use existing resources.... (find and use a ot2 json file)
 
         # get the next protocol file
 
@@ -444,6 +439,14 @@ class OT2Node(RestNode):
 
             self.run_id = run_id
             resp = self.ot2_interface.execute(run_id)
+            #TODO: Access ot-2 logging, pass path (log_filename) to log files to resources function
+            log_data = self.ot2_interface.get_run_log(run_id)
+            log_filename = f"run_{run_id}_log.json"
+            with open(log_filename, 'w') as f:
+                json.dump(log_data, f, indent=2)
+            
+            self.resources.parse_logfile(log_filename)
+
             self.run_id = None
             print(resp)
             if resp["data"]["status"] == "succeeded":

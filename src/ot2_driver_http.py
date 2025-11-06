@@ -5,13 +5,16 @@ import time
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import json
 
 import requests
 import yaml
 from urllib3 import Retry
 
-from ot2_interface.config import OT2_Config, PathLike, parse_ot2_args
-from ot2_interface.protopiler.protopiler import ProtoPiler
+from config import OT2_Config, PathLike, parse_ot2_args
+# from protopiler.protopiler import ProtoPiler
+from opentrons_resources import Opentrons_Resources
+
 
 
 class RobotStatus(Enum):
@@ -56,6 +59,7 @@ class OT2_Driver:
             Dataclass of the ot2_config
         """
         self.config: OT2_Config = config
+        self.resources: Opentrons_Resources
         # template_dir = Path(__file__).parent.resolve() / "protopiler/protocol_templates"
         # assert template_dir.exists(), f"Template dir: {template_dir} does not exist"
         # self.protopiler: ProtoPiler = ProtoPiler(template_dir=template_dir)
@@ -553,14 +557,17 @@ class OT2_Driver:
 def main(args):  # noqa: D103
     ot2s = []
     for ot2_raw_cfg in yaml.safe_load(open(args.robot_config)):
+        print((ot2_raw_cfg))
         ot2s.append(OT2_Driver(OT2_Config(**ot2_raw_cfg)))
 
     ot2: OT2_Driver = ot2s[0]
+    # ot2: OT2_Driver = "1.1.1.1"
 
     # Can pass in a full python file here, no resource files will be created, but it won't break the system
     # protocol_file, resource_file = ot2.compile_protocol(
     #     config_path=args.protocol_config, resource_file=args.resource_file
     # )
+    resource_file=args.resource_file
     protocol_file = args.protocol_config
     if args.simulate:
         print("Beginning simulation")
@@ -570,12 +577,30 @@ def main(args):  # noqa: D103
             protocol_file.unlink()
             if not args.resource_file:
                 resource_file.unlink()
+
+        print("\nExtracting logs...")
+        log_data = ot2.get_run_log(run_id)
+
+        log_filename = f"run_{run_id}_log.json"
+        with open(log_filename, 'w') as f:
+            json.dump(log_data, f, indent=2)
+
+        print(f"✓ Log saved to: {log_filename}")
+
     else:
         print("Beginning protocol")
         protocol_id, run_id = ot2.transfer(protocol_file)
 
         resp_data = ot2.execute(run_id)
-        print(f"Protocol execution response data: {resp_data}")
+        # print(f"Protocol execution response data: {resp_data}")
+        print("\nExtracting logs...")
+        log_data = ot2.get_run_log(run_id)
+
+        log_filename = f"run_{run_id}_log.json"
+        with open(log_filename, 'w') as f:
+            json.dump(log_data, f, indent=2)
+
+        print(f"✓ Log saved to: {log_filename}")
 
         if args.delete:
             # TODO: add way to delete things from ot2
