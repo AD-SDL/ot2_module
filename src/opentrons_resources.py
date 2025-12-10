@@ -1,51 +1,3 @@
-# from madsci.client.resource_client import ResourceClient
-# from madsci.common.types.resource_types import Asset, Consumable, Grid
-# from madsci.common.types.resource_types.definitions import ResourceDefinition
-
-# import json
-
-
-
-# class Opentrons_Resources:
-#     client = ResourceClient("http://localhost:8003")
-#     client.get_resource("DECK1")
-#     def parse_logfile(ot_log):
-#         """Master function, parses opentrons logfile and updates resources accordingly"""
-
-#         with open(ot_log, 'r') as file:
-#             log = json.load(file)
-#             print(log['commands']['data'][1]['commandType'])
-#             print(len(log['commands']['data']))
-#             for i in range(log['commands']['data']):
-#                 #TODO add full suite of commandTypes
-#                 if log['commands']['data'][i]['commandType'] == "loadLabware":
-#                     pass
-#                 elif log['commands']['data'][i]['commandType'] == "home":
-#                     pass
-#                 elif log['commands']['data'][i]['commandType'] == "loadPipette":
-#                     pass
-#                 elif log['commands']['data'][i]['commandType'] == "pickUpTip":
-#                     pass
-#                 elif log['commands']['data'][i]['commandType'] == "aspirate":
-#                     pass
-#                 elif log['commands']['data'][i]['commandType'] == "dispense":
-#                     pass
-#                 elif log['commands']['data'][i]['commandType'] == "dropTip":
-#                     pass
-#     def aspirate(source, pipette):
-#         pass
-
-#     def dispense(destination, pipette):
-#         pass
-
-#     def pick_up_tip(source, pipette):
-#         pass
-
-#     def drop_tip(pipette):
-#         pass
-
-
-
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -234,5 +186,170 @@ class Opentrons_Resources:
         
         
     def load_pipette(self, command, ot_log):
-        pass
+        params = command.get('params', {})
+        result = command.get('result', {})
+
+        pipette_id = result.get('pipetteId', params.get('pipetteId'))
+        mount = params.get('mount', 'unknown')
+        pipette_name = params.get('pipetteName', 'unknown')
+
+        #store pipette info
+        self.pipette_id_to_info[pipette_id] = {
+            'pipette_id': pipette_id,
+            'mount': mount,
+            'pipette_name': pipette_name
+        }
+
+        #TODO: pipette = Pool?
+        if mount in self.pipette_slots:
+            mount_resource = self.pipette_slots[mount]
+
+            try:
+                if 'p20' in pipette_name.lower():
+                    capacity = 20.0
+                elif 'p300' in pipette_name.lower():
+                    capacity = 300.0
+                elif 'p1000' in pipette_name.lower():
+                    capacity = 1000.0
+                #TODO: error handling
+                else:
+                    capacity = 0.0
+                
+                pipette_resource = Pool(
+                    resource_name=f"{self.node_name}_{pipette_name}_{mount}",
+                    resource_class="pipette",
+                    capacity=capacity,
+                    attributes={
+                        "ot2_pipette_id": pipette_id,
+                        "pipette_name": pipette_name,
+                        "mount": mount
+                    }
+                )   
+                pipette_resource = self.client.add_resource(pipette_resource)
+                self.client.set_child(resource=mount_resource, key='pipette', child=pipette_resource)
+                self.pipette_id_to_resource[pipette_id] = pipette_resource
+            
+            except Exception as e:
+                error_msg = f"Could not create pipette resource for {pipette_id}: {str(e)}"
+                print(f"Warning: {error_msg}")
+
+
+    def well_name_to_grid_key(self, well_name):
+        """convert well name (B6 etc) to row, col format"""
+
+        #TODO: error handling
+        if not well_name:
+            return (0, 0)
+        
+        row_letter = well_name[0].upper()
+        col_number = int(well_name[1:]) if len(well_name) > 1 else 1
+        
+        # Convert to 0-indexed
+        row_index = ord(row_letter) - ord('A')
+        col_index = col_number - 1
+        
+        return (row_index, col_index)
+    
+    def pick_up_tip(self, command, ot_log):
+        """handle pick up tip command"""
+
+        params = command.get('params', {})
+        labware_id = params.get('labwareId')
+        well_name = params.get('wellName')
+
+        if labware_id in self.labware_id_to_resource:
+            tip_rack = self.labware_id_to_resource[labware_id]
+
+            if isinstance(tip_rack, Grid):
+                #mark tip as removed
+                try:
+                    grid_key = self.well_name_to_grid_key(well_name)
+
+                    #try to get tip at location, remove it from grid
+                    try:
+                        tip = tip_rack.get_child(grid_key)
+                        if tip:
+                            #remove tip from rack
+                            tip_rack.remove_child(grid_key)
+                            self.client.update_resource(tip_rack)
+                    except:
+                        #TODO: no tip there, error handling
+                        pass
+                
+                except Exception as e:
+                    error_msg = f"error consuming tip at {well_name}: {str(e)}"
+                    print(f"Warning: {error_msg}")
+            
+    
+    def aspirate(self, command, ot_log):
+        """handle aspirate command"""
+        
+        params = command.get('params', {})
+
+        labware_id = params.get('labwareID')
+        well_name = params.get('wellName')
+        volume = params.get('volume', 0.0)
+
+        if labware_id in self.labware_id_to_resource:
+            source_labware = self.labware_id_to_resource[labware_id]
+
+            #get liquid from given well
+            if isinstance(source_labware, Grid):
+                try:
+                    grid_key = self.well_name_to_grid_key(well_name)
+                    well_contents = source_labware.get_child(grid_key)
+
+                    #if well contains a consumable, decrease quantity
+                    if well_contents and isinstance(well_contents, Consumable):
+                        self.client.decrease_quantity(resource=well_contents, amount=volume) 
+                
+                except Exception as e:
+                    #TODO: error handling, empty well?
+                    error_msg = f"error consuming tip at {well_name}: {str(e)}"
+                    print(f"Warning: {error_msg}")
+                    
+
+    def dispense(self, command, ot_log):
+        """handle dispense command"""
+        params = command.get('params', {})
+        
+        labware_id = params.get('labwareId')
+        well_name = params.get('wellName')
+        volume = params.get('volume', 0.0)
+
+        if labware_id in self.labware_id_to_resource:
+            dest_labware = self.labware_id_to_resource[labware_id]
+            
+            # For Grid resources (plates), try to get the sample/liquid at this well
+            if isinstance(dest_labware, Grid):
+                try:
+                    grid_key = self._well_name_to_grid_key(well_name)
+                    well_contents = dest_labware.get_child(grid_key)
+                    
+                    # If the well contains a Consumable resource, increase its quantity
+                    if well_contents and isinstance(well_contents, Consumable):
+                        self.client.increase_quantity(resource=well_contents, amount=volume)
+                
+                except Exception as e:
+                    error_msg = f"error dispensing at {well_name}: {str(e)}"
+                    print(f"Warning: {error_msg}")
+
+                    
+
+    def drop_tip(self, command, ot_log):
+        """handle drop tip command"""
+        params = command.get('params', {})
+        labware_id = params.get('labwareId')
+        well_name = params.get('wellName')
+        
+        # most tips dropped in trash (slot 12), so no tracking?? #TODO
+        #TODO: return tips to rack functionality
+
+
+
+
+
+
+
+
 
