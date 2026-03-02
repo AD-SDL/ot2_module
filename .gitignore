@@ -141,3 +141,4 @@ dmypy.json
 *.txt
 
 .pdm-python
+.madsci/

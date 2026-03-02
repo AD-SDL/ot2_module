@@ -1,4 +1,5 @@
 """Deconstructor, parses a protocol and turns it into a config"""
+
 import re
 import subprocess
 from argparse import ArgumentParser

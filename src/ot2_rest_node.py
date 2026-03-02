@@ -9,8 +9,9 @@ from madsci.common.types.node_types import RestNodeConfig
 from madsci.common.types.resource_types import Container, Pool, Slot, Stack
 from madsci.node_module.helpers import action
 from madsci.node_module.rest_node_module import RestNode
-from ot2_interface.ot2_driver_http import OT2_Config, OT2_Driver
 from typing_extensions import Annotated
+
+from ot2_interface.ot2_driver_http import OT2_Config, OT2_Driver
 
 
 class OT2NodeConfig(RestNodeConfig):
@@ -33,43 +34,43 @@ class OT2Node(RestNode):
         temp_dir = Path.home() / ".madsci" / ".ot2_temp"
         temp_dir.mkdir(exist_ok=True)
         self.protocols_folder_path = str(
-            temp_dir / self.node_definition.node_name / "protocols/"
+            temp_dir / self.node_info.node_name / "protocols/"
         )
         # Create templates
-        self._create_ot2_templates()
+        # self._create_ot2_templates()
 
-        # Create deck instance
-        self.deck = self.resource_client.create_resource_from_template(
-            template_name="ot2_deck",
-            resource_name=f"ot2_{self.node_definition.node_name}_deck",
-            add_to_database=True,
-        )
+        # # Create deck instance
+        # self.deck = self.resource_client.create_resource_from_template(
+        #     template_name="ot2_deck",
+        #     resource_name=f"ot2_{self.node_info.node_name}_deck",
+        #     add_to_database=True,
+        # )
 
-        # Create 12 deck slots (1-11 standard, 12 is trash)
-        for i in range(1, 13):
-            slot_name = f"ot2_{self.node_definition.node_name}_deck_slot_{i}"
-            template_name = "ot2_trash_slot" if i == 12 else "ot2_deck_slot"
+        # # Create 12 deck slots (1-11 standard, 12 is trash)
+        # for i in range(1, 13):
+        #     slot_name = f"ot2_{self.node_info.node_name}_deck_slot_{i}"
+        #     template_name = "ot2_trash_slot" if i == 12 else "ot2_deck_slot"
 
-            slot = self.resource_client.create_resource_from_template(
-                template_name=template_name,
-                resource_name=slot_name,
-                add_to_database=True,
-            )
+        #     slot = self.resource_client.create_resource_from_template(
+        #         template_name=template_name,
+        #         resource_name=slot_name,
+        #         add_to_database=True,
+        #     )
 
-            try:
-                self.resource_client.set_child(self.deck, str(i), slot)
-            except Exception:
-                self.logger.log(f"Deck slot {i} already exists")
+        #     try:
+        #         self.resource_client.set_child(self.deck, str(i), slot)
+        #     except Exception:
+        #         self.logger.log(f"Deck slot {i} already exists")
 
-        # Create pipette mount slots
-        self.pipette_slots = {}
-        for mount in ["left", "right"]:
-            mount_slot = self.resource_client.create_resource_from_template(
-                template_name="ot2_pipette_mount",
-                resource_name=f"ot2_{self.node_definition.node_name}_{mount}_mount",
-                add_to_database=True,
-            )
-            self.pipette_slots[mount] = mount_slot
+        # # Create pipette mount slots
+        # self.pipette_slots = {}
+        # for mount in ["left", "right"]:
+        #     mount_slot = self.resource_client.create_resource_from_template(
+        #         template_name="ot2_pipette_mount",
+        #         resource_name=f"ot2_{self.node_info.node_name}_{mount}_mount",
+        #         add_to_database=True,
+        #     )
+        #     self.pipette_slots[mount] = mount_slot
 
         if self.config.ot2_ip is None:
             raise ValueError("OT2 IP address is not configured.")
@@ -105,7 +106,7 @@ class OT2Node(RestNode):
             description="Template for OT2 deck container. Holds 11 deck slots plus trash bin.",
             required_overrides=["resource_name"],
             tags=["ot2", "deck", "container"],
-            created_by=self.node_definition.node_id,
+            created_by=self.node_info.node_id,
             version="1.0.0",
         )
 
@@ -127,7 +128,7 @@ class OT2Node(RestNode):
             description="Template for OT2 deck slot. Standard SBS-compatible position.",
             required_overrides=["resource_name"],
             tags=["ot2", "deck", "slot"],
-            created_by=self.node_definition.node_id,
+            created_by=self.node_info.node_id,
             version="1.0.0",
         )
 
@@ -148,7 +149,7 @@ class OT2Node(RestNode):
             description="Template for OT2 trash bin slot.",
             required_overrides=["resource_name"],
             tags=["ot2", "trash", "stack"],
-            created_by=self.node_definition.node_id,
+            created_by=self.node_info.node_id,
             version="1.0.0",
         )
 
@@ -169,7 +170,7 @@ class OT2Node(RestNode):
             description="Template for OT2 pipette mount slot.",
             required_overrides=["resource_name"],
             tags=["ot2", "pipette", "mount", "slot"],
-            created_by=self.node_definition.node_id,
+            created_by=self.node_info.node_id,
             version="1.0.0",
         )
 
@@ -196,7 +197,7 @@ class OT2Node(RestNode):
             description="Template for OT2 P20 Single-Channel pipette (1-20 µL).",
             required_overrides=["resource_name"],
             tags=["ot2", "pipette", "p20", "single-channel", "pool"],
-            created_by=self.node_definition.node_id,
+            created_by=self.node_info.node_id,
             version="1.0.0",
         )
 
@@ -229,7 +230,7 @@ class OT2Node(RestNode):
             description="Template for OT2 P300 Single-Channel pipette (20-300 µL).",
             required_overrides=["resource_name"],
             tags=["ot2", "pipette", "p300", "single-channel", "pool"],
-            created_by=self.node_definition.node_id,
+            created_by=self.node_info.node_id,
             version="1.0.0",
         )
 
@@ -265,7 +266,7 @@ class OT2Node(RestNode):
             description="Template for OT2 P1000 Single-Channel pipette (100-1000 µL).",
             required_overrides=["resource_name"],
             tags=["ot2", "pipette", "p1000", "single-channel", "pool"],
-            created_by=self.node_definition.node_id,
+            created_by=self.node_info.node_id,
             version="1.0.0",
         )
 
@@ -296,7 +297,7 @@ class OT2Node(RestNode):
             description="Template for OT2 P20 8-Channel pipette (1-20 µL).",
             required_overrides=["resource_name"],
             tags=["ot2", "pipette", "p20", "8-channel", "multi-channel", "pool"],
-            created_by=self.node_definition.node_id,
+            created_by=self.node_info.node_id,
             version="1.0.0",
         )
 
@@ -333,7 +334,7 @@ class OT2Node(RestNode):
             description="Template for OT2 P300 8-Channel pipette (20-300 µL).",
             required_overrides=["resource_name"],
             tags=["ot2", "pipette", "p300", "8-channel", "multi-channel", "pool"],
-            created_by=self.node_definition.node_id,
+            created_by=self.node_info.node_id,
             version="1.0.0",
         )
 
@@ -429,9 +430,7 @@ class OT2Node(RestNode):
         try:
             protocol_id, run_id = self.ot2_interface.transfer(protocol_file_path)
             self.logger.log(
-                "OT2 "
-                + self.node_definition.node_name
-                + " protocol transfer successful"
+                "OT2 " + self.node_info.node_name + " protocol transfer successful"
             )
 
             self.run_id = run_id
@@ -442,12 +441,12 @@ class OT2Node(RestNode):
                 # poll_OT2_until_run_completion()
                 self.logger.log(
                     "OT2 "
-                    + self.node_definition.node_name
+                    + self.node_info.node_name
                     + " succeeded in executing a protocol"
                 )
                 response_msg = (
                     "OT2 "
-                    + self.node_definition.node_name
+                    + self.node_info.node_name
                     + " successfully IDLE running a protocol"
                 )
                 return "succeeded", response_msg, run_id
@@ -455,12 +454,12 @@ class OT2Node(RestNode):
             elif resp["data"]["status"] == "stopped":
                 self.logger.log(
                     "OT2 "
-                    + self.node_definition.node_name
+                    + self.node_info.node_name
                     + " stopped while executing a protocol"
                 )
                 response_msg = (
                     "OT2 "
-                    + self.node_definition.node_name
+                    + self.node_info.node_name
                     + " successfully IDLE after stopping a protocol"
                 )
                 return "stopped", response_msg, run_id
@@ -468,13 +467,13 @@ class OT2Node(RestNode):
             else:
                 self.logger.log(
                     "OT2 "
-                    + self.node_definition.node_name
+                    + self.node_info.node_name
                     + " failed in executing a protocol"
                 )
                 self.logger.log(resp["data"])
                 response_msg = (
                     "OT2 "
-                    + self.node_definition.node_name
+                    + self.node_info.node_name
                     + " failed running a protocol\n"
                     + str(resp["data"])
                 )

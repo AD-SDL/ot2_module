@@ -1,7 +1,7 @@
 [project]
 name = "ot2_module"
-version = "2.0.0"
-description = "Software for automatting an OT2 liquid_handler"
+version = "3.0.0"
+description = "MADSci node module for Opentrons OT-2 and Flex liquid handlers"
 authors = [
     {name = "Ryan D. Lewis", email="ryan.lewis@anl.gov"},
     {name = "Doga Ozgulbas", email="dozgulbas@anl.gov"},
@@ -9,16 +9,37 @@ authors = [
     {name = "Tobias Ginsburg", email = "tginsburg@anl.gov"},
 ]
 dependencies = [
-    "madsci.node_module~=0.5.0",
-    "madsci.client~=0.5.0",
-    "madsci.common~=0.5.0"
+    "madsci.node_module==0.7.0rc1",
+    "madsci.client==0.7.0rc1",
+    "madsci.common==0.7.0rc1",
+    "pandas",
+    "openpyxl>=3.1.5",
 ]
-requires-python = ">=3.9.1"
+requires-python = ">=3.10"
 readme = "README.md"
 license = {text = "MIT"}
 
 [project.urls]
-homepage = "https://github.com/AD-SDL/pf400_module"
+homepage = "https://github.com/AD-SDL/ot2_module"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+    "ipykernel>=6.29.5",
+    "pydantic-settings-export>=1.0.3",
+]
+
+[tool.pydantic_settings_export]
+project_dir = "."
+default_settings = [
+    "ot2_rest_node:OT2NodeConfig",
+]
+
+[[tool.pydantic_settings_export.generators.markdown]]
+paths = ["docs/Configuration.md"]
+
+[[tool.pydantic_settings_export.generators.dotenv]]
+paths = [".env.example"]
 
 #####################
 # Development Tools #
@@ -58,8 +79,8 @@ exclude = [
 line-length = 88
 indent-width = 4
 
-# Assume Python 3.8
-target-version = "py38"
+# Assume Python 3.10
+target-version = "py310"
 
 [tool.ruff.lint]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
@@ -130,8 +151,3 @@ plugins = ["pydantic.mypy"]
 strict = true
 disallow_untyped_defs = true
 implicit_reexport = true
-
-[dependency-groups]
-dev = [
-    "ipykernel>=6.29.5",
-]

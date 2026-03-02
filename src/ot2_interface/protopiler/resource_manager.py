@@ -1,4 +1,5 @@
 """Class to manage/keep track of resources used by a protocol"""
+
 import json
 import re
 from argparse import ArgumentParser

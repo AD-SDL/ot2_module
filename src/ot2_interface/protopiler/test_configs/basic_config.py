@@ -1,4 +1,5 @@
 """basic config module"""
+
 from opentrons import protocol_api
 
 metadata = {
