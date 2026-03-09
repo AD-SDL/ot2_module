@@ -530,7 +530,6 @@ class OT2Node(RestNode):
         """Cancel the node."""
         self.logger.log("Canceling node...")
         self.ot2_interface.cancel(self.run_id)
-        self.node_status.cancelled = True
         self.logger.log("Node cancelled.")
         return True
 
