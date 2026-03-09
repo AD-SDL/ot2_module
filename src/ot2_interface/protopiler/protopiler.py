@@ -1,4 +1,5 @@
 """Protopiler is designed to compile a config yaml into a working protocol"""
+
 import argparse
 import copy
 from datetime import datetime
@@ -7,6 +8,7 @@ from pathlib import Path
 from typing import Dict, Generator, List, Optional, Tuple, Union
 
 import pandas as pd
+
 from ot2_interface.protopiler.config import (
     Clear_Pipette,
     CommandBase,
@@ -501,7 +503,7 @@ class ProtoPiler:
                         "#location#", f'"{location}"'
                     )
                     labware_command = labware_command.replace(
-                        "#nickname#", f'{"module"}'
+                        "#nickname#", f"{'module'}"
                     )
                     labware_command = labware_command.replace(
                         "#labware_name#", f'"{name}"'
@@ -634,7 +636,9 @@ class ProtoPiler:
             # TODO: Inject the payload here
             # Inject the payload
             if isinstance(payload, dict):
-                (arg_keys, arg_values) = zip(*command_block.__dict__.items())
+                (arg_keys, arg_values) = zip(
+                    *command_block.__dict__.items(), strict=False
+                )
 
                 for key, value in payload.items():
                     if "payload." not in key:
@@ -1168,7 +1172,9 @@ class ProtoPiler:
                         commands.append(load_command)
                         tip_loaded[pipette_mount] = True
 
-                    for loc, mix_vols, rep in zip(locations, mix_volumes, mix_reps):
+                    for loc, mix_vols, rep in zip(
+                        locations, mix_volumes, mix_reps, strict=False
+                    ):
                         mix_command = mix_template.replace("#reps#", str(rep))
                         mix_command = mix_command.replace("#volume#", str(mix_vols))
                         wellplate_location = self._parse_wellplate_location(loc)
@@ -1355,6 +1361,7 @@ class ProtoPiler:
                 command_block.blow_out,
                 command_block.drop_tip,
                 command_block.return_tip,
+                strict=False,
             ):
                 yield row
 
@@ -1375,6 +1382,7 @@ class ProtoPiler:
             command_block.multi_dispense_clearance,
             command_block.multi_blow_out,
             command_block.multi_drop_tip,
+            strict=False,
         ):
             yield row
 

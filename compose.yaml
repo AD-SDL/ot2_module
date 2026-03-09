@@ -3,6 +3,9 @@ services:
   ot2_module:
     container_name: ot2_module
     image: ghcr.io/ad-sdl/ot2_module
+    env_file:
+      - path: .env
+        required: false
     environment:
       - USER_ID=${USER_ID:-1000}
       - GROUP_ID=${GROUP_ID:-1000}
@@ -12,7 +15,7 @@ services:
       tags:
         - ghcr.io/ad-sdl/ot2_module:latest
         - ghcr.io/ad-sdl/ot2_module:dev
-    command: python ot2_module/src/ot2_rest_node.py --definition definitions/ot2_template.node.yaml
     volumes:
-      - ./definitions:/home/madsci/definitions
+      - ./settings.yaml:/home/madsci/settings.yaml
+      - ./.madsci:/home/madsci/.madsci
     network_mode: host

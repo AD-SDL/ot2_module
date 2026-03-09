@@ -1,4 +1,5 @@
 """Dataclasses and other configuration used in the protopiler"""
+
 from pathlib import Path
 from typing import List, Literal, Optional, TypeVar, Union
 
