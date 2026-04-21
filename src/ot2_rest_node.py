@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from madsci.common.types.node_types import RestNodeConfig
-from madsci.common.types.resource_types import Container, Pool, Slot, Stack
+from madsci.common.types.resource_types import Container, Pool, Slot, Stack, Grid
 from madsci.node_module.helpers import action
 from madsci.node_module.rest_node_module import RestNode
 from ot2_driver_http import OT2_Config, OT2_Driver
@@ -342,6 +342,45 @@ class OT2Node(RestNode):
             version="1.0.0",
         )
 
+        # 9. p20 tip box
+        p20_tip_box = Grid(
+            resource_name="ot2_p20_tip_rack",
+            resource_class="OT2_p20_tip_rack",
+            rows=8,
+            columns=12,
+        )
+
+        self.resource_client.init_template(
+            resource=p20_tip_box,
+            template_name="ot2_p20_tip_rack"
+        )
+
+        #flat bottom well plate
+        flat_bottom_96 = Grid(
+            resource_name="corning_96_wellplate_360ul_flat",
+            resource_class="OT2_labware",
+            rows=8,
+            columns=12,
+        )
+
+        self.resource_client.init_template(
+            resource=flat_bottom_96,
+            template_name="96_wellplate"
+        )
+
+        #pcr plate
+        pcr_96 = Grid(
+            resource_name="nest_96_wellplate_100ul_pcr_full_skirt",
+            resource_class="OT2_labware",
+            rows=8,
+            columns=12,
+        )
+
+        self.resource_client.init_template(
+            resource=pcr_96,
+            template_name="96_pcrplate"
+        )
+
     def shutdown_handler(self) -> None:
         """Called to shutdown the node. Should be used to close connections to devices or release any other resources."""
         self.logger.log("Shutting down")
@@ -438,6 +477,7 @@ class OT2Node(RestNode):
             )
 
             self.run_id = run_id
+            #TODO: simpulate before to ensure resources present? (future update)
             resp = self.ot2_interface.execute(run_id)
             #TODO: Access ot-2 logging, pass path (log_filename) to log files to resources function
             log_data = self.ot2_interface.get_run_log(run_id)

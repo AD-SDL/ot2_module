@@ -80,7 +80,7 @@ class Opentrons_Resources:
         result = command.get('result', {})
 
         #get labware id
-        location = params.get(location, {})
+        location = params.get('location', {})
         #labware TYPE
         load_name = params.get('loadName', 'unknown')
         #string number 1-11
@@ -115,29 +115,34 @@ class Opentrons_Resources:
         if slot_name in self.deck_slots:
             slot_resource = self.deck_slots[slot_name]
             try:
-               #check if slot already has labware (child)
-               # query for existing labware in slot
+            #    #check if slot already has labware (child)
+            #    # query for existing labware in slot
 
-               # Grid resource if tip rack
+            #    # Grid resource if tip rack
                 if 'tip' in load_name.lower():
                    #tip rack always 8x12 grid
-                   labware_resource = Grid(
-                       resource_name = f"{self.node_name}_{display_name}_{slot_name}",
-                       resource_class = "tip_rack",
-                       rows = 8,
-                       columns = 12,
-                       attributes = {
-                           "ot2_labware_id": labware_id,
-                           "load_name": load_name,
-                           "slot": slot_name
-                       }
-                   )
-                   labware_resource = self.client.add_resource(labware_resource)
+            #        labware_resource = Grid(
+            #            resource_name = f"{self.node_name}_{display_name}_{slot_name}",
+            #            resource_class = "tip_rack",
+            #            rows = 8,
+            #            columns = 12,
+            #            attributes = {
+            #                "ot2_labware_id": labware_id,
+            #                "load_name": load_name,
+            #                "slot": slot_name
+            #            }
+            #        )
+            #        labware_resource = self.client.add_resource(labware_resource)
+
+                    labware_resource = self.client.create_resource_from_template(
+                        template_name = load_name,
+                        resource_name = labware_id
+                        )
 
 
-                   #set as child of the deck slot
-                   self.client.set_child(resource=slot_resource, key="labware", child=labware_resource)
-                   self.labware_id_to_resource[labware_id] = labware_resource
+                    #set as child of the deck slot
+                    self.client.set_child(resource=slot_resource, key="labware", child=labware_resource)
+                    self.labware_id_to_resource[labware_id] = labware_resource
 
                 elif 'plate' in load_name.lower() or 'well' in load_name.loawer():
                    #plate as grid, either 96 or 384
@@ -149,34 +154,44 @@ class Opentrons_Resources:
                     else:
                         rows, cols = 8, 12 #96 well by default
                     
-                    labware_resource = Grid(
-                        resource_name=f"{self.node_name}_{display_name}_{slot_name}",
-                        resource_class="plate",
-                        rows=rows,
-                        columns=cols,
-                        attributes={
-                            "ot2_labware_id": labware_id,
-                            "load_name": load_name,
-                            "slot": slot_name
-                        }
-                    )
-                    labware_resource = self.client.add_resource(labware_resource)
+                    # labware_resource = Grid(
+                    #     resource_name=f"{self.node_name}_{display_name}_{slot_name}",
+                    #     resource_class="plate",
+                    #     rows=rows,
+                    #     columns=cols,
+                    #     attributes={
+                    #         "ot2_labware_id": labware_id,
+                    #         "load_name": load_name,
+                    #         "slot": slot_name
+                    #     }
+                    # )
+                    # labware_resource = self.client.add_resource(labware_resource)
+                    labware_resource = self.client.create_resource_from_template(
+                        template_name = load_name,
+                        resource_name = labware_id
+                        )
+
                     self.client.set_child(resource=slot_resource, key="labware", child=labware_resource)
                     self.labware_id_to_resource[labware_id] = labware_resource
                 
                 else:
                     #TODO: add addional labware types, tuberacks and modules etc, generic container for now
-                    labware_resource = Container(
-                        resource_name=f"{self.node_name}_{display_name}_{slot_name}",
-                        resource_class="labware",
-                        capacity=100,  # Generic capacity
-                        attributes={
-                            "ot2_labware_id": labware_id,
-                            "load_name": load_name,
-                            "slot": slot_name
-                        }
-                    )
-                    labware_resource = self.client.add_resource(labware_resource)
+                    # labware_resource = Container(
+                    #     resource_name=f"{self.node_name}_{display_name}_{slot_name}",
+                    #     resource_class="labware",
+                    #     capacity=100,  # Generic capacity
+                    #     attributes={
+                    #         "ot2_labware_id": labware_id,
+                    #         "load_name": load_name,
+                    #         "slot": slot_name
+                    #     }
+                    # )
+
+                    # labware_resource = self.client.add_resource(labware_resource)
+                    labware_resource = self.client.create_resource_from_template(
+                        template_name = load_name,
+                        resource_name = labware_id
+                        )
                     self.client.set_child(resource=slot_resource, key="labware", child=labware_resource)
                     self.labware_id_to_resource[labware_id] = labware_resource
                    
@@ -200,32 +215,38 @@ class Opentrons_Resources:
             'pipette_name': pipette_name
         }
 
-        #TODO: pipette = Pool?
+        # #TODO: pipette = Pool?
         if mount in self.pipette_slots:
             mount_resource = self.pipette_slots[mount]
 
+
             try:
-                if 'p20' in pipette_name.lower():
-                    capacity = 20.0
-                elif 'p300' in pipette_name.lower():
-                    capacity = 300.0
-                elif 'p1000' in pipette_name.lower():
-                    capacity = 1000.0
-                #TODO: error handling
-                else:
-                    capacity = 0.0
+        #         if 'p20' in pipette_name.lower():
+        #             capacity = 20.0
+        #         elif 'p300' in pipette_name.lower():
+        #             capacity = 300.0
+        #         elif 'p1000' in pipette_name.lower():
+        #             capacity = 1000.0
+        #         #TODO: error handling
+        #         else:
+        #             capacity = 0.0
                 
-                pipette_resource = Pool(
-                    resource_name=f"{self.node_name}_{pipette_name}_{mount}",
-                    resource_class="pipette",
-                    capacity=capacity,
-                    attributes={
-                        "ot2_pipette_id": pipette_id,
-                        "pipette_name": pipette_name,
-                        "mount": mount
-                    }
-                )   
-                pipette_resource = self.client.add_resource(pipette_resource)
+        #         pipette_resource = Pool(
+        #             resource_name=f"{self.node_name}_{pipette_name}_{mount}",
+        #             resource_class="pipette",
+        #             capacity=capacity,
+        #             attributes={
+        #                 "ot2_pipette_id": pipette_id,
+        #                 "pipette_name": pipette_name,
+        #                 "mount": mount
+        #             }
+        #         )  
+                pipette_resource = self.client.create_resource_from_template(
+                    template_name = pipette_name,
+                    resource_name = mount_resource
+                    )
+            
+                # pipette_resource = self.client.add_resource(pipette_resource) #TODO: create_resource_from_template
                 self.client.set_child(resource=mount_resource, key='pipette', child=pipette_resource)
                 self.pipette_id_to_resource[pipette_id] = pipette_resource
             
@@ -286,7 +307,7 @@ class Opentrons_Resources:
         
         params = command.get('params', {})
 
-        labware_id = params.get('labwareID')
+        labware_id = params.get('labwareId')
         well_name = params.get('wellName')
         volume = params.get('volume', 0.0)
 
@@ -323,7 +344,7 @@ class Opentrons_Resources:
             # For Grid resources (plates), try to get the sample/liquid at this well
             if isinstance(dest_labware, Grid):
                 try:
-                    grid_key = self._well_name_to_grid_key(well_name)
+                    grid_key = self.well_name_to_grid_key(well_name)
                     well_contents = dest_labware.get_child(grid_key)
                     
                     # If the well contains a Consumable resource, increase its quantity
