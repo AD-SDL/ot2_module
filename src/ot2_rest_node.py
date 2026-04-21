@@ -418,8 +418,9 @@ class OT2Node(RestNode):
             with protocol.open(mode="w") as f:
                 f.write(file_text)
             response_flag, response_msg, run_id = self.execute(protocol, parameters)
-            if self.resource_client is not None:
-                self.parse_logs(self.ot2_interface.get_run_log(run_id))
+            #redundant
+            # if self.resource_client is not None:
+            #     self.parse_logs(self.ot2_interface.get_run_log(run_id))
 
             if response_flag == "succeeded":
                 # TODO logging
@@ -480,12 +481,28 @@ class OT2Node(RestNode):
             #TODO: simpulate before to ensure resources present? (future update)
             resp = self.ot2_interface.execute(run_id)
             #TODO: Access ot-2 logging, pass path (log_filename) to log files to resources function
+            # log_data = self.ot2_interface.get_run_log(run_id)
+            # log_filename = f"run_{run_id}_log.json"
+            # with open(log_filename, 'w') as f:
+            #     json.dump(log_data, f, indent=2)
+
+            # log_data = self.ot2_interface.get_run_log(run_id)
+
+            # temp_dir = Path.home() / ".madsci" / ".ot2_temp"
+
+            resp = self.ot2_interface.execute(run_id)
+
+            log_dir = Path.home() / ".madsci" / ".ot2_temp" / self.node_definition.node_name / "logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+            self.last_log_path = log_dir / f"run_{run_id}_log.json"
+
             log_data = self.ot2_interface.get_run_log(run_id)
-            log_filename = f"run_{run_id}_log.json"
-            with open(log_filename, 'w') as f:
+            with open(self.last_log_path, 'w') as f:
                 json.dump(log_data, f, indent=2)
+
+            self.resources.parse_logfile(str(self.last_log_path))
             
-            self.resources.parse_logfile(log_filename)
+            # self.resources.parse_logfile(log_filename)
 
             self.run_id = None
             print(resp)
