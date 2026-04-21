@@ -14,6 +14,8 @@ from opentrons_resources import Opentrons_Resources
 from typing_extensions import Annotated
 import json
 
+OT2_TEMP_DIR = Path("/home/madsci/.madsci/.ot2_temp")
+
 
 class OT2NodeConfig(RestNodeConfig):
     """Configuration for the OT2 node module."""
@@ -33,10 +35,15 @@ class OT2Node(RestNode):
     def startup_handler(self) -> None:
         """Called to (re)initialize the node. Should be used to open connections to devices or initialize any other resources."""
         self.logger.log("Node initializing...")
-        temp_dir = Path.home() / ".madsci" / ".ot2_temp"
-        temp_dir.mkdir(exist_ok=True)
+        # temp_dir = Path.home() / ".madsci" / ".ot2_temp"
+        # temp_dir.mkdir(exist_ok=True)
+        # self.protocols_folder_path = str(
+        #     temp_dir / self.node_definition.node_name / "protocols/"
+        # )
+
+        OT2_TEMP_DIR.mkdir(parents=True, exist_ok=True)
         self.protocols_folder_path = str(
-            temp_dir / self.node_definition.node_name / "protocols/"
+            OT2_TEMP_DIR / self.node_definition.node_name / "protocols/"
         )
         # Create templates
         self._create_ot2_templates()
@@ -492,7 +499,10 @@ class OT2Node(RestNode):
 
             resp = self.ot2_interface.execute(run_id)
 
-            log_dir = Path.home() / ".madsci" / ".ot2_temp" / self.node_definition.node_name / "logs"
+            # log_dir = Path.home() / ".madsci" / ".ot2_temp" / self.node_definition.node_name / "logs"
+            # log_dir.mkdir(parents=True, exist_ok=True)
+            # self.last_log_path = log_dir / f"run_{run_id}_log.json"
+            log_dir = OT2_TEMP_DIR / self.node_definition.node_name / "logs"
             log_dir.mkdir(parents=True, exist_ok=True)
             self.last_log_path = log_dir / f"run_{run_id}_log.json"
 
