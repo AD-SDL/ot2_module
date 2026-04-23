@@ -31,6 +31,7 @@ class OT2Node(RestNode):
     config: OT2NodeConfig = OT2NodeConfig()
     config_model = OT2NodeConfig
     resources = Opentrons_Resources()
+    
 
     def startup_handler(self) -> None:
         """Called to (re)initialize the node. Should be used to open connections to devices or initialize any other resources."""
@@ -95,6 +96,9 @@ class OT2Node(RestNode):
 
         self.run_id = None
         self.startup_has_run = True
+        self.resources.initialize(
+            logger=self.logger,
+        )
         self.logger.info("OT2 node initialized!")
 
     def _create_ot2_templates(self) -> None:
