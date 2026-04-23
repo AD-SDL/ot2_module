@@ -48,6 +48,8 @@ class OT2Node(RestNode):
         # Create templates
         self._create_ot2_templates()
 
+        #TODO: delete instances if already exist
+
         # Create deck instance
         self.deck = self.resource_client.create_resource_from_template(
             template_name="ot2_deck",
