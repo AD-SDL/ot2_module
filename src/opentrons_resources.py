@@ -27,7 +27,10 @@ class Opentrons_Resources:
 
         self.logger = None
     
-    def initialize(self, logger):
+    def initialize(self, node_name: str, deck_slots: Dict[str, Any], pipette_slots: Dict[str, Any], logger):
+        self.node_name = node_name
+        self.deck_slots = deck_slots
+        self.pipette_slots = pipette_slots
         self.logger = logger
         
 
@@ -155,8 +158,8 @@ class Opentrons_Resources:
         self.logger.log(f"SLOT NAME, {slot_name}")
         self.logger.log(f"DECK SLOTS, {self.deck_slots}")
         if slot_name in self.deck_slots:
-            self.logger.log(f"FOUND SLOT RESOURCE, {slot_resource}")
             slot_resource = self.deck_slots[slot_name]
+            self.logger.log(f"FOUND SLOT RESOURCE, {slot_resource}")
             try:
             #    #check if slot already has labware (child)
             #    # query for existing labware in slot

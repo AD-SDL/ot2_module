@@ -59,6 +59,8 @@ class OT2Node(RestNode):
         )
 
         # Create 12 deck slots (1-11 standard, 12 is trash)
+        #TODO: populate deck slots dict in [str, any] format to match resources deck slots object
+        deck_slot_map = {} 
         for i in range(1, 13):
             slot_name = f"ot2_{self.node_info.node_name}_deck_slot_{i}"
             template_name = "ot2_trash_slot" if i == 12 else "ot2_deck_slot"
@@ -68,6 +70,7 @@ class OT2Node(RestNode):
                 resource_name=slot_name,
                 add_to_database=True,
             )
+            deck_slot_map[str(i)] = slot
 
             try:
                 self.resource_client.set_child(self.deck, str(i), slot)
@@ -97,6 +100,9 @@ class OT2Node(RestNode):
         self.run_id = None
         self.startup_has_run = True
         self.resources.initialize(
+            node_name=self.node_info.node_name,
+            deck_slots=deck_slot_map,
+            pipette_slots=self.pipette_slots,
             logger=self.logger,
         )
         self.logger.info("OT2 node initialized!")
