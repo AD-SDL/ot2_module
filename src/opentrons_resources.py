@@ -185,9 +185,11 @@ class Opentrons_Resources:
                     self.logger.log("CREATING TIP RACK RESOURCE FROM TEMPLATE")
                     self.logger.log(f"TEMPLATE NAME, {load_name}")
                     self.logger.log(f"RESOURCE NAME, {labware_id}")
+                    #TODO: better naming conventions
+                    resource_name = (str(labware_id) + str(load_name))
                     labware_resource = self.client.create_resource_from_template(
                         template_name = load_name,
-                        resource_name = labware_id
+                        resource_name = resource_name
                         )
 
 
@@ -195,7 +197,8 @@ class Opentrons_Resources:
                     self.logger.log(f"LABWARE RESOURCE, {labware_resource}")
                     self.logger.log("SETTING LABWARE RESOURCE AS CHILD OF DECK SLOT")
                     self.logger.log(f"SLOT RESOURCE, {slot_resource}")
-                    self.client.set_child(resource=slot_resource, key="labware", child=labware_resource)
+                    # self.client.set_child(resource=slot_resource, key="labware", child=labware_resource)
+                    self.client.push(resource=slot_resource, child=labware_resource)
                     self.labware_id_to_resource[labware_id] = labware_resource
 
                 elif 'plate' in load_name.lower() or 'well' in load_name.loawer():
@@ -225,16 +228,18 @@ class Opentrons_Resources:
                     self.logger.log("CREATING PLATE RESOURCE FROM TEMPLATE")
                     self.logger.log(f"TEMPLATE NAME, {load_name}")
                     self.logger.log(f"RESOURCE NAME, {labware_id}")
+                    resource_name = (str(labware_id) + str(load_name))
                     labware_resource = self.client.create_resource_from_template(
                         template_name = load_name,
-                        resource_name = labware_id
+                        resource_name = resource_name
                         )
                     
                     self.logger.log(f"LABWARE RESOURCE, {labware_resource}")
                     self.logger.log("SETTING LABWARE RESOURCE AS CHILD OF DECK SLOT")
                     self.logger.log(f"SLOT RESOURCE, {slot_resource}")
 
-                    self.client.set_child(resource=slot_resource, key="labware", child=labware_resource)
+                    # self.client.set_child(resource=slot_resource, key="labware", child=labware_resource)
+                    self.client.push(resource=slot_resource, child=labware_resource)
                     self.labware_id_to_resource[labware_id] = labware_resource
                 
                 else:
