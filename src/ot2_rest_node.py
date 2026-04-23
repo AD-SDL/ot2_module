@@ -396,7 +396,7 @@ class OT2Node(RestNode):
 
         self.resource_client.init_template(
             resource=flat_bottom_96,
-            template_name="96_wellplate"
+            template_name="corning_96_wellplate_360ul_flat"
         )
 
         #pcr plate
@@ -409,7 +409,7 @@ class OT2Node(RestNode):
 
         self.resource_client.init_template(
             resource=pcr_96,
-            template_name="96_pcrplate"
+            template_name="nest_96_wellplate_100ul_pcr_full_skirt"
         )
 
     def shutdown_handler(self) -> None:
