@@ -6,6 +6,8 @@ from madsci.client.resource_client import ResourceClient
 from madsci.common.types.resource_types import Asset, Consumable, Grid, Pool, Container
 from madsci.common.types.resource_types.definitions import ResourceDefinition
 
+from ot2_rest_node import OT2Node
+
 class Opentrons_Resources:
     def __init__(self):
         """
@@ -31,37 +33,37 @@ class Opentrons_Resources:
         if not log_path.exists():
             raise FileNotFoundError(f"Log file not found: {log_path}")
         
-        self.logger.log("Log File" + log_path + " Grabbed")
+        OT2Node.logger.log("Log File" + log_path + " Grabbed")
         with open(log_path, 'r') as file:
             ot_log = json.load(file)
         
-        self.logger.log(ot_log)
+        OT2Node.logger.log(ot_log)
         
         #two passes, one for all "load labware" commands, and one for all actions
 
-        self.logger.log("Processing setup commands")
+        OT2Node.logger.log("Processing setup commands")
         self.process_setup_commands(ot_log)
-        self.logger.log("Processing protocol commands")
+        OT2Node.logger.log("Processing protocol commands")
         self.process_protocol_commands(ot_log)
     
     def process_setup_commands(self, ot_log):
         """process setup commands (loadLabware, loadPipette)"""
         commands = ot_log.get('commands', {}).get('data', [])
-        self.logger.log("COMMANDS")
-        self.logger.log(commands)
+        OT2Node.logger.log("COMMANDS")
+        OT2Node.logger.log(commands)
 
         for command in commands:
             cmd_type = command.get('commandType')
-            self.logger.log("COMMAND")
-            self.logger.log(command)
-            self.logger.log("COMMAND TYPE")
-            self.logger.log(cmd_type)
+            OT2Node.logger.log("COMMAND")
+            OT2Node.logger.log(command)
+            OT2Node.logger.log("COMMAND TYPE")
+            OT2Node.logger.log(cmd_type)
             
             if cmd_type == 'loadLabware':
-                self.logger.log("LOADING LABWARE")
+                OT2Node.logger.log("LOADING LABWARE")
                 self.load_labware(command, ot_log)
             elif cmd_type == 'loadPipette':
-                self.logger.log("LAODING PIPETTE")
+                OT2Node.logger.log("LAODING PIPETTE")
                 self.load_pipette(command, ot_log)
 
 
@@ -69,28 +71,28 @@ class Opentrons_Resources:
     def process_protocol_commands(self, ot_log):
         """process protocol actions"""
         commands = ot_log.get('commands', {}).get('data', [])
-        self.logger.log("COMMANDS")
-        self.logger.log(commands)
+        OT2Node.logger.log("COMMANDS")
+        OT2Node.logger.log(commands)
         
         for command in commands:
             cmd_type = command.get('commandType')
-            self.logger.log("COMMAND")
-            self.logger.log(command)
-            self.logger.log("COMMAND TYPE")
-            self.logger.log(cmd_type)
+            OT2Node.logger.log("COMMAND")
+            OT2Node.logger.log(command)
+            OT2Node.logger.log("COMMAND TYPE")
+            OT2Node.logger.log(cmd_type)
             
             try:
                 if cmd_type == 'pickUpTip':
                     self.pick_up_tip(command, ot_log)
-                    self.logger.log("PICKING UP TIP")
+                    OT2Node.logger.log("PICKING UP TIP")
                 elif cmd_type == 'aspirate':
-                    self.logger.log("ASPIRATING")
+                    OT2Node.logger.log("ASPIRATING")
                     self.aspirate(command, ot_log)
                 elif cmd_type == 'dispense':
-                    self.logger.log("DISPENSING")
+                    OT2Node.logger.log("DISPENSING")
                     self.dispense(command, ot_log)
                 elif cmd_type == 'dropTip':
-                    self.logger.log("DROPPING TIP")
+                    OT2Node.logger.log("DROPPING TIP")
                     self.drop_tip(command, ot_log)
             except Exception as e:
                 error_msg = f"Error processing {cmd_type} at {command.get('id', 'unknown')}: {str(e)}"
@@ -100,9 +102,9 @@ class Opentrons_Resources:
         """loads labware, tracks labware present in each deck slot"""
         params = command.get('params', {})
         result = command.get('result', {})
-        self.logger.log("LABWARE PARAMS AND RESULT")
-        self.logger.log("PARAMS", params)
-        self.logger.log("RESULT", result)
+        OT2Node.logger.log("LABWARE PARAMS AND RESULT")
+        OT2Node.logger.log("PARAMS", params)
+        OT2Node.logger.log("RESULT", result)
 
         #get labware id
         location = params.get('location', {})
@@ -111,10 +113,10 @@ class Opentrons_Resources:
         #string number 1-11
         slot_name = location.get('slotName', 'unknown')
 
-        self.logger.log("LOCATION, LOADNAME, AND SLOT NAME")
-        self.logger.log("LOCATION", location)
-        self.logger.log("LOADNAME", load_name)
-        self.logger.log("SLOTNAME", slot_name)
+        OT2Node.logger.log("LOCATION, LOADNAME, AND SLOT NAME")
+        OT2Node.logger.log("LOCATION", location)
+        OT2Node.logger.log("LOADNAME", load_name)
+        OT2Node.logger.log("SLOTNAME", slot_name)
 
         #find matching id
         labware_id = None
@@ -123,11 +125,11 @@ class Opentrons_Resources:
             if (labware.get('loadName') == load_name and
                 labware.get('location', {}).get('slotName') == slot_name):
                 labware_id = labware.get('id')
-                self.logger.log("MATCHING ID FOUND")
+                OT2Node.logger.log("MATCHING ID FOUND")
                 break
         
         if not labware_id:
-            self.logger.log("MATCHING ID NOT FOUND")
+            OT2Node.logger.log("MATCHING ID NOT FOUND")
             #just in case not found
             labware_id = f"labware_{slot_name}_{load_name}"
         
@@ -135,7 +137,7 @@ class Opentrons_Resources:
 
 
         #store info
-        self.logger.log("STORING LABWARE INFO")
+        OT2Node.logger.log("STORING LABWARE INFO")
         self.labware_id_to_info[labware_id] = {
             'load_name': load_name,
             'display_name': display_name,
@@ -145,21 +147,21 @@ class Opentrons_Resources:
         }
 
         #get or create labware in deck slot
-        self.logger.log("LOOK FOR SLOT NAME IN DECK SLOTS")
-        self.logger.log("SLOT NAME", slot_name)
-        self.logger.log("DECK SLOTS", self.deck_slots)
+        OT2Node.logger.log("LOOK FOR SLOT NAME IN DECK SLOTS")
+        OT2Node.logger.log("SLOT NAME", slot_name)
+        OT2Node.logger.log("DECK SLOTS", self.deck_slots)
         if slot_name in self.deck_slots:
-            self.logger.log("FOUND SLOT RESOURCE", slot_resource)
+            OT2Node.logger.log("FOUND SLOT RESOURCE", slot_resource)
             slot_resource = self.deck_slots[slot_name]
             try:
             #    #check if slot already has labware (child)
             #    # query for existing labware in slot
 
             #    # Grid resource if tip rack
-                self.logger.log("CHECKING IF RESOURCE IS A TIP RACK")
-                self.logger.log("LOAD NAME LOWER", load_name.lower())
+                OT2Node.logger.log("CHECKING IF RESOURCE IS A TIP RACK")
+                OT2Node.logger.log("LOAD NAME LOWER", load_name.lower())
                 if 'tip' in load_name.lower():
-                    self.logger.log("IS TIP RACK")
+                    OT2Node.logger.log("IS TIP RACK")
                    #tip rack always 8x12 grid
             #        labware_resource = Grid(
             #            resource_name = f"{self.node_name}_{display_name}_{slot_name}",
@@ -173,9 +175,9 @@ class Opentrons_Resources:
             #            }
             #        )
             #        labware_resource = self.client.add_resource(labware_resource)
-                    self.logger.log("CREATING TIP RACK RESOURCE FROM TEMPLATE")
-                    self.logger.log("TEMPLATE NAME", load_name)
-                    self.logger.log("RESOURCE NAME", labware_id)
+                    OT2Node.logger.log("CREATING TIP RACK RESOURCE FROM TEMPLATE")
+                    OT2Node.logger.log("TEMPLATE NAME", load_name)
+                    OT2Node.logger.log("RESOURCE NAME", labware_id)
                     labware_resource = self.client.create_resource_from_template(
                         template_name = load_name,
                         resource_name = labware_id
@@ -183,15 +185,15 @@ class Opentrons_Resources:
 
 
                     #set as child of the deck slot
-                    self.logger.log("LABWARE RESOURCE", labware_resource)
-                    self.logger.log("SETTING LABWARE RESOURCE AS CHILD OF DECK SLOT")
-                    self.logger.log("SLOT RESOURCE", slot_resource)
+                    OT2Node.logger.log("LABWARE RESOURCE", labware_resource)
+                    OT2Node.logger.log("SETTING LABWARE RESOURCE AS CHILD OF DECK SLOT")
+                    OT2Node.logger.log("SLOT RESOURCE", slot_resource)
                     self.client.set_child(resource=slot_resource, key="labware", child=labware_resource)
                     self.labware_id_to_resource[labware_id] = labware_resource
 
                 elif 'plate' in load_name.lower() or 'well' in load_name.loawer():
-                    self.logger.log("RESOURCE IS A PLATE")
-                    self.logger.log("LOAD NAME LOWER", load_name.lower())
+                    OT2Node.logger.log("RESOURCE IS A PLATE")
+                    OT2Node.logger.log("LOAD NAME LOWER", load_name.lower())
                    #plate as grid, either 96 or 384
                     if '96' in load_name:
                        rows, cols = 8, 12
@@ -213,23 +215,23 @@ class Opentrons_Resources:
                     #     }
                     # )
                     # labware_resource = self.client.add_resource(labware_resource)
-                    self.logger.log("CREATING PLATE RESOURCE FROM TEMPLATE")
-                    self.logger.log("TEMPLATE NAME", load_name)
-                    self.logger.log("RESOURCE NAME", labware_id)
+                    OT2Node.logger.log("CREATING PLATE RESOURCE FROM TEMPLATE")
+                    OT2Node.logger.log("TEMPLATE NAME", load_name)
+                    OT2Node.logger.log("RESOURCE NAME", labware_id)
                     labware_resource = self.client.create_resource_from_template(
                         template_name = load_name,
                         resource_name = labware_id
                         )
                     
-                    self.logger.log("LABWARE RESOURCE", labware_resource)
-                    self.logger.log("SETTING LABWARE RESOURCE AS CHILD OF DECK SLOT")
-                    self.logger.log("SLOT RESOURCE", slot_resource)
+                    OT2Node.logger.log("LABWARE RESOURCE", labware_resource)
+                    OT2Node.logger.log("SETTING LABWARE RESOURCE AS CHILD OF DECK SLOT")
+                    OT2Node.logger.log("SLOT RESOURCE", slot_resource)
 
                     self.client.set_child(resource=slot_resource, key="labware", child=labware_resource)
                     self.labware_id_to_resource[labware_id] = labware_resource
                 
                 else:
-                    self.logger.log("REGISTERING AS NEITHER PLATE OR TIP RACK")
+                    OT2Node.logger.log("REGISTERING AS NEITHER PLATE OR TIP RACK")
                     #TODO: add addional labware types, tuberacks and modules etc, generic container for now
                     # labware_resource = Container(
                     #     resource_name=f"{self.node_name}_{display_name}_{slot_name}",
@@ -259,9 +261,9 @@ class Opentrons_Resources:
         params = command.get('params', {})
         result = command.get('result', {})
 
-        self.logger.log("PIPETTE PARAMS AND RESULT")
-        self.logger.log("PARAMS", params)
-        self.logger.log("RESULT", result)
+        OT2Node.logger.log("PIPETTE PARAMS AND RESULT")
+        OT2Node.logger.log("PARAMS", params)
+        OT2Node.logger.log("RESULT", result)
 
         pipette_id = result.get('pipetteId', params.get('pipetteId'))
         mount = params.get('mount', 'unknown')
