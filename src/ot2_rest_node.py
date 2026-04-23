@@ -247,7 +247,7 @@ class OT2Node(RestNode):
 
         # 6. P1000 Single-Channel Pipette
         p1000_single = Pool(
-            resource_name="ot2_p1000_single",
+            resource_name="p1000_single_gen2",
             resource_class="OT2_P1000_Single",
             capacity=1000.0,
             attributes={
@@ -273,7 +273,7 @@ class OT2Node(RestNode):
 
         self.resource_client.init_template(
             resource=p1000_single,
-            template_name="ot2_p1000_single_pipette",
+            template_name="p1000_single_gen2",
             description="Template for OT2 P1000 Single-Channel pipette (100-1000 µL).",
             required_overrides=["resource_name"],
             tags=["ot2", "pipette", "p1000", "single-channel", "pool"],
@@ -351,15 +351,27 @@ class OT2Node(RestNode):
 
         # 9. p20 tip box
         p20_tip_box = Grid(
-            resource_name="ot2_p20_tip_rack",
-            resource_class="OT2_p20_tip_rack",
+            resource_name="opentrons_96_tiprack_20ul",
+            resource_class="OT2_P20_Tip_Rack",
             rows=8,
             columns=12,
         )
 
         self.resource_client.init_template(
             resource=p20_tip_box,
-            template_name="ot2_p20_tip_rack"
+            template_name="opentrons_96_tiprack_20ul"
+        )
+
+        p1000_tip_box = Grid(
+            resource_name="opentrons_96_tiprack_1000ul",
+            resource_class="OT2_P1000_Tip_Rack",
+            rows=8,
+            columns=12,
+        )
+
+        self.resource_client.init_template(
+            resource=p1000_tip_box,
+            template_name="opentrons_96_tiprack_1000ul"
         )
 
         #flat bottom well plate

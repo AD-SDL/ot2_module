@@ -11,7 +11,7 @@ class Opentrons_Resources:
         """
         Initialize the Opentrons Resources manager
         """
-        self.client = ResourceClient("http://localhost:8003")
+        self.client = ResourceClient()
         self.deck_slots: Dict[str, Any] = {}#map slot numbers to resources
         self.pipette_slots: Dict[str, Any] = {}
         self.node_name: str = ""
