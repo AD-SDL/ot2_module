@@ -67,7 +67,6 @@ class Opentrons_Resources:
             self.logger.log(cmd_type)
             
             if cmd_type == 'loadLabware':
-                self.logger.log("LOADING LABWARE")
                 self.load_labware(command, ot_log)
             elif cmd_type == 'loadPipette':
                 self.logger.log("LAODING PIPETTE")
@@ -83,10 +82,6 @@ class Opentrons_Resources:
         
         for command in commands:
             cmd_type = command.get('commandType')
-            self.logger.log("COMMAND")
-            self.logger.log(command)
-            self.logger.log("COMMAND TYPE")
-            self.logger.log(cmd_type)
             
             try:
                 if cmd_type == 'pickUpTip':
@@ -109,9 +104,6 @@ class Opentrons_Resources:
         """loads labware, tracks labware present in each deck slot"""
         params = command.get('params', {})
         result = command.get('result', {})
-        self.logger.log("LABWARE PARAMS AND RESULT")
-        self.logger.log(f"PARAMS: {params}")
-        self.logger.log(f"RESULT, {result}")
 
         #get labware id
         location = params.get('location', {})
@@ -120,10 +112,6 @@ class Opentrons_Resources:
         #string number 1-11
         slot_name = location.get('slotName', 'unknown')
 
-        self.logger.log("LOCATION, LOADNAME, AND SLOT NAME")
-        self.logger.log(f"LOCATION, {location}")
-        self.logger.log(f"LOADNAME, {load_name}")
-        self.logger.log(f"SLOTNAME, {slot_name}")
 
         #find matching id
         labware_id = None
@@ -132,11 +120,9 @@ class Opentrons_Resources:
             if (labware.get('loadName') == load_name and
                 labware.get('location', {}).get('slotName') == slot_name):
                 labware_id = labware.get('id')
-                self.logger.log("MATCHING ID FOUND")
                 break
         
         if not labware_id:
-            self.logger.log("MATCHING ID NOT FOUND")
             #just in case not found
             labware_id = f"labware_{slot_name}_{load_name}"
         
@@ -144,7 +130,6 @@ class Opentrons_Resources:
 
 
         #store info
-        self.logger.log("STORING LABWARE INFO")
         self.labware_id_to_info[labware_id] = {
             'load_name': load_name,
             'display_name': display_name,
@@ -154,9 +139,6 @@ class Opentrons_Resources:
         }
 
         #get or create labware in deck slot
-        self.logger.log("LOOK FOR SLOT NAME IN DECK SLOTS")
-        self.logger.log(f"SLOT NAME, {slot_name}")
-        self.logger.log(f"DECK SLOTS, {self.deck_slots}")
         if slot_name in self.deck_slots:
             slot_resource = self.deck_slots[slot_name]
             self.logger.log(f"FOUND SLOT RESOURCE, {slot_resource}")
@@ -165,26 +147,7 @@ class Opentrons_Resources:
             #    # query for existing labware in slot
 
             #    # Grid resource if tip rack
-                self.logger.log("CHECKING IF RESOURCE IS A TIP RACK")
-                self.logger.log(f"LOAD NAME LOWER, {load_name.lower()}")
                 if 'tip' in load_name.lower():
-                    self.logger.log("IS TIP RACK")
-                   #tip rack always 8x12 grid
-            #        labware_resource = Grid(
-            #            resource_name = f"{self.node_name}_{display_name}_{slot_name}",
-            #            resource_class = "tip_rack",
-            #            rows = 8,
-            #            columns = 12,
-            #            attributes = {
-            #                "ot2_labware_id": labware_id,
-            #                "load_name": load_name,
-            #                "slot": slot_name
-            #            }
-            #        )
-            #        labware_resource = self.client.add_resource(labware_resource)
-                    self.logger.log("CREATING TIP RACK RESOURCE FROM TEMPLATE")
-                    self.logger.log(f"TEMPLATE NAME, {load_name}")
-                    self.logger.log(f"RESOURCE NAME, {labware_id}")
                     #TODO: better naming conventions
                     resource_name = (str(labware_id) + str(load_name))
                     labware_resource = self.client.create_resource_from_template(
@@ -194,16 +157,10 @@ class Opentrons_Resources:
 
 
                     #set as child of the deck slot
-                    self.logger.log(f"LABWARE RESOURCE, {labware_resource}")
-                    self.logger.log("SETTING LABWARE RESOURCE AS CHILD OF DECK SLOT")
-                    self.logger.log(f"SLOT RESOURCE, {slot_resource}")
-                    # self.client.set_child(resource=slot_resource, key="labware", child=labware_resource)
                     self.client.push(resource=slot_resource, child=labware_resource)
                     self.labware_id_to_resource[labware_id] = labware_resource
 
                 elif 'plate' in load_name.lower() or 'well' in load_name.loawer():
-                    self.logger.log("RESOURCE IS A PLATE")
-                    self.logger.log(f"LOAD NAME LOWER, {load_name.lower()}")
                    #plate as grid, either 96 or 384
                     if '96' in load_name:
                        rows, cols = 8, 12
@@ -212,56 +169,24 @@ class Opentrons_Resources:
                     
                     else:
                         rows, cols = 8, 12 #96 well by default
-                    
-                    # labware_resource = Grid(
-                    #     resource_name=f"{self.node_name}_{display_name}_{slot_name}",
-                    #     resource_class="plate",
-                    #     rows=rows,
-                    #     columns=cols,
-                    #     attributes={
-                    #         "ot2_labware_id": labware_id,
-                    #         "load_name": load_name,
-                    #         "slot": slot_name
-                    #     }
-                    # )
-                    # labware_resource = self.client.add_resource(labware_resource)
-                    self.logger.log("CREATING PLATE RESOURCE FROM TEMPLATE")
-                    self.logger.log(f"TEMPLATE NAME, {load_name}")
-                    self.logger.log(f"RESOURCE NAME, {labware_id}")
+                
                     resource_name = (str(labware_id) + str(load_name))
                     labware_resource = self.client.create_resource_from_template(
                         template_name = load_name,
                         resource_name = resource_name
                         )
-                    
-                    self.logger.log(f"LABWARE RESOURCE, {labware_resource}")
-                    self.logger.log("SETTING LABWARE RESOURCE AS CHILD OF DECK SLOT")
-                    self.logger.log(f"SLOT RESOURCE, {slot_resource}")
 
                     # self.client.set_child(resource=slot_resource, key="labware", child=labware_resource)
                     self.client.push(resource=slot_resource, child=labware_resource)
                     self.labware_id_to_resource[labware_id] = labware_resource
                 
                 else:
-                    self.logger.log("REGISTERING AS NEITHER PLATE OR TIP RACK")
-                    #TODO: add addional labware types, tuberacks and modules etc, generic container for now
-                    # labware_resource = Container(
-                    #     resource_name=f"{self.node_name}_{display_name}_{slot_name}",
-                    #     resource_class="labware",
-                    #     capacity=100,  # Generic capacity
-                    #     attributes={
-                    #         "ot2_labware_id": labware_id,
-                    #         "load_name": load_name,
-                    #         "slot": slot_name
-                    #     }
-                    # )
 
-                    # labware_resource = self.client.add_resource(labware_resource)
                     labware_resource = self.client.create_resource_from_template(
                         template_name = load_name,
                         resource_name = labware_id
                         )
-                    self.client.set_child(resource=slot_resource, key="labware", child=labware_resource)
+                    self.client.push(resource=slot_resource, child=labware_resource)
                     self.labware_id_to_resource[labware_id] = labware_resource
                    
             except Exception as e:
@@ -294,33 +219,15 @@ class Opentrons_Resources:
 
 
             try:
-        #         if 'p20' in pipette_name.lower():
-        #             capacity = 20.0
-        #         elif 'p300' in pipette_name.lower():
-        #             capacity = 300.0
-        #         elif 'p1000' in pipette_name.lower():
-        #             capacity = 1000.0
-        #         #TODO: error handling
-        #         else:
-        #             capacity = 0.0
-                
-        #         pipette_resource = Pool(
-        #             resource_name=f"{self.node_name}_{pipette_name}_{mount}",
-        #             resource_class="pipette",
-        #             capacity=capacity,
-        #             attributes={
-        #                 "ot2_pipette_id": pipette_id,
-        #                 "pipette_name": pipette_name,
-        #                 "mount": mount
-        #             }
-        #         )  
+
                 pipette_resource = self.client.create_resource_from_template(
                     template_name = pipette_name,
                     resource_name = mount_resource
                     )
             
                 # pipette_resource = self.client.add_resource(pipette_resource) #TODO: create_resource_from_template
-                self.client.set_child(resource=mount_resource, key='pipette', child=pipette_resource)
+                # self.client.set_child(resource=mount_resource, key='pipette', child=pipette_resource)
+                self.client.push(resource=mount_resource, child=pipette_resource)
                 self.pipette_id_to_resource[pipette_id] = pipette_resource
             
             except Exception as e:
