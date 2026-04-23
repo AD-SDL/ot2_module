@@ -12,9 +12,9 @@ class Opentrons_Resources:
         Initialize the Opentrons Resources manager
         """
         self.client = ResourceClient("http://localhost:8003")
-        self.deck_slots: Dict[str, Any] #map slot numbers to resources
-        self.pipette_slots: Dict[str, Any]
-        self.node_name: str
+        self.deck_slots: Dict[str, Any] = {}#map slot numbers to resources
+        self.pipette_slots: Dict[str, Any] = {}
+        self.node_name: str = ""
         
         # dicts for mapping OT2 labware IDs to MADSci resources
         self.labware_id_to_resource: Dict[str, Any] = {}
