@@ -23,6 +23,7 @@ class RobotStatus(Enum):
     FAILED = "failed"
     PAUSED = "paused"
     OFFLINE = "offline"
+    STOPPED = "stopped"
 
 
 class RunStatus(Enum):
