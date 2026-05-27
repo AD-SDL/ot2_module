@@ -9,8 +9,9 @@ from madsci.common.types.node_types import RestNodeConfig
 from madsci.common.types.resource_types import Container, Pool, Slot, Stack
 from madsci.node_module.helpers import action
 from madsci.node_module.rest_node_module import RestNode
-from ot2_interface.ot2_driver_http import OT2_Config, OT2_Driver
 from typing_extensions import Annotated
+
+from ot2_interface.ot2_driver_http import OT2_Config, OT2_Driver
 
 
 class OT2NodeConfig(RestNodeConfig):
@@ -429,9 +430,7 @@ class OT2Node(RestNode):
         try:
             protocol_id, run_id = self.ot2_interface.transfer(protocol_file_path)
             self.logger.log(
-                "OT2 "
-                + self.node_info.node_name
-                + " protocol transfer successful"
+                "OT2 " + self.node_info.node_name + " protocol transfer successful"
             )
 
             self.run_id = run_id

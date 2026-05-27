@@ -1,4 +1,5 @@
 """delete all runs"""
+
 from argparse import ArgumentParser
 
 import requests

@@ -1,4 +1,5 @@
 """Protopiler is designed to compile a config yaml into a working protocol"""
+
 import argparse
 import copy
 from datetime import datetime
@@ -7,6 +8,7 @@ from pathlib import Path
 from typing import Dict, Generator, List, Optional, Tuple, Union
 
 import pandas as pd
+
 from ot2_interface.protopiler.config import (
     Clear_Pipette,
     CommandBase,
@@ -501,7 +503,7 @@ class ProtoPiler:
                         "#location#", f'"{location}"'
                     )
                     labware_command = labware_command.replace(
-                        "#nickname#", f'{"module"}'
+                        "#nickname#", f"{'module'}"
                     )
                     labware_command = labware_command.replace(
                         "#labware_name#", f'"{name}"'
