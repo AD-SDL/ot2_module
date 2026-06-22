@@ -5,15 +5,15 @@ import traceback
 from pathlib import Path
 from typing import Any, Optional, ClassVar
 
-from madsci.common.types.resource_types import Container, Pool, Slot, Stack
-from madsci.node_module.helpers import action
-from madsci.node_module.rest_node_module import RestNode
-from typing_extensions import Annotated
 from madsci.common.types.node_types import (
     RestNodeConfig, 
     NodeRepresentationTemplateDefinition,
     NodeIntrinsicLocationDefinition,
 )
+from madsci.common.types.resource_types import Container, Pool, Slot, Stack
+from madsci.node_module.helpers import action
+from madsci.node_module.rest_node_module import RestNode
+from typing_extensions import Annotated
 
 from ot2_interface.ot2_driver_http import OT2_Config, OT2_Driver
 
@@ -410,7 +410,7 @@ class OT2Node(RestNode):
         """Periodically called to update the current state of the node."""
         if self.ot2_interface is not None:
             self.node_state = {
-                "ot2_status_code": self.ot2_interface.get_robot_status(),
+                "otflex_status_code": self.ot2_interface.get_robot_status(),  # TESTING
             }
 
     @action(name="run_protocol", description="run a given opentrons protocol")
