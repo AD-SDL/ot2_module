@@ -3,17 +3,17 @@
 
 import traceback
 from pathlib import Path
-from typing import Any, Optional, ClassVar
+from typing import Any, ClassVar, Optional
 
+from madsci.common.types.node_types import (
+    NodeIntrinsicLocationDefinition,
+    NodeRepresentationTemplateDefinition,
+    RestNodeConfig,
+)
 from madsci.common.types.resource_types import Container, Pool, Slot, Stack
 from madsci.node_module.helpers import action
 from madsci.node_module.rest_node_module import RestNode
 from typing_extensions import Annotated
-from madsci.common.types.node_types import (
-    RestNodeConfig, 
-    NodeRepresentationTemplateDefinition,
-    NodeIntrinsicLocationDefinition,
-)
 
 from ot2_interface.ot2_driver_http import OT2_Config, OT2_Driver
 

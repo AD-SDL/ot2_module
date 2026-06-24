@@ -1,14 +1,14 @@
 #! /usr/bin/env python3
-"""OT2 Node Module implementation"""
+"""OT-FLex Node Module implementation"""
 
 import traceback
 from pathlib import Path
-from typing import Any, Optional, ClassVar
+from typing import Any, ClassVar, Optional
 
 from madsci.common.types.node_types import (
-    RestNodeConfig, 
-    NodeRepresentationTemplateDefinition,
     NodeIntrinsicLocationDefinition,
+    NodeRepresentationTemplateDefinition,
+    RestNodeConfig,
 )
 from madsci.common.types.resource_types import Container, Pool, Slot, Stack
 from madsci.node_module.helpers import action
@@ -54,38 +54,22 @@ class OT2Node(RestNode):
             required_overrides=[],
             tags=["deck", "nest"],
             version="1.0.0",
-            description="OT-2 deck nest location template with capacity",
+            description="OT-Flex deck nest location template with capacity",
         ),
     ]
 
     # Intrinsic locations — auto-created on startup with '{node_name}.' prefix
     intrinsic_locations: ClassVar[list[NodeIntrinsicLocationDefinition]] = [
         NodeIntrinsicLocationDefinition(
-            location_name="deck_nest_1",
-            description="OT-2 deck nest 1.",
+            location_name="deck_nest_A4",
+            description="OT-Flex deck nest A4.",
             representation_template_name="deck_nest_repr",
-            # resource_template_name="ot2_deck_slot",
             allow_transfers=True,
         ),
         NodeIntrinsicLocationDefinition(
-            location_name="deck_nest_3",
-            description="OT-2 deck nest 3.",
+            location_name="deck_nest_B4",
+            description="OT-Flex deck nest B4.",
             representation_template_name="deck_nest_repr",
-            # resource_template_name="ot2_deck_slot",
-            allow_transfers=True,
-        ),
-        NodeIntrinsicLocationDefinition(
-            location_name="deck_nest_4_temp_block",
-            description="OT-2 deck nest 4 with temperature block.",
-            representation_template_name="deck_nest_repr",
-            # resource_template_name="ot2_deck_slot",
-            allow_transfers=True,
-        ),
-        NodeIntrinsicLocationDefinition(
-            location_name="deck_nest_6_temp_block",
-            description="OT-2 deck nest 6 with temperature block.",
-            representation_template_name="deck_nest_repr",
-            # resource_template_name="ot2_deck_slot",
             allow_transfers=True,
         ),
     ]
@@ -142,7 +126,7 @@ class OT2Node(RestNode):
 
         self.run_id = None
         self.startup_has_run = True
-        self.logger.info("OT2 node initialized!")
+        self.logger.info("OT-Flex node initialized!")
 
     def _create_ot2_templates(self) -> None:
         """Create all OT2-specific resource templates."""
@@ -410,7 +394,7 @@ class OT2Node(RestNode):
         """Periodically called to update the current state of the node."""
         if self.ot2_interface is not None:
             self.node_state = {
-                "otflex_status_code": self.ot2_interface.get_robot_status(),  # TESTING
+                "otflex_status_code": self.ot2_interface.get_robot_status(),
             }
 
     @action(name="run_protocol", description="run a given opentrons protocol")
