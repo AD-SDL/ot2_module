@@ -1,0 +1,4 @@
+node_name: ot2_example
+node_description: A MADSci Opentrons OT2 node
+node_url: "http://127.0.0.1:2000/"
+ot2_ip: 192.168.1.100
