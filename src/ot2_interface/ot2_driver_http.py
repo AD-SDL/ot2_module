@@ -2,6 +2,7 @@
 
 import subprocess
 import time
+from uuid import uuid4
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -48,6 +49,7 @@ class OT2_Driver:
         retries: int = 5,
         retry_backoff: float = 1.0,
         retry_status_codes: Optional[List[int]] = None,
+        simulation: bool = False,
     ) -> None:
         """Initialize OT2 driver.
 
@@ -57,6 +59,8 @@ class OT2_Driver:
             Dataclass of the ot2_config
         """
         self.config: OT2_Config = config
+        self.simulation = simulation
+        self._simulated_runs: Dict[str, Dict] = {}
         template_dir = Path(__file__).parent.resolve() / "protopiler/protocol_templates"
         assert template_dir.exists(), f"Template dir: {template_dir} does not exist"
         self.protopiler: ProtoPiler = ProtoPiler(template_dir=template_dir)
@@ -67,14 +71,30 @@ class OT2_Driver:
             status_forcelist=retry_status_codes,
         )
 
-        # Test connection
         self.base_url = f"http://{self.config.ip}:{self.config.port}"
         self.headers = {"Opentrons-Version": "2"}
+
+        # __init__ performs no I/O. Call connect() when you intend to drive a real
+        # robot. A simulation node builds the same object and never connects, so it
+        # cannot reach the instrument whatever else it does.
+
+    def connect(self) -> None:
+        """Check the robot answers and put its lights in a known state.
+
+        Not called from __init__, so that a node running in simulation can construct
+        the driver without touching the network.
+        """
+        if self.simulation:
+            raise RuntimeError(
+                "connect() called on an OT2_Driver built in simulation mode."
+            )
         test_conn_url = f"{self.base_url}/robot/lights"
 
-        resp = requests.get(test_conn_url, headers=self.headers)
+        resp = requests.get(test_conn_url, headers=self.headers, timeout=30)
         if resp.status_code != 200:
-            raise RuntimeError(f"Could not connect to opentrons with config {config}")
+            raise RuntimeError(
+                f"Could not connect to opentrons with config {self.config}"
+            )
 
         if "on" in resp.json() and not resp.json()["on"]:
             self.change_lights_status(status=True)
@@ -129,6 +149,41 @@ class OT2_Driver:
         else:
             return config_path, None
 
+    def _simulate_protocol(self, protocol_path: Path) -> Tuple[str, str]:
+        """Run the compiled protocol through Opentrons' own simulator.
+
+        This is not a stand-in for the robot's replies. opentrons.simulate executes
+        the protocol against the same analysis engine the instrument uses, so it
+        catches real defects: an unknown labware name, a volume beyond a pipette's
+        capacity, aspirating from a slot nothing was loaded into, a Flex protocol
+        with no trash defined. Faking the HTTP responses reports success for every
+        one of those.
+
+        What it does not do is move anything or know the physical state of a deck.
+        """
+        try:
+            from opentrons.simulate import simulate
+        except ImportError as e:
+            raise RuntimeError(
+                "Simulation mode needs the opentrons package, which is an optional "
+                "dependency. Install it with: pip install 'ot2_module[simulation]'"
+            ) from e
+
+        with protocol_path.open() as protocol_file:
+            runlog, _bundle = simulate(protocol_file, str(protocol_path))
+
+        run_id = f"simulated-{uuid4()}"
+        self._simulated_runs[run_id] = {
+            "data": {
+                "id": run_id,
+                "status": RunStatus.SUCCEEDED.value,
+                "simulated": True,
+                "commandCount": len(runlog),
+                "protocol": str(protocol_path),
+            }
+        }
+        return f"simulated-protocol-{uuid4()}", run_id
+
     def transfer(self, protocol_path: PathLike) -> Tuple[str, str]:
         """Transfer the protocol file to the OT2 via http
 
@@ -144,6 +199,9 @@ class OT2_Driver:
         """
         # Make sure its a path object
         protocol_path = Path(protocol_path)
+
+        if self.simulation:
+            return self._simulate_protocol(protocol_path)
 
         transfer_url = f"{self.base_url}/protocols"
         files = {"files": protocol_path.open("rb")}
@@ -181,6 +239,9 @@ class OT2_Driver:
         Dict[str, Dict[str, str]]
             the json response from the OT2 execute command
         """
+        if self.simulation:
+            return self._simulated_runs[run_id]
+
         execute_url = f"{self.base_url}/runs/{run_id}/actions"
         execute_json = {"data": {"actionType": "play"}}
 
@@ -551,7 +612,9 @@ class OT2_Driver:
 def main(args):  # noqa: D103
     ot2s = []
     for ot2_raw_cfg in yaml.safe_load(open(args.robot_config)):
-        ot2s.append(OT2_Driver(OT2_Config(**ot2_raw_cfg)))
+        driver = OT2_Driver(OT2_Config(**ot2_raw_cfg))
+        driver.connect()
+        ot2s.append(driver)
 
     ot2: OT2_Driver = ot2s[0]
 
