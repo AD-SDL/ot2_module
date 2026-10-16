@@ -51,6 +51,18 @@ paths = [".env.example"]
 [tool.pdm]
 distribution = true
 
+[project.optional-dependencies]
+# Opentrons' own simulator, used by simulation mode to execute a compiled protocol
+# without a robot. Kept optional because it adds roughly 54 MB and nine packages
+# that a production container never imports.
+#
+# The pin is bounded on BOTH sides and neither bound is arbitrary:
+#   9.x and 10.x REFUSE OT-2 protocols. OT-2 support moved to a separate
+#     "opentrons-ot2" distribution which is not published on PyPI.
+#   7.5 and older break on Python 3.12, they call the removed asyncio.coroutine.
+# 8.8.2 handles OT-2 and Flex, up to apiLevel 2.27.
+simulation = ["opentrons~=8.8.2"]
+
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"

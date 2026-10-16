@@ -21,6 +21,12 @@ from ot2_interface.ot2_driver_http import OT2_Config, OT2_Driver
 class OT2NodeConfig(RestNodeConfig):
     """Configuration for the OT2 node module."""
 
+    simulation: bool = False
+    """Run with no connection to a robot. Protocols are compiled as usual and then
+    executed by opentrons.simulate rather than sent to the instrument, so protocol
+    errors are still caught. Needs the optional dependency: pip install
+    'ot2_module[simulation]'."""
+
     ot2_ip: Optional[str] = None
     "ip of opentrons device"
     rate_limit_requests: int = 500
@@ -132,10 +138,19 @@ class OT2Node(RestNode):
             )
             self.pipette_slots[mount] = mount_slot
 
-        if self.config.ot2_ip is None:
+        # No address is needed in simulation: nothing is ever sent to an instrument.
+        # OT2_Config still wants a value, so use TEST-NET-1, which is reserved and
+        # unroutable, so a bug that bypassed the simulation path could not reach a
+        # real machine by accident.
+        if self.config.ot2_ip is None and not self.config.simulation:
             raise ValueError("OT2 IP address is not configured.")
         try:
-            self.ot2_interface = OT2_Driver(OT2_Config(ip=self.config.ot2_ip))
+            self.ot2_interface = OT2_Driver(
+                OT2_Config(ip=self.config.ot2_ip or "192.0.2.1"),
+                simulation=self.config.simulation,
+            )
+            if not self.config.simulation:
+                self.ot2_interface.connect()
         except Exception as e:
             self.logger.error(f"Failed to connect to OT2: {e}")
             raise e
