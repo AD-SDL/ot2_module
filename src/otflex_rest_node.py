@@ -407,10 +407,20 @@ class OT2Node(RestNode):
 
     def state_handler(self) -> None:
         """Periodically called to update the current state of the node."""
-        if self.ot2_interface is not None:
+        if self.ot2_interface is None:
+            return
+        if self.ot2_interface.simulation:
+            # get_robot_status() asks the instrument over HTTP. In simulation there
+            # is nothing to ask, so polling it throws on every tick and walks the
+            # node into an error state a minute or two after a clean start.
             self.node_state = {
-                "otflex_status_code": self.ot2_interface.get_robot_status(),
+                "otflex_status_code": "SIMULATION",
+                "simulation": True,
             }
+            return
+        self.node_state = {
+            "otflex_status_code": self.ot2_interface.get_robot_status(),
+        }
 
     @action(name="run_protocol", description="run a given opentrons protocol")
     def run_protocol(
