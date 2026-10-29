@@ -9,11 +9,18 @@ authors = [
     {name = "Tobias Ginsburg", email = "tginsburg@anl.gov"},
 ]
 dependencies = [
-    "madsci.node_module~=0.7",
-    "madsci.client~=0.7",
-    "madsci.common~=0.7",
+    "madsci.node_module~=0.8.0",
+    "madsci.client~=0.8.0",
+    "madsci.common~=0.8.0",
+    # Imported by the module but absent from this branch's dependency list. They are
+    # present at runtime only because the madsci base image happens to ship them, so
+    # the container works and a native pip install fails on first import.
+    #   pandas            protopiler/protopiler.py
+    #   openpyxl          pandas Excel support, used by the .xlsx test configs
+    #   typing_extensions both rest nodes
     "pandas",
     "openpyxl>=3.1.5",
+    "typing_extensions"
 ]
 requires-python = ">=3.10"
 readme = "README.md"

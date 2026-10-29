@@ -3,6 +3,7 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-yaml
+      - id: check-json
       - id: check-toml
       - id: check-ast
       - id: check-merge-conflict
@@ -16,21 +17,10 @@ repos:
       - id: nbstripout
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.15.4
+    rev: v0.15.14
     hooks:
       # Run the linter.
       - id: ruff
         args: [--fix]
       # Run the formatter.
       - id: ruff-format
-  - repo: https://gitlab.com/bmares/check-json5
-    rev: v1.0.1
-    hooks:
-    - id: check-json5
-  - repo: https://github.com/jag-k/pydantic-settings-export
-    rev: v1.0.3
-    hooks:
-      - id: pydantic-settings-export
-        entry: pdm run pydantic-settings-export
-        language: system
-        files: ^src/ot2_rest_node\.py$

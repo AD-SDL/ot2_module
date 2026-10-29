@@ -3,9 +3,13 @@
 
 import traceback
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 
-from madsci.common.types.node_types import RestNodeConfig
+from madsci.common.types.node_types import (
+    NodeIntrinsicLocationDefinition,
+    NodeRepresentationTemplateDefinition,
+    RestNodeConfig,
+)
 from madsci.common.types.resource_types import Container, Pool, Slot, Stack
 from madsci.node_module.helpers import action
 from madsci.node_module.rest_node_module import RestNode
@@ -19,6 +23,8 @@ class OT2NodeConfig(RestNodeConfig):
 
     ot2_ip: Optional[str] = None
     "ip of opentrons device"
+    rate_limit_requests: int = 500
+    "max number of requests per minute to the ot2 device"
 
 
 class OT2Node(RestNode):
@@ -27,6 +33,62 @@ class OT2Node(RestNode):
     ot2_interface: OT2_Driver = None
     config: OT2NodeConfig = OT2NodeConfig()
     config_model = OT2NodeConfig
+
+    # Location representation templates — registered automatically by template_handler()
+    location_representation_templates: ClassVar[
+        list[NodeRepresentationTemplateDefinition]
+    ] = [
+        NodeRepresentationTemplateDefinition(
+            template_name="deck_nest_repr",
+            default_values={"capacity": 1},
+            schema_def={
+                "type": "object",
+                "properties": {
+                    "capacity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Number of plates the nest can hold",
+                    },
+                },
+            },
+            required_overrides=[],
+            tags=["deck", "nest"],
+            version="1.0.0",
+            description="OT-2 deck nest location template with capacity",
+        ),
+    ]
+
+    # Intrinsic locations — auto-created on startup with '{node_name}.' prefix
+    intrinsic_locations: ClassVar[list[NodeIntrinsicLocationDefinition]] = [
+        NodeIntrinsicLocationDefinition(
+            location_name="deck_nest_1",
+            description="OT-2 deck nest 1.",
+            representation_template_name="deck_nest_repr",
+            # resource_template_name="ot2_deck_slot",
+            allow_transfers=True,
+        ),
+        NodeIntrinsicLocationDefinition(
+            location_name="deck_nest_3",
+            description="OT-2 deck nest 3.",
+            representation_template_name="deck_nest_repr",
+            # resource_template_name="ot2_deck_slot",
+            allow_transfers=True,
+        ),
+        NodeIntrinsicLocationDefinition(
+            location_name="deck_nest_4_temp_block",
+            description="OT-2 deck nest 4 with temperature block.",
+            representation_template_name="deck_nest_repr",
+            # resource_template_name="ot2_deck_slot",
+            allow_transfers=True,
+        ),
+        NodeIntrinsicLocationDefinition(
+            location_name="deck_nest_6_temp_block",
+            description="OT-2 deck nest 6 with temperature block.",
+            representation_template_name="deck_nest_repr",
+            # resource_template_name="ot2_deck_slot",
+            allow_transfers=True,
+        ),
+    ]
 
     def startup_handler(self) -> None:
         """Called to (re)initialize the node. Should be used to open connections to devices or initialize any other resources."""
@@ -37,40 +99,38 @@ class OT2Node(RestNode):
             temp_dir / self.node_info.node_name / "protocols/"
         )
         # Create templates
-        # self._create_ot2_templates()
+        self._create_ot2_templates()
 
-        # # Create deck instance
-        # self.deck = self.resource_client.create_resource_from_template(
-        #     template_name="ot2_deck",
-        #     resource_name=f"ot2_{self.node_info.node_name}_deck",
-        #     add_to_database=True,
-        # )
+        # Create deck instance
+        self.deck = self.resource_client.create_resource_from_template(
+            template_name="ot2_deck",
+            resource_name=f"{self.node_info.node_name}.deck",
+            add_to_database=True,
+        )
 
-        # # Create 12 deck slots (1-11 standard, 12 is trash)
-        # for i in range(1, 13):
-        #     slot_name = f"ot2_{self.node_info.node_name}_deck_slot_{i}"
-        #     template_name = "ot2_trash_slot" if i == 12 else "ot2_deck_slot"
+        # Create 12 deck slots (1-11 standard, 12 is trash)
+        for i in range(1, 13):
+            slot_name = f"{self.node_info.node_name}.deck.nest_{i}"
+            template_name = "ot2_trash_slot" if i == 12 else "ot2_deck_slot"
 
-        #     slot = self.resource_client.create_resource_from_template(
-        #         template_name=template_name,
-        #         resource_name=slot_name,
-        #         add_to_database=True,
-        #     )
+            slot = self.resource_client.create_resource_from_template(
+                template_name=template_name,
+                resource_name=slot_name,
+            )
 
-        #     try:
-        #         self.resource_client.set_child(self.deck, str(i), slot)
-        #     except Exception:
-        #         self.logger.log(f"Deck slot {i} already exists")
+            try:
+                self.resource_client.set_child(self.deck, str(i), slot)
+            except Exception:
+                self.logger.log(f"Deck slot {i} already exists")
 
-        # # Create pipette mount slots
-        # self.pipette_slots = {}
-        # for mount in ["left", "right"]:
-        #     mount_slot = self.resource_client.create_resource_from_template(
-        #         template_name="ot2_pipette_mount",
-        #         resource_name=f"ot2_{self.node_info.node_name}_{mount}_mount",
-        #         add_to_database=True,
-        #     )
-        #     self.pipette_slots[mount] = mount_slot
+        # Create pipette mount slots
+        self.pipette_slots = {}
+        for mount in ["left", "right"]:
+            mount_slot = self.resource_client.create_resource_from_template(
+                template_name="ot2_pipette_mount",
+                resource_name=f"{self.node_info.node_name}.{mount}_mount",
+            )
+            self.pipette_slots[mount] = mount_slot
 
         if self.config.ot2_ip is None:
             raise ValueError("OT2 IP address is not configured.")
@@ -94,7 +154,7 @@ class OT2Node(RestNode):
             capacity=12,
             attributes={
                 "deck_type": "OT2",
-                "slot_count": 12,
+                "nest_count": 12,
                 "sbs_compatible": True,
                 "description": "OT2 deck with 11 standard slots plus trash bin",
             },
@@ -530,6 +590,7 @@ class OT2Node(RestNode):
         """Cancel the node."""
         self.logger.log("Canceling node...")
         self.ot2_interface.cancel(self.run_id)
+        self.node_status.cancelled = True
         self.logger.log("Node cancelled.")
         return True
 
